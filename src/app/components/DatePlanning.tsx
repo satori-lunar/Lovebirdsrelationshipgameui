@@ -20,7 +20,8 @@ const dateIdeas = [
     duration: "2-3 hours",
     budget: "$",
     location: "Local park",
-    image: "🌅"
+    image: "🌅",
+    color: "from-orange-400 to-pink-500"
   },
   {
     id: 2,
@@ -30,7 +31,8 @@ const dateIdeas = [
     duration: "2 hours",
     budget: "$$",
     location: "Home",
-    image: "👨‍🍳"
+    image: "👨‍🍳",
+    color: "from-amber-400 to-orange-500"
   },
   {
     id: 3,
@@ -40,7 +42,8 @@ const dateIdeas = [
     duration: "3-4 hours",
     budget: "$$",
     location: "Downtown",
-    image: "🎨"
+    image: "🎨",
+    color: "from-purple-400 to-pink-500"
   },
   {
     id: 4,
@@ -50,7 +53,8 @@ const dateIdeas = [
     duration: "2-3 hours",
     budget: "$",
     location: "Outside city",
-    image: "✨"
+    image: "✨",
+    color: "from-indigo-500 to-purple-600"
   },
   {
     id: 5,
@@ -60,7 +64,338 @@ const dateIdeas = [
     duration: "2 hours",
     budget: "$",
     location: "Home",
-    image: "🧖"
+    image: "🧖",
+    color: "from-rose-400 to-pink-500"
+  },
+  {
+    id: 6,
+    title: "Farmers Market Adventure",
+    description: "Browse local produce, sample fresh foods, pick ingredients for a meal you'll cook together later.",
+    category: "Outdoor",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Farmers market",
+    image: "🥬",
+    color: "from-green-400 to-emerald-500"
+  },
+  {
+    id: 7,
+    title: "Bookstore & Tea Date",
+    description: "Browse books together, share your favorite reads, then enjoy tea and pastries at a cozy café.",
+    category: "Indoor",
+    duration: "2-3 hours",
+    budget: "$",
+    location: "Bookstore",
+    image: "📚",
+    color: "from-amber-500 to-yellow-600"
+  },
+  {
+    id: 8,
+    title: "Karaoke Night",
+    description: "Sing your hearts out at a karaoke bar or rent a private room. Bonus points for duets!",
+    category: "Entertainment",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Karaoke bar",
+    image: "🎤",
+    color: "from-pink-500 to-rose-600"
+  },
+  {
+    id: 9,
+    title: "Beach Day & Bonfire",
+    description: "Spend the day at the beach, build sandcastles, swim, then end with a cozy bonfire as the sun sets.",
+    category: "Outdoor",
+    duration: "4-6 hours",
+    budget: "$$",
+    location: "Beach",
+    image: "🏖️",
+    color: "from-blue-400 to-cyan-500"
+  },
+  {
+    id: 10,
+    title: "Wine & Paint Night",
+    description: "Get creative together with a paint-and-sip session. No artistic skills required - just fun!",
+    category: "Creative",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Art studio or home",
+    image: "🎨",
+    color: "from-purple-500 to-indigo-600"
+  },
+  {
+    id: 11,
+    title: "Thrift Store Challenge",
+    description: "Give each other a $20 budget and find the most interesting or fun items. Winner buys dinner!",
+    category: "Adventure",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Thrift stores",
+    image: "🛍️",
+    color: "from-yellow-400 to-orange-500"
+  },
+  {
+    id: 12,
+    title: "Hiking & Waterfall",
+    description: "Explore a scenic trail together and discover a hidden waterfall. Pack a picnic for the top!",
+    category: "Outdoor",
+    duration: "3-4 hours",
+    budget: "$",
+    location: "Hiking trail",
+    image: "⛰️",
+    color: "from-green-500 to-emerald-600"
+  },
+  {
+    id: 13,
+    title: "Comedy Show Night",
+    description: "Laugh together at a local comedy club or open mic night. Shared laughter is the best medicine.",
+    category: "Entertainment",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Comedy club",
+    image: "😂",
+    color: "from-yellow-500 to-amber-600"
+  },
+  {
+    id: 14,
+    title: "Breakfast in Bed",
+    description: "Wake up early, make breakfast together (or surprise them!), and enjoy it cozied up in bed.",
+    category: "Indoor",
+    duration: "1-2 hours",
+    budget: "$",
+    location: "Home",
+    image: "🍳",
+    color: "from-orange-400 to-yellow-500"
+  },
+  {
+    id: 15,
+    title: "Arcade & Pizza",
+    description: "Relive childhood fun at an arcade, compete for high scores, then share a pizza and talk about your favorite games.",
+    category: "Entertainment",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Arcade",
+    image: "🎮",
+    color: "from-blue-500 to-purple-600"
+  },
+  {
+    id: 16,
+    title: "Botanical Garden Stroll",
+    description: "Wander through beautiful gardens, take photos, and enjoy the peaceful atmosphere together.",
+    category: "Outdoor",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Botanical garden",
+    image: "🌺",
+    color: "from-pink-400 to-rose-500"
+  },
+  {
+    id: 17,
+    title: "Pottery Making Class",
+    description: "Get your hands dirty and create something together. Take home your masterpieces as keepsakes.",
+    category: "Creative",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Pottery studio",
+    image: "🏺",
+    color: "from-amber-600 to-orange-700"
+  },
+  {
+    id: 18,
+    title: "Food Truck Festival",
+    description: "Sample different cuisines from food trucks, share bites, and discover new favorite foods together.",
+    category: "Food",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Food truck park",
+    image: "🍕",
+    color: "from-red-400 to-orange-500"
+  },
+  {
+    id: 19,
+    title: "Sunrise Yoga & Brunch",
+    description: "Start the day with outdoor yoga, then treat yourselves to a delicious brunch at a local spot.",
+    category: "Wellness",
+    duration: "3-4 hours",
+    budget: "$$",
+    location: "Park + Brunch spot",
+    image: "🧘",
+    color: "from-green-300 to-teal-400"
+  },
+  {
+    id: 20,
+    title: "Escape Room Challenge",
+    description: "Work together to solve puzzles and escape before time runs out. Teamwork makes the dream work!",
+    category: "Adventure",
+    duration: "1-2 hours",
+    budget: "$$",
+    location: "Escape room",
+    image: "🔐",
+    color: "from-gray-600 to-slate-700"
+  },
+  {
+    id: 21,
+    title: "Drive-In Movie",
+    description: "Cozy up in the car with blankets and snacks, and watch a movie under the stars.",
+    category: "Entertainment",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Drive-in theater",
+    image: "🎬",
+    color: "from-indigo-600 to-purple-700"
+  },
+  {
+    id: 22,
+    title: "Bike Ride & Ice Cream",
+    description: "Rent bikes and explore your city, then stop for ice cream at a local shop.",
+    category: "Outdoor",
+    duration: "2-3 hours",
+    budget: "$",
+    location: "City trails",
+    image: "🚲",
+    color: "from-cyan-400 to-blue-500"
+  },
+  {
+    id: 23,
+    title: "Cooking Class Together",
+    description: "Learn to make pasta, sushi, or another cuisine from a professional chef. Then enjoy your creation!",
+    category: "Food",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Cooking school",
+    image: "🍝",
+    color: "from-red-500 to-pink-600"
+  },
+  {
+    id: 24,
+    title: "Antique Shopping",
+    description: "Browse antique shops and flea markets, hunt for treasures, and share stories about interesting finds.",
+    category: "Shopping",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Antique district",
+    image: "🕰️",
+    color: "from-amber-600 to-yellow-700"
+  },
+  {
+    id: 25,
+    title: "Sunset Kayaking",
+    description: "Paddle together as the sun sets, enjoy the peaceful water, and maybe spot some wildlife.",
+    category: "Outdoor",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Lake or river",
+    image: "🛶",
+    color: "from-blue-400 to-cyan-500"
+  },
+  {
+    id: 26,
+    title: "Game Night at Home",
+    description: "Break out board games, card games, or video games. Make snacks and compete for bragging rights!",
+    category: "Indoor",
+    duration: "3-4 hours",
+    budget: "$",
+    location: "Home",
+    image: "🎲",
+    color: "from-purple-500 to-indigo-600"
+  },
+  {
+    id: 27,
+    title: "Rooftop Bar & City Views",
+    description: "Enjoy cocktails with stunning city views, watch the sunset, and have deep conversations.",
+    category: "Nightlife",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Rooftop bar",
+    image: "🍸",
+    color: "from-purple-600 to-pink-700"
+  },
+  {
+    id: 28,
+    title: "Volunteer Together",
+    description: "Give back to your community by volunteering at an animal shelter, food bank, or community garden.",
+    category: "Meaningful",
+    duration: "2-3 hours",
+    budget: "Free",
+    location: "Volunteer location",
+    image: "❤️",
+    color: "from-red-500 to-pink-600"
+  },
+  {
+    id: 29,
+    title: "Photography Walk",
+    description: "Take a walk with cameras (or phones) and capture interesting moments, architecture, and each other.",
+    category: "Creative",
+    duration: "2-3 hours",
+    budget: "$",
+    location: "City or nature",
+    image: "📸",
+    color: "from-gray-500 to-slate-600"
+  },
+  {
+    id: 30,
+    title: "Dance Class",
+    description: "Learn salsa, swing, or ballroom dancing together. Laugh at mistakes and enjoy the connection.",
+    category: "Active",
+    duration: "1-2 hours",
+    budget: "$$",
+    location: "Dance studio",
+    image: "💃",
+    color: "from-pink-500 to-rose-600"
+  },
+  {
+    id: 31,
+    title: "Farm Visit & Petting Zoo",
+    description: "Visit a local farm, interact with animals, pick fresh produce, and enjoy the countryside.",
+    category: "Outdoor",
+    duration: "3-4 hours",
+    budget: "$$",
+    location: "Farm",
+    image: "🐑",
+    color: "from-green-400 to-lime-500"
+  },
+  {
+    id: 32,
+    title: "Concert Under the Stars",
+    description: "Attend an outdoor concert or music festival. Bring blankets and enjoy live music together.",
+    category: "Entertainment",
+    duration: "3-4 hours",
+    budget: "$$",
+    location: "Outdoor venue",
+    image: "🎵",
+    color: "from-indigo-500 to-purple-600"
+  },
+  {
+    id: 33,
+    title: "DIY Craft Night",
+    description: "Pick a craft project - make candles, tie-dye shirts, or create something unique together.",
+    category: "Creative",
+    duration: "2-3 hours",
+    budget: "$$",
+    location: "Home",
+    image: "🕯️",
+    color: "from-yellow-400 to-orange-500"
+  },
+  {
+    id: 34,
+    title: "Ghost Tour",
+    description: "Take a spooky walking tour of your city's haunted spots. Hold hands if you get scared!",
+    category: "Adventure",
+    duration: "1-2 hours",
+    budget: "$$",
+    location: "Historic district",
+    image: "👻",
+    color: "from-gray-700 to-slate-800"
+  },
+  {
+    id: 35,
+    title: "Beach Volleyball & Smoothies",
+    description: "Play beach volleyball, work up a sweat, then cool down with fresh smoothies.",
+    category: "Active",
+    duration: "2-3 hours",
+    budget: "$",
+    location: "Beach",
+    image: "🏐",
+    color: "from-blue-400 to-teal-500"
   }
 ];
 
@@ -467,47 +802,72 @@ function SwipeableDateCard({
           whileDrag={{ cursor: 'grabbing' }}
           className="absolute inset-0"
         >
-          <Card className="p-8 border-0 shadow-2xl h-full flex flex-col">
-            <div className="text-6xl mb-4 text-center">{date.image}</div>
-            <h2 className="text-2xl text-center mb-3">{date.title}</h2>
-            <p className="text-sm text-gray-600 text-center mb-6 flex-1">{date.description}</p>
+          <Card className="border-0 shadow-2xl h-full flex flex-col overflow-hidden relative">
+            {/* Gradient Background */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${date.color || 'from-pink-400 to-purple-500'} opacity-10`} />
             
-            <div className="grid grid-cols-3 gap-2 mb-6">
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <Clock className="w-5 h-5 mx-auto mb-1 text-gray-600" />
-                <p className="text-xs text-gray-600">{date.duration}</p>
+            {/* Content */}
+            <div className="relative z-10 p-8 flex flex-col h-full">
+              {/* Emoji Icon */}
+              <div className="text-8xl mb-6 text-center drop-shadow-lg">
+                {date.image}
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <DollarSign className="w-5 h-5 mx-auto mb-1 text-gray-600" />
-                <p className="text-xs text-gray-600">{date.budget}</p>
+              
+              {/* Title */}
+              <h2 className="text-3xl font-bold text-center mb-4 text-gray-800">
+                {date.title}
+              </h2>
+              
+              {/* Description */}
+              <p className="text-base text-gray-700 text-center mb-8 flex-1 leading-relaxed">
+                {date.description}
+              </p>
+              
+              {/* Info Cards */}
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/50">
+                  <Clock className="w-6 h-6 mx-auto mb-2 text-purple-600" />
+                  <p className="text-xs font-semibold text-gray-700">{date.duration}</p>
+                </div>
+                <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/50">
+                  <DollarSign className="w-6 h-6 mx-auto mb-2 text-pink-600" />
+                  <p className="text-xs font-semibold text-gray-700">{date.budget}</p>
+                </div>
+                <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/50">
+                  <MapPin className="w-6 h-6 mx-auto mb-2 text-blue-600" />
+                  <p className="text-xs font-semibold text-gray-700">{date.location}</p>
+                </div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <MapPin className="w-5 h-5 mx-auto mb-1 text-gray-600" />
-                <p className="text-xs text-gray-600">{date.location}</p>
-              </div>
-            </div>
 
-            {/* Button fallback for non-touch devices */}
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={() => {
-                  setExitX('-100%');
-                  setTimeout(() => onSwipe(false), 100);
-                }}
-                variant="outline"
-                className="flex-1 h-16 border-2 border-gray-300 hover:border-red-500 hover:bg-red-50"
-              >
-                <X className="w-8 h-8 text-red-500" />
-              </Button>
-              <Button
-                onClick={() => {
-                  setExitX('100%');
-                  setTimeout(() => onSwipe(true), 100);
-                }}
-                className="flex-1 h-16 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-              >
-                <Heart className="w-8 h-8 fill-white" />
-              </Button>
+              {/* Category Badge */}
+              <div className="mb-6 text-center">
+                <span className="inline-block px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700 shadow-sm">
+                  {date.category}
+                </span>
+              </div>
+
+              {/* Button fallback for non-touch devices */}
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={() => {
+                    setExitX('-100%');
+                    setTimeout(() => onSwipe(false), 100);
+                  }}
+                  variant="outline"
+                  className="flex-1 h-16 border-2 border-gray-300 hover:border-red-500 hover:bg-red-50 transition-all"
+                >
+                  <X className="w-8 h-8 text-red-500" />
+                </Button>
+                <Button
+                  onClick={() => {
+                    setExitX('100%');
+                    setTimeout(() => onSwipe(true), 100);
+                  }}
+                  className="flex-1 h-16 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg transition-all"
+                >
+                  <Heart className="w-8 h-8 fill-white" />
+                </Button>
+              </div>
             </div>
           </Card>
         </motion.div>
