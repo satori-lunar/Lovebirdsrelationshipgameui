@@ -7,7 +7,7 @@ import { useAuth } from './useAuth';
 export function useDailyQuestion() {
   const { user } = useAuth();
   const { relationship } = useRelationship();
-  const { partnerId } = usePartner();
+  const { partnerId } = usePartner(relationship);
   const queryClient = useQueryClient();
 
   const { data: question, isLoading } = useQuery({
