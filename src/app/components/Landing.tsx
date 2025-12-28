@@ -9,7 +9,7 @@ interface LandingProps {
 }
 
 export function Landing({ onGetStarted }: LandingProps) {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const handleGetStarted = () => {
@@ -55,9 +55,42 @@ export function Landing({ onGetStarted }: LandingProps) {
             {user ? 'Continue to App' : 'Sign Up & Get Started'}
           </Button>
           
-          <p className="text-sm text-gray-500">
-            Then $5/month per couple • No credit card required • Cancel anytime
-          </p>
+          <div className="text-center space-y-2">
+            {user ? (
+              <>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-sm text-gray-600 hover:text-gray-900 underline block"
+                >
+                  Sign in to a different account
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await signOut();
+                    } catch (error) {
+                      console.error('Sign out error:', error);
+                    }
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-900 underline block"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-sm text-gray-600 hover:text-gray-900 underline"
+                >
+                  Already have an account? Sign In
+                </button>
+                <p className="text-sm text-gray-500">
+                  Then $5/month per couple • No credit card required • Cancel anytime
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
         <AuthModal 
