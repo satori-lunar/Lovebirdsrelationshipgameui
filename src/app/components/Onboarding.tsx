@@ -6,15 +6,20 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Progress } from './ui/progress';
+import { useAuth } from '../hooks/useAuth';
+import { onboardingService } from '../services/onboardingService';
+import { toast } from 'sonner';
 
 interface OnboardingProps {
-  onComplete: (data: any) => void;
+  onComplete: () => void;
 }
 
 const TOTAL_STEPS = 9;
 
 export function Onboarding({ onComplete }: OnboardingProps) {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     partnerName: '',
@@ -46,20 +51,45 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     }));
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
-      handleComplete();
+      await handleComplete();
     }
   };
 
-  const handleComplete = () => {
-    // Return form data for mock mode
-    onComplete({
-      name: formData.name,
-      partnerName: formData.partnerName,
-    });
+  const handleComplete = async () => {
+    if (!user) {
+      toast.error('Please sign in to continue');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await onboardingService.saveOnboarding(user.id, {
+        name: formData.name,
+        partnerName: formData.partnerName,
+        livingTogether: formData.livingTogether,
+        relationshipDuration: formData.duration,
+        relationshipGoals: formData.relationshipGoals,
+        loveLanguages: formData.loveLanguage,
+        favoriteActivities: formData.favoriteActivities,
+        budgetComfort: formData.budget,
+        energyLevel: formData.energy,
+        feelLoved: formData.feelLoved,
+        wishHappened: formData.wishHappened,
+        communicationStyle: formData.communicationStyle,
+        fearsTriggers: formData.fearsTriggers,
+        healthAccessibility: formData.healthAccessibility,
+      });
+      toast.success('Onboarding complete!');
+      onComplete();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save onboarding data');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const prevStep = () => {
@@ -420,10 +450,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             
             <Button
               onClick={nextStep}
+              disabled={isSaving}
               className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white flex items-center gap-2 px-6"
             >
-              {step === TOTAL_STEPS ? 'Complete' : 'Continue'}
-              {step !== TOTAL_STEPS && <ChevronRight className="w-4 h-4" />}
+              {isSaving ? 'Saving...' : step === TOTAL_STEPS ? 'Complete' : 'Continue'}
+              {step !== TOTAL_STEPS && !isSaving && <ChevronRight className="w-4 h-4" />}
             </Button>
           </div>
         </div>

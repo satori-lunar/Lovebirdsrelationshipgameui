@@ -1,11 +1,25 @@
+import { useState } from 'react';
 import { Heart, Sparkles, Gift, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
+import { AuthModal } from './AuthModal';
+import { useAuth } from '../hooks/useAuth';
 
 interface LandingProps {
   onGetStarted: () => void;
 }
 
 export function Landing({ onGetStarted }: LandingProps) {
+  const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const handleGetStarted = () => {
+    if (user) {
+      onGetStarted();
+    } else {
+      setShowAuthModal(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex flex-col items-center justify-center p-6">
       <div className="text-center space-y-8 max-w-md">
@@ -25,16 +39,22 @@ export function Landing({ onGetStarted }: LandingProps) {
 
         <div className="space-y-3 pt-4">
           <Button 
-            onClick={onGetStarted}
+            onClick={handleGetStarted}
             className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6"
           >
-            Start Your 7-Day Free Trial
+            {user ? 'Continue to App' : 'Start Your 7-Day Free Trial'}
           </Button>
           
           <p className="text-sm text-gray-500">
             Then $5/month per couple • No credit card required • Cancel anytime
           </p>
         </div>
+
+        <AuthModal 
+          open={showAuthModal} 
+          onOpenChange={setShowAuthModal}
+          onSuccess={onGetStarted}
+        />
 
         <div className="grid grid-cols-2 gap-4 pt-8 text-left">
           <div className="space-y-2">

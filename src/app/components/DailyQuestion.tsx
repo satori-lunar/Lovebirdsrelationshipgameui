@@ -1,39 +1,127 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { motion } from 'motion/react';
+import { useDailyQuestion } from '../hooks/useDailyQuestion';
+import { useRelationship } from '../hooks/useRelationship';
+import { toast } from 'sonner';
 
 interface DailyQuestionProps {
   onComplete: () => void;
 }
 
 export function DailyQuestion({ onComplete }: DailyQuestionProps) {
+  const { relationship } = useRelationship();
+  const {
+    question,
+    isLoading,
+    userAnswer,
+    userGuess,
+    partnerAnswer,
+    saveAnswer,
+    saveGuess,
+    hasAnswered,
+    hasGuessed,
+    canSeeFeedback,
+    isSavingAnswer,
+    isSavingGuess,
+  } = useDailyQuestion();
+
   const [stage, setStage] = useState<'answer' | 'guess' | 'feedback'>('answer');
   const [answerText, setAnswerText] = useState('');
   const [guessText, setGuessText] = useState('');
 
-  const question = "What is your favorite movie?";
-  const partnerAnswer = "The Goonies"; // Mock partner's answer
+  useEffect(() => {
+    if (hasAnswered && !hasGuessed) {
+      setStage('guess');
+    } else if (hasAnswered && hasGuessed && canSeeFeedback) {
+      setStage('feedback');
+    } else if (!hasAnswered) {
+      setStage('answer');
+    }
+  }, [hasAnswered, hasGuessed, canSeeFeedback]);
 
-  const handleSubmitAnswer = () => {
-    if (!answerText.trim()) return;
-    setStage('guess');
+  useEffect(() => {
+    if (userAnswer) {
+      setAnswerText(userAnswer.answer_text);
+    }
+  }, [userAnswer]);
+
+  useEffect(() => {
+    if (userGuess) {
+      setGuessText(userGuess.guess_text);
+    }
+  }, [userGuess]);
+
+  if (!relationship?.partner_b_id) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6 flex items-center justify-center">
+        <div className="bg-white rounded-3xl p-8 shadow-lg text-center max-w-md">
+          <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl mb-2">Connect with your partner first</h2>
+          <p className="text-gray-600 mb-6">
+            You need to connect with your partner before you can answer daily questions together.
+          </p>
+          <Button
+            onClick={onComplete}
+            className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !question) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading today's question...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSubmitAnswer = async () => {
+    if (!answerText.trim()) {
+      toast.error('Please enter an answer');
+      return;
+    }
+
+    try {
+      await saveAnswer({ answerText: answerText.trim() });
+      setStage('guess');
+      toast.success('Answer saved!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save answer');
+    }
   };
 
-  const handleSubmitGuess = () => {
-    if (!guessText.trim()) return;
-    setStage('feedback');
+  const handleSubmitGuess = async () => {
+    if (!guessText.trim()) {
+      toast.error('Please enter a guess');
+      return;
+    }
+
+    try {
+      await saveGuess({ guessText: guessText.trim() });
+      setStage('feedback');
+      toast.success('Guess saved!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save guess');
+    }
   };
 
   const handleComplete = () => {
-    setStage('answer');
     setAnswerText('');
     setGuessText('');
     onComplete();
   };
 
-  const isCorrect = guessText.toLowerCase().includes(partnerAnswer.toLowerCase());
+  const isCorrect = partnerAnswer && guessText.toLowerCase().includes(partnerAnswer.answer_text.toLowerCase());
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6">
@@ -55,7 +143,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
             </div>
 
             <div className="p-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl">
-              <p className="text-xl text-center">{question}</p>
+              <p className="text-xl text-center">{question.question_text}</p>
             </div>
 
             <div className="space-y-3">
@@ -70,10 +158,10 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
               
               <Button
                 onClick={handleSubmitAnswer}
-                disabled={!answerText.trim()}
+                disabled={!answerText.trim() || isSavingAnswer}
                 className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6"
               >
-                Submit Answer
+                {isSavingAnswer ? 'Saving...' : 'Submit Answer'}
               </Button>
             </div>
 
@@ -100,7 +188,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
             </div>
 
             <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl">
-              <p className="text-xl text-center">{question}</p>
+              <p className="text-xl text-center">{question.question_text}</p>
               <p className="text-center text-sm text-gray-600 mt-2">What would your partner say?</p>
             </div>
 
@@ -116,16 +204,16 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
               
               <Button
                 onClick={handleSubmitGuess}
-                disabled={!guessText.trim()}
+                disabled={!guessText.trim() || isSavingGuess}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-6"
               >
-                Submit Guess
+                {isSavingGuess ? 'Saving...' : 'Submit Guess'}
               </Button>
             </div>
           </motion.div>
         )}
 
-        {stage === 'feedback' && (
+        {stage === 'feedback' && partnerAnswer && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -166,7 +254,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
 
                 <div className="p-4 bg-pink-50 rounded-xl">
                   <p className="text-sm text-gray-600 mb-1">Your partner's answer:</p>
-                  <p className="font-semibold">{partnerAnswer}</p>
+                  <p className="font-semibold">{partnerAnswer.answer_text}</p>
                 </div>
               </div>
 
