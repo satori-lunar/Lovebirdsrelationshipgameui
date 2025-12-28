@@ -58,20 +58,22 @@ export const supabase = createClient(
   }
 );
 
-// Test connection on initialization
+// Test connection on initialization (non-blocking)
 if (isSupabaseConfigured()) {
-  // Test the connection
-  supabase.auth.getSession()
-    .then(() => {
-      console.log('✅ Supabase connection test successful');
-    })
-    .catch((error) => {
-      console.error('❌ Supabase connection test failed:', error);
-      console.error('This might indicate:');
-      console.error('- Network connectivity issues');
-      console.error('- Incorrect Supabase URL');
-      console.error('- Supabase project is paused or inactive');
-      console.error('- CORS configuration issues');
-    });
+  // Test the connection asynchronously without blocking module initialization
+  setTimeout(() => {
+    supabase.auth.getSession()
+      .then(() => {
+        console.log('✅ Supabase connection test successful');
+      })
+      .catch((error) => {
+        console.error('❌ Supabase connection test failed:', error);
+        console.error('This might indicate:');
+        console.error('- Network connectivity issues');
+        console.error('- Incorrect Supabase URL');
+        console.error('- Supabase project is paused or inactive');
+        console.error('- CORS configuration issues');
+      });
+  }, 0);
 }
 
