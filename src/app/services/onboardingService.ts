@@ -64,27 +64,40 @@ export const onboardingService = {
     // Use upsert (insert or update) to handle existing onboarding
     // At this point, we've verified the user exists, so foreign key should be satisfied
     try {
-      const { data, error } = await api.supabase
+      const upsertData: any = {
+        user_id: userId,
+        name: data.name,
+        is_private: true, // Sensitive data is private by default
+        updated_at: new Date().toISOString(),
+      };
+
+      // New onboarding fields
+      if (data.birthday) upsertData.birthday = data.birthday;
+      if (data.pronouns) upsertData.pronouns = data.pronouns;
+      if (data.love_language?.primary) upsertData.love_language_primary = data.love_language.primary;
+      if (data.love_language?.secondary) upsertData.love_language_secondary = data.love_language.secondary;
+      if (data.wants_needs) upsertData.wants_needs = data.wants_needs;
+      if (data.preferences) upsertData.preferences = data.preferences;
+      if (data.consent) upsertData.consent = data.consent;
+
+      // Legacy fields for backward compatibility (optional)
+      if (data.partnerName) upsertData.partner_name = data.partnerName;
+      if (data.livingTogether) upsertData.living_together = data.livingTogether;
+      if (data.relationshipDuration) upsertData.relationship_duration = data.relationshipDuration;
+      if (data.loveLanguages) upsertData.love_languages = data.loveLanguages;
+      if (data.favoriteActivities) upsertData.favorite_activities = data.favoriteActivities;
+      if (data.budgetComfort) upsertData.budget_comfort = data.budgetComfort;
+      if (data.energyLevel) upsertData.energy_level = data.energyLevel;
+      if (data.feelLoved) upsertData.feel_loved = data.feelLoved;
+      if (data.wishHappened) upsertData.wish_happened = data.wishHappened;
+      if (data.communicationStyle) upsertData.communication_style = data.communicationStyle;
+      if (data.fearsTriggers) upsertData.fears_triggers = data.fearsTriggers;
+      if (data.healthAccessibility) upsertData.health_accessibility = data.healthAccessibility;
+      if (data.relationshipGoals) upsertData.relationship_goals = data.relationshipGoals;
+
+      const { data: result, error } = await api.supabase
         .from('onboarding_responses')
-        .upsert({
-          user_id: userId,
-          name: data.name,
-          partner_name: data.partnerName,
-          living_together: data.livingTogether || null,
-          relationship_duration: data.relationshipDuration || null,
-          love_languages: data.loveLanguages || [],
-          favorite_activities: data.favoriteActivities || [],
-          budget_comfort: data.budgetComfort || null,
-          energy_level: data.energyLevel || null,
-          feel_loved: data.feelLoved || null,
-          wish_happened: data.wishHappened || null,
-          communication_style: data.communicationStyle || null,
-          fears_triggers: data.fearsTriggers || null,
-          health_accessibility: data.healthAccessibility || null,
-          relationship_goals: data.relationshipGoals || null,
-          is_private: true, // Sensitive data is private by default
-          updated_at: new Date().toISOString(),
-        }, {
+        .upsert(upsertData, {
           onConflict: 'user_id'
         })
         .select()
@@ -98,7 +111,7 @@ export const onboardingService = {
         throw new Error(error.message || 'Failed to save onboarding data');
       }
 
-      return data;
+      return result;
     } catch (error: any) {
       if (error.message) {
         throw error;
@@ -139,7 +152,20 @@ export const onboardingService = {
 
   async updateOnboarding(userId: string, data: Partial<OnboardingData>): Promise<OnboardingResponse> {
     const updateData: any = {};
+    
+    // New onboarding fields
     if (data.name !== undefined) updateData.name = data.name;
+    if (data.birthday !== undefined) updateData.birthday = data.birthday;
+    if (data.pronouns !== undefined) updateData.pronouns = data.pronouns;
+    if (data.love_language !== undefined) {
+      if (data.love_language.primary) updateData.love_language_primary = data.love_language.primary;
+      if (data.love_language.secondary !== undefined) updateData.love_language_secondary = data.love_language.secondary;
+    }
+    if (data.wants_needs !== undefined) updateData.wants_needs = data.wants_needs;
+    if (data.preferences !== undefined) updateData.preferences = data.preferences;
+    if (data.consent !== undefined) updateData.consent = data.consent;
+
+    // Legacy fields for backward compatibility
     if (data.partnerName !== undefined) updateData.partner_name = data.partnerName;
     if (data.livingTogether !== undefined) updateData.living_together = data.livingTogether;
     if (data.relationshipDuration !== undefined) updateData.relationship_duration = data.relationshipDuration;
@@ -153,6 +179,8 @@ export const onboardingService = {
     if (data.fearsTriggers !== undefined) updateData.fears_triggers = data.fearsTriggers;
     if (data.healthAccessibility !== undefined) updateData.health_accessibility = data.healthAccessibility;
     if (data.relationshipGoals !== undefined) updateData.relationship_goals = data.relationshipGoals;
+
+    updateData.updated_at = new Date().toISOString();
 
     const response = await handleSupabaseError(
       api.supabase

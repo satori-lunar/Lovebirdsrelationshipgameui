@@ -49,8 +49,8 @@ export default function App() {
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
-        // Not authenticated - show landing
-        if (currentView !== 'landing' && currentView !== 'onboarding') {
+        // Not authenticated - show landing (user must sign up first)
+        if (currentView !== 'landing') {
           setCurrentView('landing');
         }
       } else if (user) {
@@ -60,12 +60,10 @@ export default function App() {
           if (onboarding) {
             // User has completed onboarding - go to home
             setCurrentView('home');
-          } else if (!onboardingError) {
+          } else {
             // User hasn't completed onboarding - show onboarding
-            // Only set to onboarding if we're not already there (to avoid loops)
-            if (currentView === 'landing') {
-              setCurrentView('onboarding');
-            }
+            // This happens after sign up
+            setCurrentView('onboarding');
           }
         }
       }
@@ -87,7 +85,10 @@ export default function App() {
     <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50">
       <Toaster />
       {currentView === 'landing' && (
-        <Landing onGetStarted={() => setCurrentView('onboarding')} />
+        <Landing onGetStarted={() => {
+          // Landing page handles sign up, then App.tsx will redirect to onboarding
+          // after user is authenticated
+        }} />
       )}
 
       {currentView === 'onboarding' && (

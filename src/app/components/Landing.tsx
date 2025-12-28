@@ -47,7 +47,7 @@ export function Landing({ onGetStarted }: LandingProps) {
             onClick={handleGetStarted}
             className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6"
           >
-            {user ? 'Continue to App' : 'Start Your 7-Day Free Trial'}
+            {user ? 'Continue to App' : 'Sign Up & Get Started'}
           </Button>
           
           <p className="text-sm text-gray-500">
