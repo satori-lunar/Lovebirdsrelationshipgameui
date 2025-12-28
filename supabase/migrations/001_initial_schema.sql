@@ -187,6 +187,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger for onboarding_responses
+-- Drop trigger if it exists to allow re-running migrations
+DROP TRIGGER IF EXISTS update_onboarding_responses_updated_at ON public.onboarding_responses;
 CREATE TRIGGER update_onboarding_responses_updated_at
   BEFORE UPDATE ON public.onboarding_responses
   FOR EACH ROW
