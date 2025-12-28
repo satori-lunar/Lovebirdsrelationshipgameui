@@ -77,10 +77,10 @@ export function Memories({ onBack }: MemoriesProps) {
             </div>
             <Dialog open={isAddingMemory} onOpenChange={setIsAddingMemory}>
               <DialogTrigger asChild>
-                <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0">
+            <Button variant="secondary" className="bg-white/20 hover:bg-white/30 text-white border-0">
                   <Plus className="w-4 h-4 mr-2" />
-                  Add
-                </Button>
+              Add
+            </Button>
               </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>

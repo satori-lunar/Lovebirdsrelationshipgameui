@@ -20,6 +20,10 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Accept",
+          "value": "application/json, text/plain, */*"
         }
       ]
     }

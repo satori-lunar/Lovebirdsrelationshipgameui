@@ -62,7 +62,12 @@ export const supabase = createClient(
     global: {
       headers: {
         'x-client-info': 'love-birds-app',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
       },
+    },
+    db: {
+      schema: 'public',
     },
   }
 );
