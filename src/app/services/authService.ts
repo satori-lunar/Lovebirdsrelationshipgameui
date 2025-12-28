@@ -37,8 +37,7 @@ export const authService = {
       });
 
     if (profileError) {
-      // Clean up auth user if profile creation fails
-      await api.supabase.auth.admin.deleteUser(authData.user.id);
+      console.error('Failed to create user profile:', profileError);
       throw new Error(profileError.message);
     }
 
