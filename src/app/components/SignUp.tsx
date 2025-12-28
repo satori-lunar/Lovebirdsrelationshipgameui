@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useAuth } from '../hooks/useAuth';
+import { authService } from '../services/authService';
 import { toast } from 'sonner';
 
 interface SignUpProps {
@@ -12,7 +13,7 @@ interface SignUpProps {
 }
 
 export function SignUp({ onSuccess, onBack }: SignUpProps) {
-  const { signUp, user } = useAuth();
+  const { signUp, user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -55,15 +56,34 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
 
   // Wait for user session to be established after sign-up
   useEffect(() => {
-    if (signUpSuccess && user) {
-      // User session is now available, wait a moment then redirect
-      setIsLoading(false);
-      const timer = setTimeout(() => {
-        onSuccess();
-      }, 1500);
-      return () => clearTimeout(timer);
+    if (signUpSuccess && user && !authLoading) {
+      // Verify session exists before redirecting
+      const checkSession = async () => {
+        try {
+          const session = await authService.getSession();
+          if (session) {
+            // Session is available, wait a moment then redirect
+            setIsLoading(false);
+            setTimeout(() => {
+              onSuccess();
+            }, 1500);
+          } else {
+            // No session yet, wait and check again
+            setTimeout(checkSession, 500);
+          }
+        } catch (error) {
+          console.error('Error checking session:', error);
+          // If error checking session, wait a bit longer and try redirect anyway
+          setIsLoading(false);
+          setTimeout(() => {
+            onSuccess();
+          }, 2000);
+        }
+      };
+      
+      checkSession();
     }
-  }, [signUpSuccess, user, onSuccess]);
+  }, [signUpSuccess, user, authLoading, onSuccess]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex flex-col items-center justify-center p-6">
