@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Toaster } from './components/ui/sonner';
-import { Landing } from './components/Landing';
+import { EntryChoice } from './components/EntryChoice';
+import { FeatureSlides } from './components/FeatureSlides';
+import { SignUp } from './components/SignUp';
 import { Onboarding } from './components/Onboarding';
 import { Home } from './components/Home';
 import { DailyQuestion } from './components/DailyQuestion';
@@ -10,16 +12,17 @@ import { GiftGuidance } from './components/GiftGuidance';
 import { RelationshipTracker } from './components/RelationshipTracker';
 import { Memories } from './components/Memories';
 import { Settings } from './components/Settings';
+import { AuthModal } from './components/AuthModal';
 import { useAuth } from './hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 
-type AppState = 'landing' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'tracker' | 'memories' | 'settings';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'tracker' | 'memories' | 'settings';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
-  const [currentView, setCurrentView] = useState<AppState>('landing');
-  const [hasJustSignedUp, setHasJustSignedUp] = useState(false);
+  const [currentView, setCurrentView] = useState<AppState>('entry');
+  const [showSignInModal, setShowSignInModal] = useState(false);
 
   const { data: onboarding, error: onboardingError } = useQuery({
     queryKey: ['onboarding', user?.id],
@@ -46,54 +49,39 @@ export default function App() {
     setCurrentView('home');
   };
 
-  // Listen for sign up event from Landing page
-  useEffect(() => {
-    const handleSignUp = () => {
-      setHasJustSignedUp(true);
-    };
-    
-    window.addEventListener('userJustSignedUp', handleSignUp);
-    return () => window.removeEventListener('userJustSignedUp', handleSignUp);
-  }, []);
-
-  // Show landing if not authenticated, or if authenticated but no onboarding
+  // Handle routing based on auth and onboarding status
   useEffect(() => {
     // Wait for auth to finish loading
     if (authLoading) {
       return;
     }
 
-    // If not authenticated, always show landing
+    // If not authenticated and not in entry flow, show entry
     if (!user) {
-      if (currentView !== 'landing') {
-        setCurrentView('landing');
+      if (!['entry', 'feature-slides', 'sign-up', 'sign-in'].includes(currentView)) {
+        setCurrentView('entry');
       }
       return;
     }
 
     // User is authenticated - check onboarding status
-    // Only auto-redirect if we're on landing page AND user just signed up
-    // Don't auto-redirect if user already had a session (let them click "Continue to App")
-    if (currentView === 'landing' && hasJustSignedUp) {
-      // The onboarding query is enabled only when user exists
-      // If onboarding is null, it means user hasn't completed onboarding
-      // If onboarding is undefined, query hasn't run yet (shouldn't happen since enabled: !!user)
-      // Add a small delay to let the auth modal show success message
-      const redirectTimer = setTimeout(() => {
-        if (onboarding === null) {
-          // User hasn't completed onboarding - show onboarding
-          setCurrentView('onboarding');
-          setHasJustSignedUp(false); // Reset flag
-        } else if (onboarding) {
-          // User has completed onboarding - go to home
-          setCurrentView('home');
-          setHasJustSignedUp(false); // Reset flag
-        }
-      }, 2000); // Wait 2 seconds to let user see success message
-      
-      return () => clearTimeout(redirectTimer);
+    // Only auto-redirect if we're in the sign-up flow
+    if (currentView === 'sign-up') {
+      // After sign up, redirect to onboarding
+      if (onboarding === null) {
+        setCurrentView('onboarding');
+      } else if (onboarding) {
+        setCurrentView('home');
+      }
+    } else if (currentView === 'entry' || currentView === 'feature-slides') {
+      // If user is authenticated but still on entry/slides, check onboarding
+      if (onboarding === null) {
+        setCurrentView('onboarding');
+      } else if (onboarding) {
+        setCurrentView('home');
+      }
     }
-  }, [user, onboarding, authLoading, currentView, hasJustSignedUp]);
+  }, [user, onboarding, authLoading, currentView]);
 
   if (authLoading) {
     return (
@@ -106,19 +94,53 @@ export default function App() {
     );
   }
 
+  const handleSignInSuccess = () => {
+    setShowSignInModal(false);
+    // Check onboarding status and redirect
+    if (onboarding === null) {
+      setCurrentView('onboarding');
+    } else if (onboarding) {
+      setCurrentView('home');
+    }
+  };
+
   return (
     <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50">
       <Toaster />
-      {currentView === 'landing' && (
-        <Landing onGetStarted={() => {
-          // When user clicks "Continue to App", signal that they want to proceed
-          setHasJustSignedUp(true);
-        }} />
+      
+      {currentView === 'entry' && (
+        <EntryChoice
+          onSignIn={() => setShowSignInModal(true)}
+          onFirstTime={() => setCurrentView('feature-slides')}
+        />
+      )}
+
+      {currentView === 'feature-slides' && (
+        <FeatureSlides
+          onComplete={() => setCurrentView('sign-up')}
+          onBack={() => setCurrentView('entry')}
+        />
+      )}
+
+      {currentView === 'sign-up' && (
+        <SignUp
+          onSuccess={() => {
+            // After successful sign up, redirect handled by useEffect
+          }}
+          onBack={() => setCurrentView('feature-slides')}
+        />
       )}
 
       {currentView === 'onboarding' && user && (
         <Onboarding onComplete={handleOnboardingComplete} />
       )}
+
+      <AuthModal
+        open={showSignInModal}
+        onOpenChange={setShowSignInModal}
+        onSuccess={handleSignInSuccess}
+        signInOnly={true}
+      />
 
       {currentView === 'home' && (
         <Home 

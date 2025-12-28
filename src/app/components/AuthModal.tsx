@@ -10,10 +10,11 @@ interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  signInOnly?: boolean;
 }
 
-export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
-  const [isSignUp, setIsSignUp] = useState(true);
+export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }: AuthModalProps) {
+  const [isSignUp, setIsSignUp] = useState(!signInOnly);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -121,15 +122,17 @@ export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
           >
             {isLoading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
           </Button>
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
-          </div>
+          {!signInOnly && (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>
