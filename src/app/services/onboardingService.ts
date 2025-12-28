@@ -62,8 +62,9 @@ export const onboardingService = {
     }
 
     // Use upsert (insert or update) to handle existing onboarding
-    const response = await handleSupabaseError(
-      api.supabase
+    // At this point, we've verified the user exists, so foreign key should be satisfied
+    try {
+      const { data, error } = await api.supabase
         .from('onboarding_responses')
         .upsert({
           user_id: userId,
@@ -87,10 +88,23 @@ export const onboardingService = {
           onConflict: 'user_id'
         })
         .select()
-        .single()
-    );
+        .single();
 
-    return response;
+      if (error) {
+        if (error.code === '23503') {
+          // Foreign key constraint violation - user doesn't exist
+          throw new Error('User profile not found. Please sign out and sign in again.');
+        }
+        throw new Error(error.message || 'Failed to save onboarding data');
+      }
+
+      return data;
+    } catch (error: any) {
+      if (error.message) {
+        throw error;
+      }
+      throw new Error('Failed to save onboarding data');
+    }
   },
 
   async getOnboarding(userId: string): Promise<OnboardingResponse | null> {
