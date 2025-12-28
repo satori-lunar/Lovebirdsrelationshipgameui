@@ -22,7 +22,7 @@ const SLIDES = [
   },
   {
     headline: 'Track your relationship growth',
-    body: 'See how often you're connecting, planning dates, and showing up for each other — all in one place.',
+    body: "See how often you're connecting, planning dates, and showing up for each other — all in one place.",
   },
   {
     headline: 'Ready to get started?',
