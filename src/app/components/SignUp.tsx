@@ -64,7 +64,6 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
       return () => clearTimeout(timer);
     }
   }, [signUpSuccess, user, onSuccess]);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex flex-col items-center justify-center p-6">
