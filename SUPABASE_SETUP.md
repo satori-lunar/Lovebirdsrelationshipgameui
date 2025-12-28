@@ -22,9 +22,31 @@ Copy and paste the contents of `supabase/migrations/002_rls_policies.sql` into t
 
 ## 3. Environment Variables
 
+### Local Development
+
 Your `.env` file is already configured with:
 - `VITE_SUPABASE_URL=https://vaxcujmbynxgxuhonyyp.supabase.co`
 - `VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+
+### Vercel Deployment
+
+**You MUST configure these environment variables in Vercel for production:**
+
+1. Go to your Vercel project dashboard
+2. Navigate to **Settings** → **Environment Variables**
+3. Add the following variables:
+
+   **Variable Name:** `VITE_SUPABASE_URL`  
+   **Value:** `https://vaxcujmbynxgxuhonyyp.supabase.co`  
+   **Environment:** Production, Preview, Development (select all)
+
+   **Variable Name:** `VITE_SUPABASE_ANON_KEY`  
+   **Value:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZheGN1am1ieW5neGd1aG9ueXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4ODE5MjgsImV4cCI6MjA4MjQ1NzkyOH0.OQc_5NAEAaLE74Ra0yNNIhPh-mTLjflX6CGeGwPjYb0`  
+   **Environment:** Production, Preview, Development (select all)
+
+4. After adding the variables, **redeploy your application** for the changes to take effect
+
+> **Note:** The anon key is safe to expose in client-side code. It's designed to be public and is restricted by Row Level Security (RLS) policies.
 
 ## 4. Restart Development Server
 
