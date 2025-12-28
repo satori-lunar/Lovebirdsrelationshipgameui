@@ -10,34 +10,43 @@ export const isSupabaseConfigured = () => {
          supabaseUrl.startsWith('http'));
 };
 
-// Enhanced logging for debugging
-console.log('🔍 Supabase Configuration Check:');
-console.log('Environment:', import.meta.env.MODE);
-console.log('VITE_SUPABASE_URL:', supabaseUrl ? `✓ Set (${supabaseUrl.substring(0, 30)}...)` : '✗ Missing');
-console.log('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? `✓ Set (${supabaseAnonKey.substring(0, 20)}...)` : '✗ Missing');
-console.log('Is Configured:', isSupabaseConfigured());
-
-if (!isSupabaseConfigured()) {
-  console.error('❌ Supabase environment variables are not properly configured!');
-  console.error('Please verify:');
-  console.error('1. VITE_SUPABASE_URL is set in Vercel environment variables');
-  console.error('2. VITE_SUPABASE_ANON_KEY is set in Vercel environment variables');
-  console.error('3. Variables are enabled for Production environment');
-  console.error('4. App has been redeployed after setting variables');
+// Enhanced logging for debugging (defer to avoid blocking)
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    console.log('🔍 Supabase Configuration Check:');
+    console.log('Environment:', import.meta.env.MODE);
+    console.log('VITE_SUPABASE_URL:', supabaseUrl ? `✓ Set (${supabaseUrl.substring(0, 30)}...)` : '✗ Missing');
+    console.log('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? `✓ Set (${supabaseAnonKey.substring(0, 20)}...)` : '✗ Missing');
+    console.log('Is Configured:', isSupabaseConfigured());
+  }, 0);
 }
 
-// Validate URL format
-if (supabaseUrl) {
-  if (supabaseUrl.includes('supabase.com/dashboard')) {
-    console.error('❌ ERROR: You are using the DASHBOARD URL instead of the API URL!');
-    console.error('Current URL:', supabaseUrl);
-    console.error('❌ WRONG: https://supabase.com/dashboard/project/...');
-    console.error('✅ CORRECT: https://[project-ref].supabase.co');
-    console.error('Please update VITE_SUPABASE_URL in Vercel to use the API endpoint.');
-  } else if (!supabaseUrl.includes('.supabase.co')) {
-    console.warn('⚠️ Supabase URL does not look correct:', supabaseUrl);
-    console.warn('Expected format: https://[project-ref].supabase.co');
-  }
+// Defer validation logging to avoid blocking initialization
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    if (!isSupabaseConfigured()) {
+      console.error('❌ Supabase environment variables are not properly configured!');
+      console.error('Please verify:');
+      console.error('1. VITE_SUPABASE_URL is set in Vercel environment variables');
+      console.error('2. VITE_SUPABASE_ANON_KEY is set in Vercel environment variables');
+      console.error('3. Variables are enabled for Production environment');
+      console.error('4. App has been redeployed after setting variables');
+    }
+
+    // Validate URL format
+    if (supabaseUrl) {
+      if (supabaseUrl.includes('supabase.com/dashboard')) {
+        console.error('❌ ERROR: You are using the DASHBOARD URL instead of the API URL!');
+        console.error('Current URL:', supabaseUrl);
+        console.error('❌ WRONG: https://supabase.com/dashboard/project/...');
+        console.error('✅ CORRECT: https://[project-ref].supabase.co');
+        console.error('Please update VITE_SUPABASE_URL in Vercel to use the API endpoint.');
+      } else if (!supabaseUrl.includes('.supabase.co')) {
+        console.warn('⚠️ Supabase URL does not look correct:', supabaseUrl);
+        console.warn('Expected format: https://[project-ref].supabase.co');
+      }
+    }
+  }, 0);
 }
 
 // Always create client, but log warnings if not configured
