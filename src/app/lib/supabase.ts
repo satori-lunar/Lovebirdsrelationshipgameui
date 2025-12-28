@@ -17,14 +17,14 @@ if (typeof window !== 'undefined') {
     console.log('Environment:', import.meta.env.MODE);
     console.log('VITE_SUPABASE_URL:', supabaseUrl ? `✓ Set (${supabaseUrl.substring(0, 30)}...)` : '✗ Missing');
     console.log('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? `✓ Set (${supabaseAnonKey.substring(0, 20)}...)` : '✗ Missing');
-    console.log('Is Configured:', isSupabaseConfigured());
+    console.log('Is Configured:', !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== '' && supabaseAnonKey !== '' && supabaseUrl.startsWith('http')));
   }, 0);
 }
 
 // Defer validation logging to avoid blocking initialization
 if (typeof window !== 'undefined') {
   setTimeout(() => {
-    if (!isSupabaseConfigured()) {
+    if (!(supabaseUrl && supabaseAnonKey && supabaseUrl !== '' && supabaseAnonKey !== '' && supabaseUrl.startsWith('http'))) {
       console.error('❌ Supabase environment variables are not properly configured!');
       console.error('Please verify:');
       console.error('1. VITE_SUPABASE_URL is set in Vercel environment variables');
@@ -64,10 +64,11 @@ export const supabase = createClient(
 
 // Test connection on initialization (non-blocking)
 // Defer to avoid any initialization issues
-if (isSupabaseConfigured() && typeof window !== 'undefined') {
+// Don't call isSupabaseConfigured() at module level - inline the check to prevent
+// "Cannot access 'r' before initialization" when the function gets minified to 'r'
+if (typeof window !== 'undefined' && supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
   // Defer the connection test to avoid closure TDZ issues during minification
-  // Don't create a const at module level - inline the function to prevent
-  // the minifier from reordering and causing "Cannot access 'r' before initialization"
+  // Inline all checks to prevent any function calls at module level
   if (typeof requestIdleCallback !== 'undefined') {
     requestIdleCallback(() => {
       supabase.auth.getSession()
