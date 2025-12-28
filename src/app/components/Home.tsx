@@ -2,12 +2,6 @@ import { Heart, MessageCircle, Calendar, Gift, Sparkles, Camera, Bell, Settings 
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion } from 'motion/react';
-import { PartnerConnection } from './PartnerConnection';
-import { useDailyQuestion } from '../hooks/useDailyQuestion';
-import { useAuth } from '../hooks/useAuth';
-import { useRelationship } from '../hooks/useRelationship';
-import { useQuery } from '@tanstack/react-query';
-import { onboardingService } from '../services/onboardingService';
 
 interface HomeProps {
   userName: string;
@@ -16,17 +10,10 @@ interface HomeProps {
 }
 
 export function Home({ userName, partnerName, onNavigate }: HomeProps) {
-  const { user } = useAuth();
-  const { relationship } = useRelationship();
-  const { hasAnswered, hasGuessed, canSeeFeedback } = useDailyQuestion();
-  const hasCompletedDailyQuestion = hasAnswered && hasGuessed;
-  
-  const { data: onboarding } = useQuery({
-    queryKey: ['onboarding', user?.id],
-    queryFn: () => onboardingService.getOnboarding(user!.id),
-    enabled: !!user,
-  });
-
+  // Mock data for design testing
+  const hasCompletedDailyQuestion = false;
+  const partnerHasCompleted = false;
+  const isPartnerConnected = false;
   const weeklyNotificationsEnabled = true;
 
   return (
@@ -55,7 +42,54 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
           </div>
 
           {/* Partner Connection Status */}
-          <PartnerConnection partnerName={partnerName} />
+          {isPartnerConnected ? (
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center border-2 border-white/50">
+                      <span className="text-base">{partnerName.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">{partnerName}</p>
+                    <p className="text-xs text-white/80">Connected</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Heart className="w-4 h-4 fill-white/80 text-white/80" />
+                  <Heart className="w-5 h-5 fill-white text-white" />
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-xl">👥</span>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm mb-1">Connect with {partnerName}</p>
+                  <p className="text-xs text-white/80">Connect to unlock all features together</p>
+                </div>
+                <Button 
+                  size="sm"
+                  className="bg-white text-purple-600 hover:bg-white/90 text-xs"
+                >
+                  Connect
+                </Button>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -81,7 +115,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-lg">Today's Question</h3>
-                    {relationship?.partner_b_id && hasAnswered && !hasGuessed && (
+                    {partnerHasCompleted && !hasCompletedDailyQuestion && (
                       <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
                         {partnerName} answered!
                       </span>
@@ -100,10 +134,9 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                       <Button 
                         onClick={() => onNavigate('daily-question')}
                         className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-                        disabled={!relationship?.partner_b_id}
                       >
                         Answer Now
-                        {relationship?.partner_b_id && hasAnswered && <span className="ml-2">→</span>}
+                        {partnerHasCompleted && <span className="ml-2">→</span>}
                       </Button>
                     </>
                   )}
