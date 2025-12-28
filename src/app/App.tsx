@@ -55,17 +55,22 @@ export default function App() {
         }
       } else if (user) {
         // Authenticated - check onboarding status and redirect accordingly
+        // Only auto-redirect if we're on landing or onboarding page
         if (currentView === 'landing' || currentView === 'onboarding') {
           if (onboarding) {
+            // User has completed onboarding - go to home
             setCurrentView('home');
-          } else {
-            // User is authenticated but hasn't completed onboarding
-            setCurrentView('onboarding');
+          } else if (!onboardingError) {
+            // User hasn't completed onboarding - show onboarding
+            // Only set to onboarding if we're not already there (to avoid loops)
+            if (currentView === 'landing') {
+              setCurrentView('onboarding');
+            }
           }
         }
       }
     }
-  }, [user, onboarding, onboardingError, authLoading]);
+  }, [user, onboarding, onboardingError, authLoading, currentView]);
 
   if (authLoading) {
     return (
