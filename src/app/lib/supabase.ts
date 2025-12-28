@@ -65,27 +65,39 @@ export const supabase = createClient(
 // Test connection on initialization (non-blocking)
 // Defer to avoid any initialization issues
 if (isSupabaseConfigured() && typeof window !== 'undefined') {
-  // Use requestIdleCallback or setTimeout to ensure module is fully loaded
-  const testConnection = () => {
-    supabase.auth.getSession()
-      .then(() => {
-        console.log('✅ Supabase connection test successful');
-      })
-      .catch((error) => {
-        console.error('❌ Supabase connection test failed:', error);
-        console.error('This might indicate:');
-        console.error('- Network connectivity issues');
-        console.error('- Incorrect Supabase URL');
-        console.error('- Supabase project is paused or inactive');
-        console.error('- CORS configuration issues');
-      });
-  };
-
-  // Wait for next event loop to ensure supabase is fully initialized
+  // Defer the connection test to avoid closure TDZ issues during minification
+  // Don't create a const at module level - inline the function to prevent
+  // the minifier from reordering and causing "Cannot access 'r' before initialization"
   if (typeof requestIdleCallback !== 'undefined') {
-    requestIdleCallback(testConnection, { timeout: 1000 });
+    requestIdleCallback(() => {
+      supabase.auth.getSession()
+        .then(() => {
+          console.log('✅ Supabase connection test successful');
+        })
+        .catch((error) => {
+          console.error('❌ Supabase connection test failed:', error);
+          console.error('This might indicate:');
+          console.error('- Network connectivity issues');
+          console.error('- Incorrect Supabase URL');
+          console.error('- Supabase project is paused or inactive');
+          console.error('- CORS configuration issues');
+        });
+    }, { timeout: 1000 });
   } else {
-    setTimeout(testConnection, 100);
+    setTimeout(() => {
+      supabase.auth.getSession()
+        .then(() => {
+          console.log('✅ Supabase connection test successful');
+        })
+        .catch((error) => {
+          console.error('❌ Supabase connection test failed:', error);
+          console.error('This might indicate:');
+          console.error('- Network connectivity issues');
+          console.error('- Incorrect Supabase URL');
+          console.error('- Supabase project is paused or inactive');
+          console.error('- CORS configuration issues');
+        });
+    }, 100);
   }
 }
 
