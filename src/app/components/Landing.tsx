@@ -32,7 +32,7 @@ export function Landing({ onGetStarted }: LandingProps) {
           </Button>
           
           <p className="text-sm text-gray-500">
-            No credit card required • Cancel anytime
+            Then $5/month per couple • No credit card required • Cancel anytime
           </p>
         </div>
 

@@ -293,13 +293,15 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
           </Card>
         </motion.div>
 
-        {/* Memories Upsell */}
+        {/* Memories Card */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.35 }}
         >
-          <Card className="p-6 bg-gradient-to-br from-pink-500 via-purple-500 to-pink-600 text-white border-0 shadow-lg relative overflow-hidden">
+          <Card className="p-6 bg-gradient-to-br from-pink-500 via-purple-500 to-pink-600 text-white border-0 shadow-lg relative overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
+            onClick={() => onNavigate('memories')}
+          >
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -ml-12 -mb-12"></div>
             
@@ -309,16 +311,9 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold mb-1">Save Your Memories</h3>
-                <p className="text-sm text-white/90 mb-3">
+                <p className="text-sm text-white/90">
                   Create your private relationship scrapbook
                 </p>
-                <Button 
-                  onClick={() => onNavigate('memories')}
-                  variant="secondary" 
-                  className="bg-white text-purple-600 hover:bg-white/90"
-                >
-                  Learn More
-                </Button>
               </div>
             </div>
           </Card>
