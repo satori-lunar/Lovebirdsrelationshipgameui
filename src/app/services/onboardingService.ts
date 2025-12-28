@@ -113,11 +113,16 @@ export const onboardingService = {
         .from('onboarding_responses')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid 406 on empty results
 
       if (error) {
         // If no rows found, return null (user hasn't completed onboarding)
-        if (error.code === 'PGRST116') {
+        if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+          return null;
+        }
+        // Handle 406 errors specifically
+        if (error.status === 406 || error.code === '406') {
+          console.warn('406 error fetching onboarding - table might not exist or RLS issue:', error);
           return null;
         }
         throw new Error(error.message);
@@ -127,6 +132,7 @@ export const onboardingService = {
     } catch (error: any) {
       // If table doesn't exist or other error, return null
       console.warn('Error fetching onboarding:', error.message);
+      // Don't throw - return null so app can continue
       return null;
     }
   },
