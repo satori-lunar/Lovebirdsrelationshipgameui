@@ -47,28 +47,35 @@ export default function App() {
 
   // Show landing if not authenticated, or if authenticated but no onboarding
   useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        // Not authenticated - show landing (user must sign up first)
-        if (currentView !== 'landing') {
-          setCurrentView('landing');
-        }
-      } else if (user) {
-        // Authenticated - check onboarding status and redirect accordingly
-        // Only auto-redirect if we're on landing or onboarding page
-        if (currentView === 'landing' || currentView === 'onboarding') {
-          if (onboarding) {
-            // User has completed onboarding - go to home
-            setCurrentView('home');
-          } else {
-            // User hasn't completed onboarding - show onboarding
-            // This happens after sign up
-            setCurrentView('onboarding');
-          }
-        }
-      }
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return;
     }
-  }, [user, onboarding, onboardingError, authLoading, currentView]);
+
+    // If not authenticated, always show landing
+    if (!user) {
+      if (currentView !== 'landing') {
+        setCurrentView('landing');
+      }
+      return;
+    }
+
+    // User is authenticated - check onboarding status
+    // Only auto-redirect if we're on landing page (after sign up)
+    if (currentView === 'landing') {
+      // The onboarding query is enabled only when user exists
+      // If onboarding is null, it means user hasn't completed onboarding
+      // If onboarding is undefined, query hasn't run yet (shouldn't happen since enabled: !!user)
+      if (onboarding === null) {
+        // User hasn't completed onboarding - show onboarding
+        setCurrentView('onboarding');
+      } else if (onboarding) {
+        // User has completed onboarding - go to home
+        setCurrentView('home');
+      }
+      // If onboarding is undefined, wait for query to complete
+    }
+  }, [user, onboarding, authLoading, currentView]);
 
   if (authLoading) {
     return (
@@ -91,7 +98,7 @@ export default function App() {
         }} />
       )}
 
-      {currentView === 'onboarding' && (
+      {currentView === 'onboarding' && user && (
         <Onboarding onComplete={handleOnboardingComplete} />
       )}
 

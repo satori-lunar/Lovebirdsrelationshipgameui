@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronRight, ChevronLeft, Heart, Edit } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -107,9 +107,17 @@ const NUDGE_FREQUENCY_OPTIONS = [
 ];
 
 export function Onboarding({ onComplete }: OnboardingProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Redirect to landing if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      // User is not authenticated, redirect will be handled by App.tsx
+      // This component shouldn't render if user is not authenticated
+    }
+  }, [user, authLoading]);
   const [birthday, setBirthday] = useState<Date | undefined>(undefined);
   const [pronounsOther, setPronounsOther] = useState('');
   const [formData, setFormData] = useState<OnboardingData>({
