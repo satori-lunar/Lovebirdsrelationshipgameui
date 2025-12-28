@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronLeft, Sparkles, User, Users, Heart, X, MapPin, Clock, DollarSign } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 
 interface DatePlanningProps {
   onBack: () => void;
@@ -288,82 +288,13 @@ export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
     const currentDate = dateIdeas[currentSwipeIndex];
     
     return (
-      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 pb-8">
-          <div className="max-w-md mx-auto">
-            <button 
-              onClick={() => setMode('select')}
-              className="flex items-center gap-2 mb-6 hover:opacity-80"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              <span>Back</span>
-            </button>
-            
-            <h1 className="text-2xl mb-2">Swipe for Dates</h1>
-            <p className="text-white/90 text-sm mb-4">
-              Swipe right for yes, left for no
-            </p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-white/20 rounded-full h-2">
-                <div 
-                  className="bg-white h-2 rounded-full transition-all"
-                  style={{ width: `${((currentSwipeIndex + 1) / dateIdeas.length) * 100}%` }}
-                />
-              </div>
-              <span className="text-sm">{currentSwipeIndex + 1}/{dateIdeas.length}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-md mx-auto px-6 -mt-2">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentSwipeIndex}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Card className="p-8 border-0 shadow-2xl">
-                <div className="text-6xl mb-4 text-center">{currentDate.image}</div>
-                <h2 className="text-2xl text-center mb-3">{currentDate.title}</h2>
-                <p className="text-sm text-gray-600 text-center mb-6">{currentDate.description}</p>
-                
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <Clock className="w-5 h-5 mx-auto mb-1 text-gray-600" />
-                    <p className="text-xs text-gray-600">{currentDate.duration}</p>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <DollarSign className="w-5 h-5 mx-auto mb-1 text-gray-600" />
-                    <p className="text-xs text-gray-600">{currentDate.budget}</p>
-                  </div>
-                  <div className="text-center p-3 bg-gray-50 rounded-lg">
-                    <MapPin className="w-5 h-5 mx-auto mb-1 text-gray-600" />
-                    <p className="text-xs text-gray-600">{currentDate.location}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <Button
-                    onClick={() => handleSwipe(false)}
-                    variant="outline"
-                    className="flex-1 h-16 border-2 border-gray-300 hover:border-red-500 hover:bg-red-50"
-                  >
-                    <X className="w-8 h-8 text-red-500" />
-                  </Button>
-                  <Button
-                    onClick={() => handleSwipe(true)}
-                    className="flex-1 h-16 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-                  >
-                    <Heart className="w-8 h-8 fill-white" />
-                  </Button>
-                </div>
-              </Card>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
+      <SwipeableDateCard
+        date={currentDate}
+        onSwipe={handleSwipe}
+        onBack={() => setMode('select')}
+        currentIndex={currentSwipeIndex}
+        totalCount={dateIdeas.length}
+      />
     );
   }
 
@@ -427,4 +358,160 @@ export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
   }
 
   return null;
+}
+
+// Swipeable Date Card Component
+function SwipeableDateCard({ 
+  date, 
+  onSwipe, 
+  onBack,
+  currentIndex,
+  totalCount 
+}: { 
+  date: typeof dateIdeas[0]; 
+  onSwipe: (liked: boolean) => void;
+  onBack: () => void;
+  currentIndex: number;
+  totalCount: number;
+}) {
+  const [exitX, setExitX] = useState<number | string>('100%');
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-200, 200], [-25, 25]);
+  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
+  
+  const likeOpacity = useTransform(x, [0, 150], [0, 1]);
+  const nopeOpacity = useTransform(x, [-150, 0], [1, 0]);
+
+  const handleDragEnd = (_event: any, info: any) => {
+    const threshold = 100;
+    
+    if (Math.abs(info.offset.x) > threshold) {
+      const liked = info.offset.x > 0;
+      setExitX(info.offset.x > 0 ? '100%' : '-100%');
+      setTimeout(() => {
+        onSwipe(liked);
+        x.set(0);
+      }, 100);
+    } else {
+      // Spring back to center
+      x.set(0);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
+      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 pb-8">
+        <div className="max-w-md mx-auto">
+          <button 
+            onClick={onBack}
+            className="flex items-center gap-2 mb-6 hover:opacity-80"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+          
+          <h1 className="text-2xl mb-2">Swipe for Dates</h1>
+          <p className="text-white/90 text-sm mb-4">
+            Swipe right for yes, left for no
+          </p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-white/20 rounded-full h-2">
+              <div 
+                className="bg-white h-2 rounded-full transition-all"
+                style={{ width: `${((currentIndex + 1) / totalCount) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm">{currentIndex + 1}/{totalCount}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto px-6 -mt-2 relative" style={{ height: '600px' }}>
+        {/* Like overlay */}
+        <motion.div
+          style={{ opacity: likeOpacity }}
+          className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+        >
+          <div className="bg-green-500/20 border-4 border-green-500 rounded-3xl p-8 w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <Heart className="w-20 h-20 text-green-500 fill-green-500 mx-auto mb-4" />
+              <p className="text-3xl font-bold text-green-500">LIKE</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Nope overlay */}
+        <motion.div
+          style={{ opacity: nopeOpacity }}
+          className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+        >
+          <div className="bg-red-500/20 border-4 border-red-500 rounded-3xl p-8 w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <X className="w-20 h-20 text-red-500 mx-auto mb-4" />
+              <p className="text-3xl font-bold text-red-500">NOPE</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Swipeable Card */}
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={handleDragEnd}
+          style={{ 
+            x, 
+            rotate,
+            opacity,
+            cursor: 'grab'
+          }}
+          whileDrag={{ cursor: 'grabbing' }}
+          className="absolute inset-0"
+        >
+          <Card className="p-8 border-0 shadow-2xl h-full flex flex-col">
+            <div className="text-6xl mb-4 text-center">{date.image}</div>
+            <h2 className="text-2xl text-center mb-3">{date.title}</h2>
+            <p className="text-sm text-gray-600 text-center mb-6 flex-1">{date.description}</p>
+            
+            <div className="grid grid-cols-3 gap-2 mb-6">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <Clock className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+                <p className="text-xs text-gray-600">{date.duration}</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <DollarSign className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+                <p className="text-xs text-gray-600">{date.budget}</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <MapPin className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+                <p className="text-xs text-gray-600">{date.location}</p>
+              </div>
+            </div>
+
+            {/* Button fallback for non-touch devices */}
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => {
+                  setExitX('-100%');
+                  setTimeout(() => onSwipe(false), 100);
+                }}
+                variant="outline"
+                className="flex-1 h-16 border-2 border-gray-300 hover:border-red-500 hover:bg-red-50"
+              >
+                <X className="w-8 h-8 text-red-500" />
+              </Button>
+              <Button
+                onClick={() => {
+                  setExitX('100%');
+                  setTimeout(() => onSwipe(true), 100);
+                }}
+                className="flex-1 h-16 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+              >
+                <Heart className="w-8 h-8 fill-white" />
+              </Button>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
+  );
 }
