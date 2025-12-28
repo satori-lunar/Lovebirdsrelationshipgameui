@@ -65,16 +65,24 @@ export default function App() {
     }
 
     // User is authenticated - check onboarding status
-    // Only auto-redirect if we're in the sign-up flow
+    // Only auto-redirect if we're on the sign-up screen (after successful sign up)
+    // Don't redirect if user is on entry or feature-slides (let them complete the flow)
     if (currentView === 'sign-up') {
-      // After sign up, redirect to onboarding
-      if (onboarding === null) {
-        setCurrentView('onboarding');
-      } else if (onboarding) {
-        setCurrentView('home');
-      }
-    } else if (currentView === 'entry' || currentView === 'feature-slides') {
-      // If user is authenticated but still on entry/slides, check onboarding
+      // After sign up, wait a moment then redirect to onboarding
+      const redirectTimer = setTimeout(() => {
+        if (onboarding === null) {
+          setCurrentView('onboarding');
+        } else if (onboarding) {
+          setCurrentView('home');
+        }
+      }, 1500); // Give time to see success message
+      
+      return () => clearTimeout(redirectTimer);
+    }
+    
+    // If user is authenticated and on entry (cached session), redirect based on onboarding
+    // But don't redirect from feature-slides - let them complete the flow
+    if (currentView === 'entry') {
       if (onboarding === null) {
         setCurrentView('onboarding');
       } else if (onboarding) {
