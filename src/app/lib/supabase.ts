@@ -59,16 +59,6 @@ export const supabase = createClient(
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
-    global: {
-      headers: {
-        'x-client-info': 'love-birds-app',
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-    },
-    db: {
-      schema: 'public',
-    },
   }
 );
 
