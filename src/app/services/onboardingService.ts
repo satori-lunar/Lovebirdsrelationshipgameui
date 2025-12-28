@@ -3,10 +3,41 @@ import type { OnboardingData, OnboardingResponse } from '../types/onboarding';
 
 export const onboardingService = {
   async saveOnboarding(userId: string, data: OnboardingData): Promise<OnboardingResponse> {
+    // First, ensure user exists in users table (required for foreign key)
+    try {
+      const { data: userData, error: userError } = await api.supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (userError && userError.code === 'PGRST116') {
+        // User doesn't exist, create it
+        const { data: authUser } = await api.supabase.auth.getUser();
+        if (authUser?.user) {
+          const trialEndDate = new Date();
+          trialEndDate.setDate(trialEndDate.getDate() + 7);
+          
+          await api.supabase
+            .from('users')
+            .insert({
+              id: userId,
+              email: authUser.user.email || '',
+              name: data.name || null,
+              trial_start_date: new Date().toISOString(),
+              trial_end_date: trialEndDate.toISOString(),
+            });
+        }
+      }
+    } catch (error) {
+      console.warn('Error ensuring user exists:', error);
+    }
+
+    // Use upsert (insert or update) to handle existing onboarding
     const response = await handleSupabaseError(
       api.supabase
         .from('onboarding_responses')
-        .insert({
+        .upsert({
           user_id: userId,
           name: data.name,
           partner_name: data.partnerName,
@@ -23,6 +54,9 @@ export const onboardingService = {
           health_accessibility: data.healthAccessibility || null,
           relationship_goals: data.relationshipGoals || null,
           is_private: true, // Sensitive data is private by default
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
         })
         .select()
         .single()

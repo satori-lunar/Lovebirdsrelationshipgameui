@@ -79,6 +79,37 @@ export const authService = {
     });
 
     if (error) throw new Error(error.message);
+    
+    // Ensure user profile exists after sign in
+    if (data.user) {
+      try {
+        const { data: userData, error: userError } = await api.supabase
+          .from('users')
+          .select('id')
+          .eq('id', data.user.id)
+          .single();
+
+        if (userError && userError.code === 'PGRST116') {
+          // User profile doesn't exist, create it
+          const trialEndDate = new Date();
+          trialEndDate.setDate(trialEndDate.getDate() + 7);
+          
+          await api.supabase
+            .from('users')
+            .insert({
+              id: data.user.id,
+              email: data.user.email || email,
+              name: null,
+              trial_start_date: new Date().toISOString(),
+              trial_end_date: trialEndDate.toISOString(),
+            });
+        }
+      } catch (profileError) {
+        // Log but don't fail sign in
+        console.warn('Failed to ensure user profile exists:', profileError);
+      }
+    }
+    
     return data;
   },
 
