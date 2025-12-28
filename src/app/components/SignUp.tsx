@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,11 +12,12 @@ interface SignUpProps {
 }
 
 export function SignUp({ onSuccess, onBack }: SignUpProps) {
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,17 +41,29 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
     try {
       await signUp(email, password);
       toast.success('Account created successfully!');
-      // Small delay to show success message, then redirect
-      setTimeout(() => {
-        onSuccess();
-      }, 1000);
+      setSignUpSuccess(true);
+      // Don't redirect immediately - wait for user session to be established
+      // Keep loading state until user session is ready
     } catch (error: any) {
       console.error('Sign up error:', error);
       const errorMessage = error.message || 'Failed to create account';
       toast.error(errorMessage.split('\n')[0] || 'Failed to create account');
-    } finally {
       setIsLoading(false);
+      setSignUpSuccess(false);
     }
+  };
+
+  // Wait for user session to be established after sign-up
+  useEffect(() => {
+    if (signUpSuccess && user) {
+      // User session is now available, wait a moment then redirect
+      setIsLoading(false);
+      const timer = setTimeout(() => {
+        onSuccess();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [signUpSuccess, user, onSuccess]);
   };
 
   return (
