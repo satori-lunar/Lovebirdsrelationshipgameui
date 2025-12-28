@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';

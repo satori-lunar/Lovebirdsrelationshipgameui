@@ -20,10 +20,12 @@ export default function App() {
   const { user, loading: authLoading } = useAuth();
   const [currentView, setCurrentView] = useState<AppState>('landing');
 
-  const { data: onboarding } = useQuery({
+  const { data: onboarding, error: onboardingError } = useQuery({
     queryKey: ['onboarding', user?.id],
     queryFn: () => onboardingService.getOnboarding(user!.id),
     enabled: !!user,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const userData = onboarding ? {
@@ -45,14 +47,22 @@ export default function App() {
 
   // Show landing if not authenticated, or if authenticated but no onboarding
   useEffect(() => {
-    if (!authLoading && user) {
-      if (!onboarding && currentView === 'landing') {
-        setCurrentView('onboarding');
-      } else if (onboarding && currentView === 'landing') {
-        setCurrentView('home');
+    if (!authLoading) {
+      if (!user) {
+        // Not authenticated - show landing
+        if (currentView !== 'landing' && currentView !== 'onboarding') {
+          setCurrentView('landing');
+        }
+      } else if (user) {
+        // Authenticated - check onboarding status
+        if (onboarding && currentView === 'landing') {
+          setCurrentView('home');
+        } else if (!onboarding && !onboardingError && currentView === 'landing') {
+          setCurrentView('onboarding');
+        }
       }
     }
-  }, [user, onboarding, authLoading, currentView]);
+  }, [user, onboarding, onboardingError, authLoading, currentView]);
 
   if (authLoading) {
     return (
@@ -76,10 +86,10 @@ export default function App() {
         <Onboarding onComplete={handleOnboardingComplete} />
       )}
 
-      {currentView === 'home' && userData && (
+      {currentView === 'home' && (
         <Home 
-          userName={userData.name || 'there'}
-          partnerName={userData.partnerName || 'your partner'}
+          userName={userData?.name || 'there'}
+          partnerName={userData?.partnerName || 'your partner'}
           onNavigate={handleNavigate}
         />
       )}

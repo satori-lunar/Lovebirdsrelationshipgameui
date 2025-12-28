@@ -32,15 +32,27 @@ export const onboardingService = {
   },
 
   async getOnboarding(userId: string): Promise<OnboardingResponse | null> {
-    const response = await handleSupabaseError(
-      api.supabase
+    try {
+      const { data, error } = await api.supabase
         .from('onboarding_responses')
         .select('*')
         .eq('user_id', userId)
-        .single()
-    );
+        .single();
 
-    return response;
+      if (error) {
+        // If no rows found, return null (user hasn't completed onboarding)
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        throw new Error(error.message);
+      }
+
+      return data;
+    } catch (error: any) {
+      // If table doesn't exist or other error, return null
+      console.warn('Error fetching onboarding:', error.message);
+      return null;
+    }
   },
 
   async updateOnboarding(userId: string, data: Partial<OnboardingData>): Promise<OnboardingResponse> {
