@@ -77,7 +77,7 @@ const PLANNING_STYLE_OPTIONS = [
 const AVOID_OPTIONS = [
   'Public attention',
   'Overly physical surprises',
-  'Big expensive gifts I'd feel awkward about',
+  "Big expensive gifts I'd feel awkward about",
   'None / tell below'
 ];
 
