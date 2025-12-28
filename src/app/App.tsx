@@ -54,15 +54,18 @@ export default function App() {
           setCurrentView('landing');
         }
       } else if (user) {
-        // Authenticated - check onboarding status
-        if (onboarding && currentView === 'landing') {
-          setCurrentView('home');
-        } else if (!onboarding && !onboardingError && currentView === 'landing') {
-          setCurrentView('onboarding');
+        // Authenticated - check onboarding status and redirect accordingly
+        if (currentView === 'landing' || currentView === 'onboarding') {
+          if (onboarding) {
+            setCurrentView('home');
+          } else {
+            // User is authenticated but hasn't completed onboarding
+            setCurrentView('onboarding');
+          }
         }
       }
     }
-  }, [user, onboarding, onboardingError, authLoading, currentView]);
+  }, [user, onboarding, onboardingError, authLoading]);
 
   if (authLoading) {
     return (

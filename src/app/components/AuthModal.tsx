@@ -18,7 +18,19 @@ export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, user } = useAuth();
+
+  // Close modal and call onSuccess when user is authenticated
+  useEffect(() => {
+    if (user && open) {
+      // User is now authenticated, close modal and trigger success
+      setEmail('');
+      setPassword('');
+      setName('');
+      onOpenChange(false);
+      onSuccess();
+    }
+  }, [user, open, onOpenChange, onSuccess]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,16 +49,15 @@ export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
     try {
       if (isSignUp) {
         await signUp(email, password, name);
-        toast.success('Account created! Please check your email to verify your account.');
+        toast.success('Account created successfully!');
+        // Don't close modal here - let useEffect handle it when user state updates
+        // This allows for automatic sign-in if email confirmation is disabled
       } else {
         await signIn(email, password);
         toast.success('Signed in successfully!');
+        // For sign in, user state should update immediately
+        // useEffect will handle closing the modal
       }
-      onSuccess();
-      onOpenChange(false);
-      setEmail('');
-      setPassword('');
-      setName('');
     } catch (error: any) {
       console.error('Auth error:', error);
       const errorMessage = error.message || 'Authentication failed';

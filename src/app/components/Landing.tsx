@@ -20,6 +20,11 @@ export function Landing({ onGetStarted }: LandingProps) {
     }
   };
 
+  const handleAuthSuccess = () => {
+    // Close modal - App.tsx will handle navigation based on auth state
+    setShowAuthModal(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex flex-col items-center justify-center p-6">
       <div className="text-center space-y-8 max-w-md">
@@ -53,7 +58,7 @@ export function Landing({ onGetStarted }: LandingProps) {
         <AuthModal 
           open={showAuthModal} 
           onOpenChange={setShowAuthModal}
-          onSuccess={onGetStarted}
+          onSuccess={handleAuthSuccess}
         />
 
         <div className="grid grid-cols-2 gap-4 pt-8 text-left">

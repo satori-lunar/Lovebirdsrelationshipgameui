@@ -27,8 +27,17 @@ if (!isSupabaseConfigured()) {
 }
 
 // Validate URL format
-if (supabaseUrl && !supabaseUrl.includes('supabase.co')) {
-  console.warn('⚠️ Supabase URL does not look correct:', supabaseUrl);
+if (supabaseUrl) {
+  if (supabaseUrl.includes('supabase.com/dashboard')) {
+    console.error('❌ ERROR: You are using the DASHBOARD URL instead of the API URL!');
+    console.error('Current URL:', supabaseUrl);
+    console.error('❌ WRONG: https://supabase.com/dashboard/project/...');
+    console.error('✅ CORRECT: https://[project-ref].supabase.co');
+    console.error('Please update VITE_SUPABASE_URL in Vercel to use the API endpoint.');
+  } else if (!supabaseUrl.includes('.supabase.co')) {
+    console.warn('⚠️ Supabase URL does not look correct:', supabaseUrl);
+    console.warn('Expected format: https://[project-ref].supabase.co');
+  }
 }
 
 // Always create client, but log warnings if not configured
