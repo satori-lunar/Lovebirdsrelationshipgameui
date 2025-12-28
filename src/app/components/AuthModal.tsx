@@ -48,7 +48,10 @@ export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
       setPassword('');
       setName('');
     } catch (error: any) {
-      toast.error(error.message || 'Authentication failed');
+      console.error('Auth error:', error);
+      const errorMessage = error.message || 'Authentication failed';
+      // Show error message, handling multi-line messages
+      toast.error(errorMessage.split('\n')[0] || 'Authentication failed');
     } finally {
       setIsLoading(false);
     }

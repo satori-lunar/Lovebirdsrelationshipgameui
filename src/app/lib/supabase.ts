@@ -17,6 +17,12 @@ if (!isSupabaseConfigured()) {
 }
 
 // Always create client, even with empty values (for graceful degradation)
+// But validate that we have real values
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://placeholder.supabase.co') {
+  console.error('❌ Supabase is not properly configured!');
+  console.error('Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+}
+
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-key',
@@ -24,6 +30,7 @@ export const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+      detectSessionInUrl: true,
     },
   }
 );

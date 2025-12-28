@@ -14,34 +14,52 @@ export interface SignInData {
 
 export const authService = {
   async signUp({ email, password, name }: SignUpData) {
-    const { data: authData, error: authError } = await api.supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (authError) throw new Error(authError.message);
-    if (!authData.user) throw new Error('Failed to create user');
-
-    // Create user profile
-    const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 7);
-
-    const { error: profileError } = await api.supabase
-      .from('users')
-      .insert({
-        id: authData.user.id,
+    try {
+      const { data: authData, error: authError } = await api.supabase.auth.signUp({
         email,
-        name: name || null,
-        trial_start_date: new Date().toISOString(),
-        trial_end_date: trialEndDate.toISOString(),
+        password,
       });
 
-    if (profileError) {
-      console.error('Failed to create user profile:', profileError);
-      throw new Error(profileError.message);
-    }
+      if (authError) {
+        // Better error messages for common issues
+        if (authError.message.includes('fetch') || authError.message.includes('network')) {
+          throw new Error('Network error: Please check your internet connection and verify Supabase is configured correctly.');
+        }
+        throw new Error(authError.message);
+      }
+      
+      if (!authData.user) {
+        throw new Error('Failed to create user account');
+      }
 
-    return authData;
+      // Try to create user profile (don't fail signup if table doesn't exist yet)
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+
+      const { error: profileError } = await api.supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email,
+          name: name || null,
+          trial_start_date: new Date().toISOString(),
+          trial_end_date: trialEndDate.toISOString(),
+        });
+
+      if (profileError) {
+        // Log but don't fail - user can complete profile later
+        console.warn('Failed to create user profile (this is okay if migrations are not run yet):', profileError);
+        // Don't throw - auth was successful, profile can be created later
+      }
+
+      return authData;
+    } catch (error: any) {
+      // Catch network errors and provide better messages
+      if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
+        throw new Error('Unable to connect to Supabase. Please check:\n1. Your internet connection\n2. Supabase project is active\n3. Environment variables are set correctly');
+      }
+      throw error;
+    }
   },
 
   async signIn({ email, password }: SignInData) {
