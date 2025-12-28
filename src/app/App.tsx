@@ -19,6 +19,7 @@ type AppState = 'landing' | 'onboarding' | 'home' | 'daily-question' | 'love-lan
 export default function App() {
   const { user, loading: authLoading } = useAuth();
   const [currentView, setCurrentView] = useState<AppState>('landing');
+  const [hasJustSignedUp, setHasJustSignedUp] = useState(false);
 
   const { data: onboarding, error: onboardingError } = useQuery({
     queryKey: ['onboarding', user?.id],
@@ -45,6 +46,16 @@ export default function App() {
     setCurrentView('home');
   };
 
+  // Listen for sign up event from Landing page
+  useEffect(() => {
+    const handleSignUp = () => {
+      setHasJustSignedUp(true);
+    };
+    
+    window.addEventListener('userJustSignedUp', handleSignUp);
+    return () => window.removeEventListener('userJustSignedUp', handleSignUp);
+  }, []);
+
   // Show landing if not authenticated, or if authenticated but no onboarding
   useEffect(() => {
     // Wait for auth to finish loading
@@ -61,21 +72,28 @@ export default function App() {
     }
 
     // User is authenticated - check onboarding status
-    // Only auto-redirect if we're on landing page (after sign up)
-    if (currentView === 'landing') {
+    // Only auto-redirect if we're on landing page AND user just signed up
+    // Don't auto-redirect if user already had a session (let them click "Continue to App")
+    if (currentView === 'landing' && hasJustSignedUp) {
       // The onboarding query is enabled only when user exists
       // If onboarding is null, it means user hasn't completed onboarding
       // If onboarding is undefined, query hasn't run yet (shouldn't happen since enabled: !!user)
-      if (onboarding === null) {
-        // User hasn't completed onboarding - show onboarding
-        setCurrentView('onboarding');
-      } else if (onboarding) {
-        // User has completed onboarding - go to home
-        setCurrentView('home');
-      }
-      // If onboarding is undefined, wait for query to complete
+      // Add a small delay to let the auth modal show success message
+      const redirectTimer = setTimeout(() => {
+        if (onboarding === null) {
+          // User hasn't completed onboarding - show onboarding
+          setCurrentView('onboarding');
+          setHasJustSignedUp(false); // Reset flag
+        } else if (onboarding) {
+          // User has completed onboarding - go to home
+          setCurrentView('home');
+          setHasJustSignedUp(false); // Reset flag
+        }
+      }, 2000); // Wait 2 seconds to let user see success message
+      
+      return () => clearTimeout(redirectTimer);
     }
-  }, [user, onboarding, authLoading, currentView]);
+  }, [user, onboarding, authLoading, currentView, hasJustSignedUp]);
 
   if (authLoading) {
     return (
@@ -93,8 +111,8 @@ export default function App() {
       <Toaster />
       {currentView === 'landing' && (
         <Landing onGetStarted={() => {
-          // Landing page handles sign up, then App.tsx will redirect to onboarding
-          // after user is authenticated
+          // When user clicks "Continue to App", signal that they want to proceed
+          setHasJustSignedUp(true);
         }} />
       )}
 

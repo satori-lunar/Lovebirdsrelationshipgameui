@@ -23,12 +23,16 @@ export function AuthModal({ open, onOpenChange, onSuccess }: AuthModalProps) {
   // Close modal and call onSuccess when user is authenticated
   useEffect(() => {
     if (user && open) {
-      // User is now authenticated, close modal and trigger success
-      setEmail('');
-      setPassword('');
-      setName('');
-      onOpenChange(false);
-      onSuccess();
+      // User is now authenticated, wait a moment to show success message, then close modal
+      const timer = setTimeout(() => {
+        setEmail('');
+        setPassword('');
+        setName('');
+        onOpenChange(false);
+        onSuccess();
+      }, 1500); // Give user time to see success message
+      
+      return () => clearTimeout(timer);
     }
   }, [user, open, onOpenChange, onSuccess]);
 

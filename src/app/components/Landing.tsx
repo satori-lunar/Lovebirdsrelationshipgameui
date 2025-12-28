@@ -14,6 +14,8 @@ export function Landing({ onGetStarted }: LandingProps) {
 
   const handleGetStarted = () => {
     if (user) {
+      // User is already authenticated, signal to proceed
+      window.dispatchEvent(new CustomEvent('userJustSignedUp'));
       onGetStarted();
     } else {
       setShowAuthModal(true);
@@ -23,6 +25,9 @@ export function Landing({ onGetStarted }: LandingProps) {
   const handleAuthSuccess = () => {
     // Close modal - App.tsx will handle navigation based on auth state
     setShowAuthModal(false);
+    // Signal to App.tsx that user just signed up
+    // We'll use a custom event to communicate this
+    window.dispatchEvent(new CustomEvent('userJustSignedUp'));
   };
 
   return (
