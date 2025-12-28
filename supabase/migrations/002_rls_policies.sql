@@ -13,41 +13,50 @@ ALTER TABLE public.memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Users policies
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
 CREATE POLICY "Users can view their own profile"
   ON public.users FOR SELECT
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
 CREATE POLICY "Users can update their own profile"
   ON public.users FOR UPDATE
   USING (auth.uid() = id);
 
 -- Relationships policies
+DROP POLICY IF EXISTS "Users can view their own relationships" ON public.relationships;
 CREATE POLICY "Users can view their own relationships"
   ON public.relationships FOR SELECT
   USING (auth.uid() = partner_a_id OR auth.uid() = partner_b_id);
 
+DROP POLICY IF EXISTS "Users can create relationships" ON public.relationships;
 CREATE POLICY "Users can create relationships"
   ON public.relationships FOR INSERT
   WITH CHECK (auth.uid() = partner_a_id);
 
+DROP POLICY IF EXISTS "Users can update their relationships" ON public.relationships;
 CREATE POLICY "Users can update their relationships"
   ON public.relationships FOR UPDATE
   USING (auth.uid() = partner_a_id OR auth.uid() = partner_b_id);
 
 -- Onboarding responses policies (private by default)
+DROP POLICY IF EXISTS "Users can view their own onboarding" ON public.onboarding_responses;
 CREATE POLICY "Users can view their own onboarding"
   ON public.onboarding_responses FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own onboarding" ON public.onboarding_responses;
 CREATE POLICY "Users can insert their own onboarding"
   ON public.onboarding_responses FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own onboarding" ON public.onboarding_responses;
 CREATE POLICY "Users can update their own onboarding"
   ON public.onboarding_responses FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Daily questions policies
+DROP POLICY IF EXISTS "Users can view questions for their relationships" ON public.daily_questions;
 CREATE POLICY "Users can view questions for their relationships"
   ON public.daily_questions FOR SELECT
   USING (
@@ -58,50 +67,61 @@ CREATE POLICY "Users can view questions for their relationships"
     )
   );
 
+DROP POLICY IF EXISTS "System can create daily questions" ON public.daily_questions;
 CREATE POLICY "System can create daily questions"
   ON public.daily_questions FOR INSERT
   WITH CHECK (true);
 
 -- Question answers policies (completely private)
+DROP POLICY IF EXISTS "Users can view their own answers" ON public.question_answers;
 CREATE POLICY "Users can view their own answers"
   ON public.question_answers FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own answers" ON public.question_answers;
 CREATE POLICY "Users can insert their own answers"
   ON public.question_answers FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own answers" ON public.question_answers;
 CREATE POLICY "Users can update their own answers"
   ON public.question_answers FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Question guesses policies (completely private)
+DROP POLICY IF EXISTS "Users can view their own guesses" ON public.question_guesses;
 CREATE POLICY "Users can view their own guesses"
   ON public.question_guesses FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own guesses" ON public.question_guesses;
 CREATE POLICY "Users can insert their own guesses"
   ON public.question_guesses FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own guesses" ON public.question_guesses;
 CREATE POLICY "Users can update their own guesses"
   ON public.question_guesses FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Love language suggestions policies
+DROP POLICY IF EXISTS "Users can view their own suggestions" ON public.love_language_suggestions;
 CREATE POLICY "Users can view their own suggestions"
   ON public.love_language_suggestions FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can create suggestions" ON public.love_language_suggestions;
 CREATE POLICY "System can create suggestions"
   ON public.love_language_suggestions FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update their own suggestions" ON public.love_language_suggestions;
 CREATE POLICY "Users can update their own suggestions"
   ON public.love_language_suggestions FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Date ideas policies
+DROP POLICY IF EXISTS "Users can view dates for their relationships" ON public.date_ideas;
 CREATE POLICY "Users can view dates for their relationships"
   ON public.date_ideas FOR SELECT
   USING (
@@ -112,10 +132,12 @@ CREATE POLICY "Users can view dates for their relationships"
     )
   );
 
+DROP POLICY IF EXISTS "System can create date ideas" ON public.date_ideas;
 CREATE POLICY "System can create date ideas"
   ON public.date_ideas FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update dates for their relationships" ON public.date_ideas;
 CREATE POLICY "Users can update dates for their relationships"
   ON public.date_ideas FOR UPDATE
   USING (
@@ -127,6 +149,7 @@ CREATE POLICY "Users can update dates for their relationships"
   );
 
 -- Date matches policies
+DROP POLICY IF EXISTS "Users can view matches for their relationships" ON public.date_matches;
 CREATE POLICY "Users can view matches for their relationships"
   ON public.date_matches FOR SELECT
   USING (
@@ -137,10 +160,12 @@ CREATE POLICY "Users can view matches for their relationships"
     )
   );
 
+DROP POLICY IF EXISTS "System can create date matches" ON public.date_matches;
 CREATE POLICY "System can create date matches"
   ON public.date_matches FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update matches for their relationships" ON public.date_matches;
 CREATE POLICY "Users can update matches for their relationships"
   ON public.date_matches FOR UPDATE
   USING (
@@ -152,6 +177,7 @@ CREATE POLICY "Users can update matches for their relationships"
   );
 
 -- Important dates policies
+DROP POLICY IF EXISTS "Users can view dates for their relationships" ON public.important_dates;
 CREATE POLICY "Users can view dates for their relationships"
   ON public.important_dates FOR SELECT
   USING (
@@ -162,6 +188,7 @@ CREATE POLICY "Users can view dates for their relationships"
     )
   );
 
+DROP POLICY IF EXISTS "Users can create dates for their relationships" ON public.important_dates;
 CREATE POLICY "Users can create dates for their relationships"
   ON public.important_dates FOR INSERT
   WITH CHECK (
@@ -172,6 +199,7 @@ CREATE POLICY "Users can create dates for their relationships"
     )
   );
 
+DROP POLICY IF EXISTS "Users can update dates for their relationships" ON public.important_dates;
 CREATE POLICY "Users can update dates for their relationships"
   ON public.important_dates FOR UPDATE
   USING (
@@ -182,6 +210,7 @@ CREATE POLICY "Users can update dates for their relationships"
     )
   );
 
+DROP POLICY IF EXISTS "Users can delete dates for their relationships" ON public.important_dates;
 CREATE POLICY "Users can delete dates for their relationships"
   ON public.important_dates FOR DELETE
   USING (
@@ -193,6 +222,7 @@ CREATE POLICY "Users can delete dates for their relationships"
   );
 
 -- Memories policies
+DROP POLICY IF EXISTS "Users can view memories for their relationships" ON public.memories;
 CREATE POLICY "Users can view memories for their relationships"
   ON public.memories FOR SELECT
   USING (
@@ -207,6 +237,7 @@ CREATE POLICY "Users can view memories for their relationships"
     )
   );
 
+DROP POLICY IF EXISTS "Users can create memories for their relationships" ON public.memories;
 CREATE POLICY "Users can create memories for their relationships"
   ON public.memories FOR INSERT
   WITH CHECK (
@@ -218,24 +249,28 @@ CREATE POLICY "Users can create memories for their relationships"
     )
   );
 
+DROP POLICY IF EXISTS "Users can update their own memories" ON public.memories;
 CREATE POLICY "Users can update their own memories"
   ON public.memories FOR UPDATE
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own memories" ON public.memories;
 CREATE POLICY "Users can delete their own memories"
   ON public.memories FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Subscriptions policies
+DROP POLICY IF EXISTS "Users can view their own subscriptions" ON public.subscriptions;
 CREATE POLICY "Users can view their own subscriptions"
   ON public.subscriptions FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can create subscriptions" ON public.subscriptions;
 CREATE POLICY "System can create subscriptions"
   ON public.subscriptions FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update their own subscriptions" ON public.subscriptions;
 CREATE POLICY "Users can update their own subscriptions"
   ON public.subscriptions FOR UPDATE
   USING (auth.uid() = user_id);
-
