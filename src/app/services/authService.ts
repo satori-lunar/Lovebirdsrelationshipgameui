@@ -15,15 +15,25 @@ export interface SignInData {
 export const authService = {
   async signUp({ email, password, name }: SignUpData) {
     try {
+      // Log the attempt
+      console.log('Attempting sign up with email:', email);
+      console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL?.substring(0, 30) || 'NOT SET');
+      
       const { data: authData, error: authError } = await api.supabase.auth.signUp({
         email,
         password,
       });
 
       if (authError) {
+        console.error('Sign up error:', authError);
+        
         // Better error messages for common issues
-        if (authError.message.includes('fetch') || authError.message.includes('network')) {
-          throw new Error('Network error: Please check your internet connection and verify Supabase is configured correctly.');
+        if (authError.message.includes('fetch') || authError.message.includes('network') || authError.message.includes('Failed to fetch')) {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          if (!supabaseUrl) {
+            throw new Error('Supabase is not configured. Please check environment variables in Vercel.');
+          }
+          throw new Error(`Cannot connect to Supabase at ${supabaseUrl}. Please verify:\n1. Supabase project is active\n2. Environment variables are set correctly\n3. Network connection is working`);
         }
         throw new Error(authError.message);
       }
