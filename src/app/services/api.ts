@@ -26,6 +26,5 @@ export async function handleSupabaseError<T>(promise: Promise<{ data: T | null; 
 
 export const api = {
   supabase,
-  handleSupabaseError,
 };
 
