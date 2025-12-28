@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Toaster } from './components/ui/sonner';
+import { SetupScreen } from './components/SetupScreen';
 import { Landing } from './components/Landing';
 import { Onboarding } from './components/Onboarding';
 import { Home } from './components/Home';
@@ -13,6 +14,7 @@ import { Settings } from './components/Settings';
 import { useAuth } from './hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
+import { isSupabaseConfigured } from './lib/supabase';
 
 type AppState = 'landing' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'tracker' | 'memories' | 'settings';
 
@@ -62,6 +64,16 @@ export default function App() {
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
+    );
+  }
+
+  // Show setup screen if Supabase is not configured
+  if (!isSupabaseConfigured()) {
+    return (
+      <>
+        <Toaster />
+        <SetupScreen />
+      </>
     );
   }
 
