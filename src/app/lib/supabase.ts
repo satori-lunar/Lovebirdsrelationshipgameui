@@ -63,42 +63,45 @@ export const supabase = createClient(
 );
 
 // Test connection on initialization (non-blocking)
-// Defer to avoid any initialization issues
-// Don't call isSupabaseConfigured() at module level - inline the check to prevent
-// "Cannot access 'r' before initialization" when the function gets minified to 'r'
-if (typeof window !== 'undefined' && supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
-  // Defer the connection test to avoid closure TDZ issues during minification
-  // Inline all checks to prevent any function calls at module level
-  if (typeof requestIdleCallback !== 'undefined') {
-    requestIdleCallback(() => {
-      supabase.auth.getSession()
-        .then(() => {
-          console.log('✅ Supabase connection test successful');
-        })
-        .catch((error) => {
-          console.error('❌ Supabase connection test failed:', error);
-          console.error('This might indicate:');
-          console.error('- Network connectivity issues');
-          console.error('- Incorrect Supabase URL');
-          console.error('- Supabase project is paused or inactive');
-          console.error('- CORS configuration issues');
-        });
-    }, { timeout: 1000 });
-  } else {
-    setTimeout(() => {
-      supabase.auth.getSession()
-        .then(() => {
-          console.log('✅ Supabase connection test successful');
-        })
-        .catch((error) => {
-          console.error('❌ Supabase connection test failed:', error);
-          console.error('This might indicate:');
-          console.error('- Network connectivity issues');
-          console.error('- Incorrect Supabase URL');
-          console.error('- Supabase project is paused or inactive');
-          console.error('- CORS configuration issues');
-        });
-    }, 100);
-  }
+// CRITICAL: Defer ALL code to avoid TDZ - don't evaluate ANY conditions at module level
+// The if condition itself (even inlined) causes "Cannot access 'r' before initialization"
+// when variables get minified and the condition executes during module loading
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    // Only NOW evaluate the configuration check - safely inside deferred callback
+    if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => {
+          supabase.auth.getSession()
+            .then(() => {
+              console.log('✅ Supabase connection test successful');
+            })
+            .catch((error) => {
+              console.error('❌ Supabase connection test failed:', error);
+              console.error('This might indicate:');
+              console.error('- Network connectivity issues');
+              console.error('- Incorrect Supabase URL');
+              console.error('- Supabase project is paused or inactive');
+              console.error('- CORS configuration issues');
+            });
+        }, { timeout: 1000 });
+      } else {
+        setTimeout(() => {
+          supabase.auth.getSession()
+            .then(() => {
+              console.log('✅ Supabase connection test successful');
+            })
+            .catch((error) => {
+              console.error('❌ Supabase connection test failed:', error);
+              console.error('This might indicate:');
+              console.error('- Network connectivity issues');
+              console.error('- Incorrect Supabase URL');
+              console.error('- Supabase project is paused or inactive');
+              console.error('- CORS configuration issues');
+            });
+        }, 100);
+      }
+    }
+  }, 0);
 }
 
