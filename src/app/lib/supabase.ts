@@ -68,9 +68,10 @@ export const supabase = createClient(
 );
 
 // Test connection on initialization (non-blocking)
-if (isSupabaseConfigured()) {
-  // Test the connection asynchronously without blocking module initialization
-  setTimeout(() => {
+// Defer to avoid any initialization issues
+if (isSupabaseConfigured() && typeof window !== 'undefined') {
+  // Use requestIdleCallback or setTimeout to ensure module is fully loaded
+  const testConnection = () => {
     supabase.auth.getSession()
       .then(() => {
         console.log('✅ Supabase connection test successful');
@@ -83,6 +84,13 @@ if (isSupabaseConfigured()) {
         console.error('- Supabase project is paused or inactive');
         console.error('- CORS configuration issues');
       });
-  }, 0);
+  };
+
+  // Wait for next event loop to ensure supabase is fully initialized
+  if (typeof requestIdleCallback !== 'undefined') {
+    requestIdleCallback(testConnection, { timeout: 1000 });
+  } else {
+    setTimeout(testConnection, 100);
+  }
 }
 
