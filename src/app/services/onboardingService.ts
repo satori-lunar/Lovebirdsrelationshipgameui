@@ -4,6 +4,7 @@ import type { OnboardingData, OnboardingResponse } from '../types/onboarding';
 export const onboardingService = {
   async saveOnboarding(userId: string, data: OnboardingData): Promise<OnboardingResponse> {
     // First, ensure user exists in users table (required for foreign key)
+    // This is critical - onboarding_responses has a foreign key to users
     try {
       const { data: userData, error: userError } = await api.supabase
         .from('users')
@@ -12,25 +13,52 @@ export const onboardingService = {
         .single();
 
       if (userError && userError.code === 'PGRST116') {
-        // User doesn't exist, create it
-        const { data: authUser } = await api.supabase.auth.getUser();
-        if (authUser?.user) {
-          const trialEndDate = new Date();
-          trialEndDate.setDate(trialEndDate.getDate() + 7);
-          
-          await api.supabase
-            .from('users')
-            .insert({
-              id: userId,
-              email: authUser.user.email || '',
-              name: data.name || null,
-              trial_start_date: new Date().toISOString(),
-              trial_end_date: trialEndDate.toISOString(),
-            });
+        // User doesn't exist, create it - this MUST succeed before onboarding
+        const { data: authUser, error: authError } = await api.supabase.auth.getUser();
+        
+        if (authError || !authUser?.user) {
+          throw new Error('Unable to get user information. Please sign in again.');
         }
+
+        const trialEndDate = new Date();
+        trialEndDate.setDate(trialEndDate.getDate() + 7);
+        
+        const { error: insertError } = await api.supabase
+          .from('users')
+          .insert({
+            id: userId,
+            email: authUser.user.email || '',
+            name: data.name || null,
+            trial_start_date: new Date().toISOString(),
+            trial_end_date: trialEndDate.toISOString(),
+          });
+
+        if (insertError) {
+          console.error('Failed to create user profile:', insertError);
+          throw new Error(`Failed to create user profile: ${insertError.message}. Please ensure database migrations are run.`);
+        }
+
+        // Verify user was created
+        const { error: verifyError } = await api.supabase
+          .from('users')
+          .select('id')
+          .eq('id', userId)
+          .single();
+
+        if (verifyError) {
+          throw new Error('User profile creation failed. Please try again.');
+        }
+      } else if (userError) {
+        // Some other error occurred
+        console.error('Error checking user:', userError);
+        throw new Error(`Database error: ${userError.message}`);
       }
-    } catch (error) {
-      console.warn('Error ensuring user exists:', error);
+    } catch (error: any) {
+      // Re-throw with better error message
+      if (error.message) {
+        throw error;
+      }
+      throw new Error('Failed to ensure user profile exists. Please try again.');
     }
 
     // Use upsert (insert or update) to handle existing onboarding
