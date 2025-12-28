@@ -64,24 +64,10 @@ export default function App() {
       return;
     }
 
-    // User is authenticated - check onboarding status
-    // Only auto-redirect if we're on the sign-up screen (after successful sign up)
-    // Don't redirect if user is on entry or feature-slides (let them complete the flow)
-    if (currentView === 'sign-up') {
-      // After sign up, wait a moment then redirect to onboarding
-      const redirectTimer = setTimeout(() => {
-        if (onboarding === null) {
-          setCurrentView('onboarding');
-        } else if (onboarding) {
-          setCurrentView('home');
-        }
-      }, 1500); // Give time to see success message
-      
-      return () => clearTimeout(redirectTimer);
-    }
+    // User is authenticated - but don't auto-redirect from sign-up or feature-slides
+    // Let the user complete the flow, then redirect will happen via onSuccess callbacks
     
-    // If user is authenticated and on entry (cached session), redirect based on onboarding
-    // But don't redirect from feature-slides - let them complete the flow
+    // Only redirect from entry screen if user has cached session
     if (currentView === 'entry') {
       if (onboarding === null) {
         setCurrentView('onboarding');
@@ -133,7 +119,12 @@ export default function App() {
       {currentView === 'sign-up' && (
         <SignUp
           onSuccess={() => {
-            // After successful sign up, redirect handled by useEffect
+            // After successful sign up, redirect to onboarding
+            // New users always need to complete onboarding
+            // Wait a moment to show success message
+            setTimeout(() => {
+              setCurrentView('onboarding');
+            }, 1500);
           }}
           onBack={() => setCurrentView('feature-slides')}
         />
