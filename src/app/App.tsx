@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Toaster } from './components/ui/sonner';
 import { Landing } from './components/Landing';
 import { Onboarding } from './components/Onboarding';
 import { Home } from './components/Home';
@@ -9,15 +10,28 @@ import { GiftGuidance } from './components/GiftGuidance';
 import { RelationshipTracker } from './components/RelationshipTracker';
 import { Memories } from './components/Memories';
 import { Settings } from './components/Settings';
+import { useAuth } from './hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { onboardingService } from './services/onboardingService';
 
 type AppState = 'landing' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'tracker' | 'memories' | 'settings';
 
 export default function App() {
+  const { user, loading: authLoading } = useAuth();
   const [currentView, setCurrentView] = useState<AppState>('landing');
-  const [userData, setUserData] = useState<any>(null);
 
-  const handleOnboardingComplete = (data: any) => {
-    setUserData(data);
+  const { data: onboarding } = useQuery({
+    queryKey: ['onboarding', user?.id],
+    queryFn: () => onboardingService.getOnboarding(user!.id),
+    enabled: !!user,
+  });
+
+  const userData = onboarding ? {
+    name: onboarding.name,
+    partnerName: onboarding.partner_name,
+  } : null;
+
+  const handleOnboardingComplete = () => {
     setCurrentView('home');
   };
 
@@ -29,8 +43,31 @@ export default function App() {
     setCurrentView('home');
   };
 
+  // Show landing if not authenticated, or if authenticated but no onboarding
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (!onboarding && currentView === 'landing') {
+        setCurrentView('onboarding');
+      } else if (onboarding && currentView === 'landing') {
+        setCurrentView('home');
+      }
+    }
+  }, [user, onboarding, authLoading, currentView]);
+
+  if (authLoading) {
+    return (
+      <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50">
+      <Toaster />
       {currentView === 'landing' && (
         <Landing onGetStarted={() => setCurrentView('onboarding')} />
       )}
