@@ -97,13 +97,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                       <p className="text-sm text-gray-600 mb-3">
                         Answer together and see how well you know each other
                       </p>
-                      <Button 
+                      <Button
                         onClick={() => onNavigate('daily-question')}
                         className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-                        disabled={!relationship?.partner_b_id}
+                        disabled={!relationship}
                       >
                         Answer Now
-                        {relationship?.partner_b_id && hasAnswered && <span className="ml-2">→</span>}
+                        {relationship && hasAnswered && <span className="ml-2">→</span>}
                       </Button>
                     </>
                   )}
@@ -135,7 +135,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         )}
 
         {/* Connection Stats - Show when connected */}
-        {relationship?.partner_b_id && (
+        {relationship && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -226,7 +226,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         </div>
 
         {/* Upcoming Events - Show when connected */}
-        {relationship?.partner_b_id && (
+        {relationship && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

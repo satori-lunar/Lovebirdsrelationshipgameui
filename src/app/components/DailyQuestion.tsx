@@ -75,7 +75,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
     }
   }, [userGuess]);
 
-  if (!relationship?.partner_b_id) {
+  if (!relationship) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6 flex items-center justify-center">
         <div className="bg-white rounded-3xl p-8 shadow-lg text-center max-w-md">
