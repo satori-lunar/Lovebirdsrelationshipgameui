@@ -452,19 +452,24 @@ export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
           </div>
 
           {/* Swipe Card */}
-          {!isUserDone && currentDate && (
-            <SwipeableDateCard
-              date={currentDate}
-              onSwipe={handleSwipe}
-              onBack={() => {
-                resetSwipeFlow();
-                setMode('select');
-              }}
-              currentIndex={currentSwipeIndex}
-              totalCount={swipeDateIdeas.length}
-              partnerName="You"
-              isPartner1={true}
-            />
+          {!isUserDone && (
+            <AnimatePresence mode="wait">
+              {currentDate && (
+                <SwipeableDateCard
+                  key={currentSwipeIndex}
+                  date={currentDate}
+                  onSwipe={handleSwipe}
+                  onBack={() => {
+                    resetSwipeFlow();
+                    setMode('select');
+                  }}
+                  currentIndex={currentSwipeIndex}
+                  totalCount={swipeDateIdeas.length}
+                  partnerName="You"
+                  isPartner1={true}
+                />
+              )}
+            </AnimatePresence>
           )}
 
           {/* Waiting State */}
@@ -649,7 +654,7 @@ function SwipeableDateCard({
   partnerName: string;
   isPartner1: boolean;
 }) {
-  const [exitX, setExitX] = useState<number | string>('100%');
+  const [isExiting, setIsExiting] = useState(false);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-30, 30]);
@@ -661,21 +666,22 @@ function SwipeableDateCard({
   const nopeOpacity = useTransform(x, [-200, -120, 0], [1, 0.8, 0]);
   const nopeScale = useTransform(x, [-200, -120, 0], [1.2, 1.1, 0.8]);
 
+  // Reset motion values when component mounts (new card)
+  useEffect(() => {
+    x.set(0);
+    y.set(0);
+    setIsExiting(false);
+  }, [currentIndex, x, y]);
+
   const handleDragEnd = (_event: any, info: any) => {
     const threshold = 120;
-    
+
     if (Math.abs(info.offset.x) > threshold) {
       const liked = info.offset.x > 0;
-      const exitDirection = liked ? 500 : -500;
-      setExitX(exitDirection);
+      setIsExiting(true);
 
-      // Add a small delay before triggering the callback for better UX
-      setTimeout(() => {
-        onSwipe(liked);
-        // Reset values for next card
-        x.set(0);
-        y.set(0);
-      }, 200);
+      // Trigger callback immediately for better responsiveness
+      onSwipe(liked);
     } else {
       // Spring back to center with smooth animation
       x.set(0, { type: "spring", stiffness: 300, damping: 30 });
@@ -773,8 +779,8 @@ function SwipeableDateCard({
           dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
           dragElastic={0.7}
           onDragEnd={handleDragEnd}
-          style={{ 
-            x, 
+          style={{
+            x,
             y,
             rotate,
             scale,
@@ -785,10 +791,13 @@ function SwipeableDateCard({
             cursor: 'grabbing',
             scale: 1.05
           }}
-          animate={{
-            x: exitX === '100%' ? 0 : exitX,
-            y: 0
+          exit={{
+            x: isExiting ? (x.get() > 0 ? 500 : -500) : 0,
+            opacity: 0,
+            transition: { duration: 0.3, ease: "easeOut" }
           }}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
           transition={{
             type: "spring",
             stiffness: 300,
