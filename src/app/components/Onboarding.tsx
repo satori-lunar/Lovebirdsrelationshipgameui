@@ -216,6 +216,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         pronouns: formData.pronouns === 'Other (type)' ? pronounsOther : formData.pronouns
       };
 
+      console.log('Saving onboarding data:', dataToSave);
+
       await onboardingService.saveOnboarding(user.id, dataToSave);
       toast.success('Onboarding complete!');
       onComplete();
@@ -320,7 +322,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                         <Calendar
                           mode="single"
                           selected={birthday}
-                          onSelect={setBirthday}
+                          onSelect={(date) => {
+                            console.log('Birthday selected:', date);
+                            setBirthday(date);
+                          }}
                           disabled={(date) => date > new Date()}
                           initialFocus
                         />
