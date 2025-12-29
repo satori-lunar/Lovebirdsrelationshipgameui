@@ -168,17 +168,23 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
             <p className="text-xs text-white/80">Share your invite code or enter theirs</p>
           </div>
           <div className="flex gap-2">
-            {currentInviteCode && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs border-white/50 text-white hover:bg-white/20"
-                onClick={() => setShowInviteDialog(true)}
-              >
-                <Link2 className="w-3 h-3 mr-1" />
-                Code
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs border-white/50 text-white hover:bg-white/20"
+              onClick={async () => {
+                // If no invite code exists, generate one first
+                if (!currentInviteCode) {
+                  await handleCreateInvite();
+                } else {
+                  setShowInviteDialog(true);
+                }
+              }}
+              disabled={isCreating}
+            >
+              <Link2 className="w-3 h-3 mr-1" />
+              {isCreating ? 'Creating...' : 'Code'}
+            </Button>
             <Button
               size="sm"
               className="bg-white text-purple-600 hover:bg-white/90 text-xs"

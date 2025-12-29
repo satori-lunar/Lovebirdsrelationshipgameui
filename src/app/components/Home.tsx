@@ -6,6 +6,7 @@ import { PartnerConnection } from './PartnerConnection';
 import { useDailyQuestion } from '../hooks/useDailyQuestion';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
+import { useQuestionStats } from '../hooks/useQuestionStats';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 
@@ -19,6 +20,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { hasAnswered, hasGuessed, canSeeFeedback } = useDailyQuestion();
+  const { totalCompleted, currentStreak } = useQuestionStats();
   const hasCompletedDailyQuestion = hasAnswered && hasGuessed;
   
   const { data: onboarding } = useQuery({
@@ -143,11 +145,11 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             className="grid grid-cols-3 gap-3 mb-6"
           >
             <Card className="p-4 text-center border-0 shadow-sm bg-white">
-              <div className="text-2xl font-bold text-pink-600 mb-1">0</div>
+              <div className="text-2xl font-bold text-pink-600 mb-1">{currentStreak}</div>
               <div className="text-xs text-gray-600">Day Streak</div>
             </Card>
             <Card className="p-4 text-center border-0 shadow-sm bg-white">
-              <div className="text-2xl font-bold text-purple-600 mb-1">0</div>
+              <div className="text-2xl font-bold text-purple-600 mb-1">{totalCompleted}</div>
               <div className="text-xs text-gray-600">Questions</div>
             </Card>
             <Card className="p-4 text-center border-0 shadow-sm bg-white">
