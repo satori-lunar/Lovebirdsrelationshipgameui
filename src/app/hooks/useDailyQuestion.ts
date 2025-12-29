@@ -14,14 +14,21 @@ export function useDailyQuestion() {
   const { data: question, isLoading } = useQuery({
     queryKey: ['dailyQuestion', relationship?.id],
     queryFn: async () => {
-      if (!relationship) return null;
-      
+      console.log('useDailyQuestion queryFn called, relationship:', relationship);
+      if (!relationship) {
+        console.log('No relationship, returning null');
+        return null;
+      }
+
       let todayQuestion = await questionService.getTodayQuestion(relationship.id);
-      
+      console.log('Today question result:', todayQuestion);
+
       if (!todayQuestion) {
+        console.log('No today question, generating...');
         todayQuestion = await questionService.generateDailyQuestion(relationship.id);
       }
-      
+
+      console.log('Final question:', todayQuestion);
       return todayQuestion;
     },
     enabled: !!relationship,

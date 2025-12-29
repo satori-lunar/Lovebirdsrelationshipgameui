@@ -20,6 +20,7 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
   const [copied, setCopied] = useState(false);
 
   const isConnected = !!relationship?.partner_b_id;
+  const hasRelationship = !!relationship;
   const currentInviteCode = relationship?.invite_code;
 
   const handleCreateInvite = async () => {
@@ -156,23 +157,36 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
     );
   }
 
-  // Has relationship but not connected - show connect option
+  // Has relationship but not connected - show both invite and connect options
   return (
     <>
       <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30">
         <div className="flex items-center gap-3">
           <Users className="w-10 h-10 text-white/90" />
           <div className="flex-1">
-            <p className="font-semibold text-sm mb-1">Waiting for {partnerName}</p>
+            <p className="font-semibold text-sm mb-1">Connect with {partnerName}</p>
             <p className="text-xs text-white/80">Share your invite code or enter theirs</p>
           </div>
-          <Button 
-            size="sm"
-            className="bg-white text-purple-600 hover:bg-white/90 text-xs"
-            onClick={() => setShowConnectDialog(true)}
-          >
-            Connect
-          </Button>
+          <div className="flex gap-2">
+            {currentInviteCode && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs border-white/50 text-white hover:bg-white/20"
+                onClick={() => setShowInviteDialog(true)}
+              >
+                <Link2 className="w-3 h-3 mr-1" />
+                Code
+              </Button>
+            )}
+            <Button
+              size="sm"
+              className="bg-white text-purple-600 hover:bg-white/90 text-xs"
+              onClick={() => setShowConnectDialog(true)}
+            >
+              Connect
+            </Button>
+          </div>
         </div>
       </div>
 

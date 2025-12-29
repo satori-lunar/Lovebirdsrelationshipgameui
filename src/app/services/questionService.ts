@@ -23,9 +23,11 @@ export const questionService = {
 
   async generateDailyQuestion(relationshipId: string, context?: any): Promise<DailyQuestion> {
     const today = new Date().toISOString().split('T')[0];
+    console.log('Generating daily question for relationship:', relationshipId, 'date:', today);
 
     // Check if question already exists for today
     const existing = await this.getTodayQuestion(relationshipId);
+    console.log('Existing question:', existing);
     if (existing) {
       return existing;
     }
@@ -36,12 +38,16 @@ export const questionService = {
       .select('*')
       .is('relationship_id', null); // Get global questions (relationship_id is NULL)
 
+    console.log('Global questions query result:', { questions: questions?.length, error });
+
     if (error || !questions || questions.length === 0) {
+      console.error('No questions available:', { error, questionsCount: questions?.length });
       throw new Error('No questions available');
     }
 
     // Select a random question
     const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+    console.log('Selected random question:', randomQuestion.question_text);
 
     // Create a new daily question for this relationship
     const question = await handleSupabaseError(
@@ -56,6 +62,7 @@ export const questionService = {
         .single()
     );
 
+    console.log('Created new question:', question);
     return question;
   },
 
