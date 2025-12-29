@@ -19,22 +19,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    authService.getSession().then((session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    // Defer auth initialization to ensure supabase client is fully loaded
+    // This prevents "Cannot access 'r' before initialization" when modules load
+    const initAuth = async () => {
+      try {
+        // Get initial session
+        const session = await authService.getSession();
         setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Failed to get initial session:', error);
+        // Don't throw - just set no user
+        setUser(null);
+      } finally {
         setLoading(false);
       }
-    );
+
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      );
+
+      return subscription;
+    };
+
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    // Defer to next tick to ensure all modules are loaded
+    setTimeout(() => {
+      initAuth().then((sub) => {
+        if (sub) subscription = sub;
+      });
+    }, 0);
 
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 

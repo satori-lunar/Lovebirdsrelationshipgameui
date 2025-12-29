@@ -6,6 +6,7 @@ import { PartnerConnection } from './PartnerConnection';
 import { useDailyQuestion } from '../hooks/useDailyQuestion';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
+import { useQuestionStats } from '../hooks/useQuestionStats';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 
@@ -19,6 +20,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { hasAnswered, hasGuessed, canSeeFeedback } = useDailyQuestion();
+  const { totalCompleted, currentStreak } = useQuestionStats();
   const hasCompletedDailyQuestion = hasAnswered && hasGuessed;
   
   const { data: onboarding } = useQuery({
@@ -97,13 +99,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                       <p className="text-sm text-gray-600 mb-3">
                         Answer together and see how well you know each other
                       </p>
-                      <Button 
+                      <Button
                         onClick={() => onNavigate('daily-question')}
                         className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-                        disabled={!relationship?.partner_b_id}
+                        disabled={!relationship}
                       >
                         Answer Now
-                        {relationship?.partner_b_id && hasAnswered && <span className="ml-2">→</span>}
+                        {relationship && hasAnswered && <span className="ml-2">→</span>}
                       </Button>
                     </>
                   )}
@@ -134,26 +136,28 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
           </motion.div>
         )}
 
-        {/* Connection Stats */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-3 gap-3 mb-6"
-        >
-          <Card className="p-4 text-center border-0 shadow-sm bg-white">
-            <div className="text-2xl font-bold text-pink-600 mb-1">12</div>
-            <div className="text-xs text-gray-600">Day Streak</div>
-          </Card>
-          <Card className="p-4 text-center border-0 shadow-sm bg-white">
-            <div className="text-2xl font-bold text-purple-600 mb-1">47</div>
-            <div className="text-xs text-gray-600">Questions</div>
-          </Card>
-          <Card className="p-4 text-center border-0 shadow-sm bg-white">
-            <div className="text-2xl font-bold text-pink-600 mb-1">8</div>
-            <div className="text-xs text-gray-600">Dates</div>
-          </Card>
-        </motion.div>
+        {/* Connection Stats - Show when connected */}
+        {relationship && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-3 gap-3 mb-6"
+          >
+            <Card className="p-4 text-center border-0 shadow-sm bg-white">
+              <div className="text-2xl font-bold text-pink-600 mb-1">{currentStreak}</div>
+              <div className="text-xs text-gray-600">Day Streak</div>
+            </Card>
+            <Card className="p-4 text-center border-0 shadow-sm bg-white">
+              <div className="text-2xl font-bold text-purple-600 mb-1">{totalCompleted}</div>
+              <div className="text-xs text-gray-600">Questions</div>
+            </Card>
+            <Card className="p-4 text-center border-0 shadow-sm bg-white">
+              <div className="text-2xl font-bold text-pink-600 mb-1">0</div>
+              <div className="text-xs text-gray-600">Dates</div>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Quick Actions */}
         <div className="space-y-4 mb-6">
@@ -223,42 +227,26 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
           </motion.div>
         </div>
 
-        {/* Upcoming Events */}
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="p-6 mb-6 border-0 shadow-md bg-white">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-purple-600" />
-              <h3 className="font-semibold">Coming Up</h3>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
-                <div className="w-14 h-14 bg-white rounded-xl flex flex-col items-center justify-center flex-shrink-0 shadow-sm">
-                  <span className="text-xs text-purple-600 font-medium">FEB</span>
-                  <span className="text-xl font-bold text-purple-600">14</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">Valentine's Day</p>
-                  <p className="text-xs text-gray-600">47 days away</p>
-                </div>
+        {/* Upcoming Events - Show when connected */}
+        {relationship && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="p-6 mb-6 border-0 shadow-md bg-white">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-purple-600" />
+                <h3 className="font-semibold">Coming Up</h3>
               </div>
-              
-              <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl">
-                <div className="w-14 h-14 bg-white rounded-xl flex flex-col items-center justify-center flex-shrink-0 shadow-sm">
-                  <span className="text-xs text-pink-600 font-medium">MAR</span>
-                  <span className="text-xl font-bold text-pink-600">15</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">{partnerName}'s Birthday</p>
-                  <p className="text-xs text-gray-600">76 days away</p>
-                </div>
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No upcoming events yet</p>
+                <p className="text-xs text-gray-400 mt-1">Add important dates to see them here</p>
               </div>
-            </div>
-          </Card>
-        </motion.div>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Memories Card */}
         <motion.div

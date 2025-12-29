@@ -9,11 +9,13 @@ interface LandingProps {
 }
 
 export function Landing({ onGetStarted }: LandingProps) {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const handleGetStarted = () => {
     if (user) {
+      // User is already authenticated, signal to proceed
+      window.dispatchEvent(new CustomEvent('userJustSignedUp'));
       onGetStarted();
     } else {
       setShowAuthModal(true);
@@ -23,6 +25,9 @@ export function Landing({ onGetStarted }: LandingProps) {
   const handleAuthSuccess = () => {
     // Close modal - App.tsx will handle navigation based on auth state
     setShowAuthModal(false);
+    // Signal to App.tsx that user just signed up
+    // We'll use a custom event to communicate this
+    window.dispatchEvent(new CustomEvent('userJustSignedUp'));
   };
 
   return (
@@ -47,12 +52,45 @@ export function Landing({ onGetStarted }: LandingProps) {
             onClick={handleGetStarted}
             className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6"
           >
-            {user ? 'Continue to App' : 'Start Your 7-Day Free Trial'}
+            {user ? 'Continue to App' : 'Sign Up & Get Started'}
           </Button>
           
-          <p className="text-sm text-gray-500">
-            Then $5/month per couple • No credit card required • Cancel anytime
-          </p>
+          <div className="text-center space-y-2">
+            {user ? (
+              <>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-sm text-gray-600 hover:text-gray-900 underline block"
+                >
+                  Sign in to a different account
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await signOut();
+                    } catch (error) {
+                      console.error('Sign out error:', error);
+                    }
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-900 underline block"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-sm text-gray-600 hover:text-gray-900 underline"
+                >
+                  Already have an account? Sign In
+                </button>
+                <p className="text-sm text-gray-500">
+                  Then $5/month per couple • No credit card required • Cancel anytime
+                </p>
+              </>
+            )}
+          </div>
         </div>
 
         <AuthModal 

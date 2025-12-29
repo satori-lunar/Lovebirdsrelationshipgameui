@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Toaster } from './components/ui/sonner';
-import { Landing } from './components/Landing';
+import { EntryChoice } from './components/EntryChoice';
+import { FeatureSlides } from './components/FeatureSlides';
+import { SignUp } from './components/SignUp';
 import { Onboarding } from './components/Onboarding';
 import { Home } from './components/Home';
 import { DailyQuestion } from './components/DailyQuestion';
@@ -10,15 +12,17 @@ import { GiftGuidance } from './components/GiftGuidance';
 import { RelationshipTracker } from './components/RelationshipTracker';
 import { Memories } from './components/Memories';
 import { Settings } from './components/Settings';
+import { AuthModal } from './components/AuthModal';
 import { useAuth } from './hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 
-type AppState = 'landing' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'tracker' | 'memories' | 'settings';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'tracker' | 'memories' | 'settings';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
-  const [currentView, setCurrentView] = useState<AppState>('landing');
+  const [currentView, setCurrentView] = useState<AppState>('entry');
+  const [showSignInModal, setShowSignInModal] = useState(false);
 
   const { data: onboarding, error: onboardingError } = useQuery({
     queryKey: ['onboarding', user?.id],
@@ -45,32 +49,32 @@ export default function App() {
     setCurrentView('home');
   };
 
-  // Show landing if not authenticated, or if authenticated but no onboarding
+  // Handle routing based on auth and onboarding status
   useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        // Not authenticated - show landing
-        if (currentView !== 'landing' && currentView !== 'onboarding') {
-          setCurrentView('landing');
-        }
-      } else if (user) {
-        // Authenticated - check onboarding status and redirect accordingly
-        // Only auto-redirect if we're on landing or onboarding page
-        if (currentView === 'landing' || currentView === 'onboarding') {
-          if (onboarding) {
-            // User has completed onboarding - go to home
-            setCurrentView('home');
-          } else if (!onboardingError) {
-            // User hasn't completed onboarding - show onboarding
-            // Only set to onboarding if we're not already there (to avoid loops)
-            if (currentView === 'landing') {
-              setCurrentView('onboarding');
-            }
-          }
-        }
-      }
+    // Wait for auth to finish loading
+    if (authLoading) {
+      return;
     }
-  }, [user, onboarding, onboardingError, authLoading, currentView]);
+
+    // If not authenticated and not in entry flow, show entry
+    if (!user) {
+      if (!['entry', 'feature-slides', 'sign-up', 'sign-in'].includes(currentView)) {
+        setCurrentView('entry');
+      }
+      return;
+    }
+
+    // User is authenticated
+    // Only auto-redirect if user has COMPLETED onboarding (not in progress)
+    if (currentView === 'entry') {
+      // If onboarding is completed, go to home
+      if (onboarding) {
+        setCurrentView('home');
+      }
+      // If onboarding is null/incomplete, stay on entry - let them choose sign in
+      // This handles cached sessions from incomplete sign-ups
+    }
+  }, [user, onboarding, authLoading, currentView]);
 
   if (authLoading) {
     return (
@@ -83,16 +87,58 @@ export default function App() {
     );
   }
 
+  const handleSignInSuccess = () => {
+    setShowSignInModal(false);
+    // Check onboarding status and redirect
+    if (onboarding === null) {
+      setCurrentView('onboarding');
+    } else if (onboarding) {
+      setCurrentView('home');
+    }
+  };
+
   return (
     <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50">
       <Toaster />
-      {currentView === 'landing' && (
-        <Landing onGetStarted={() => setCurrentView('onboarding')} />
+      
+      {currentView === 'entry' && (
+        <EntryChoice
+          onSignIn={() => setShowSignInModal(true)}
+          onFirstTime={() => setCurrentView('feature-slides')}
+        />
       )}
 
-      {currentView === 'onboarding' && (
+      {currentView === 'feature-slides' && (
+        <FeatureSlides
+          onComplete={() => setCurrentView('sign-up')}
+          onBack={() => setCurrentView('entry')}
+        />
+      )}
+
+      {currentView === 'sign-up' && (
+        <SignUp
+          onSuccess={() => {
+            // After successful sign up, redirect to onboarding
+            // New users always need to complete onboarding
+            // Wait a moment to show success message
+            setTimeout(() => {
+              setCurrentView('onboarding');
+            }, 1500);
+          }}
+          onBack={() => setCurrentView('feature-slides')}
+        />
+      )}
+
+      {currentView === 'onboarding' && user && (
         <Onboarding onComplete={handleOnboardingComplete} />
       )}
+
+      <AuthModal
+        open={showSignInModal}
+        onOpenChange={setShowSignInModal}
+        onSuccess={handleSignInSuccess}
+        signInOnly={true}
+      />
 
       {currentView === 'home' && (
         <Home 

@@ -28,19 +28,43 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
     isSavingGuess,
   } = useDailyQuestion();
 
-  const [stage, setStage] = useState<'answer' | 'guess' | 'feedback'>('answer');
+  // Show error if no relationship is established
+  if (!relationship) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-3xl p-8 shadow-lg text-center">
+            <Heart className="w-16 h-16 text-pink-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-4">Connect with Your Partner</h2>
+            <p className="text-gray-600 mb-6">
+              To answer daily questions, you need to connect with your partner first.
+              Go to Settings and use "Connect Partner" to get started.
+            </p>
+            <Button onClick={onComplete} className="w-full">
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const [stage, setStage] = useState<'answer' | 'guess' | 'feedback' | 'submitting-guess'>('answer');
   const [answerText, setAnswerText] = useState('');
   const [guessText, setGuessText] = useState('');
 
   useEffect(() => {
-    if (hasAnswered && !hasGuessed) {
-      setStage('guess');
-    } else if (hasAnswered && hasGuessed && canSeeFeedback) {
-      setStage('feedback');
-    } else if (!hasAnswered) {
-      setStage('answer');
+    // Only manage automatic stage transitions, don't override manual ones
+    if (stage === 'answer' || stage === 'guess') {
+      if (hasAnswered && !hasGuessed) {
+        setStage('guess');
+      } else if (hasAnswered && hasGuessed && canSeeFeedback) {
+        setStage('feedback');
+      } else if (!hasAnswered) {
+        setStage('answer');
+      }
     }
-  }, [hasAnswered, hasGuessed, canSeeFeedback]);
+  }, [hasAnswered, hasGuessed, canSeeFeedback, stage]);
 
   useEffect(() => {
     if (userAnswer) {
@@ -54,7 +78,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
     }
   }, [userGuess]);
 
-  if (!relationship?.partner_b_id) {
+  if (!relationship) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6 flex items-center justify-center">
         <div className="bg-white rounded-3xl p-8 shadow-lg text-center max-w-md">
@@ -106,11 +130,25 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
       return;
     }
 
+    setStage('submitting-guess');
+
     try {
       await saveGuess({ guessText: guessText.trim() });
-      setStage('feedback');
-      toast.success('Guess saved!');
+
+      // Check if partner has answered
+      if (partnerAnswer) {
+        // Partner has answered - show feedback
+        setStage('feedback');
+        toast.success('Guess saved!');
+      } else {
+        // Partner hasn't answered yet - go back to home
+        toast.success('Guess saved! Check back later when your partner answers.');
+        setTimeout(() => {
+          onComplete();
+        }, 2000); // Give user time to see the toast
+      }
     } catch (error: any) {
+      setStage('guess'); // Go back to guess stage on error
       toast.error(error.message || 'Failed to save guess');
     }
   };
@@ -209,6 +247,27 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
               >
                 {isSavingGuess ? 'Saving...' : 'Submit Guess'}
               </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {stage === 'submitting-guess' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-3xl p-8 shadow-lg space-y-6"
+          >
+            <div className="text-center space-y-3">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <Heart className="w-8 h-8 text-white" />
+                </div>
+              </div>
+              <h2 className="text-2xl">Saving Your Guess</h2>
+              <p className="text-gray-600">Checking if your partner has answered...</p>
+            </div>
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
             </div>
           </motion.div>
         )}

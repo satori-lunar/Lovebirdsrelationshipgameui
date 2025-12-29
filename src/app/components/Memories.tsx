@@ -6,6 +6,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { toast } from 'sonner';
+
+// Check if device has camera capabilities
+const hasCameraSupport = () => {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+};
+
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         (window.innerWidth <= 768 && window.innerHeight <= 1024);
+};
 
 interface MemoriesProps {
   onBack: () => void;
@@ -23,6 +34,7 @@ interface Memory {
 export function Memories({ onBack }: MemoriesProps) {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [isAddingMemory, setIsAddingMemory] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [newMemory, setNewMemory] = useState({
     journalEntry: '',
     tags: '',
@@ -31,9 +43,10 @@ export function Memories({ onBack }: MemoriesProps) {
   });
 
   const handleAddMemory = () => {
-    if (newMemory.journalEntry.trim() || newMemory.tags.trim()) {
+    if (newMemory.journalEntry.trim() || newMemory.tags.trim() || selectedImage) {
       const memory: Memory = {
         id: Date.now().toString(),
+        photoUrl: selectedImage ? URL.createObjectURL(selectedImage) : undefined,
         journalEntry: newMemory.journalEntry || undefined,
         tags: newMemory.tags.split(',').map(t => t.trim()).filter(Boolean),
         memoryDate: newMemory.memoryDate,
@@ -46,7 +59,9 @@ export function Memories({ onBack }: MemoriesProps) {
         memoryDate: new Date().toISOString().split('T')[0],
         isPrivate: false,
       });
+      setSelectedImage(null);
       setIsAddingMemory(false);
+      toast.success('Memory saved!');
     }
   };
 
@@ -114,6 +129,93 @@ export function Memories({ onBack }: MemoriesProps) {
                       onChange={(e) => setNewMemory({ ...newMemory, tags: e.target.value })}
                       placeholder="First date, Anniversary, Vacation..."
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Add a Photo</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => {
+                          const input = document.getElementById('photo-upload') as HTMLInputElement;
+                          if (input) {
+                            input.click();
+                          } else {
+                            console.error('Photo upload input not found');
+                          }
+                        }}
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        Choose Photo
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={`flex items-center gap-2 ${!hasCameraSupport() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!hasCameraSupport()}
+                        onClick={() => {
+                          if (!hasCameraSupport()) {
+                            toast.info('Camera not available on this device');
+                            return;
+                          }
+                          const input = document.getElementById('camera-upload') as HTMLInputElement;
+                          if (input) {
+                            input.click();
+                          } else {
+                            console.error('Camera upload input not found');
+                          }
+                        }}
+                      >
+                        <Camera className="w-4 h-4" />
+                        Take Photo
+                      </Button>
+                    </div>
+                    {!hasCameraSupport() && (
+                      <p className="text-xs text-gray-500">
+                        💡 Camera not available on this device. Use "Choose Photo" to select from gallery.
+                      </p>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        console.log('Photo upload changed:', e.target.files);
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          console.log('Selected file:', file.name, file.type, file.size);
+                          setSelectedImage(file);
+                          toast.success('Photo selected!');
+                        }
+                      }}
+                      className="hidden"
+                      id="photo-upload"
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture={isMobileDevice() ? "environment" : undefined}
+                      onChange={(e) => {
+                        console.log('Camera upload changed:', e.target.files);
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          console.log('Captured file:', file.name, file.type, file.size);
+                          setSelectedImage(file);
+                          toast.success('Photo captured!');
+                        }
+                      }}
+                      className="hidden"
+                      id="camera-upload"
+                    />
+                    {selectedImage && (
+                      <div className="mt-2">
+                        <img
+                          src={URL.createObjectURL(selectedImage)}
+                          alt="Selected"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
                   </div>
                   <Button
                     onClick={handleAddMemory}

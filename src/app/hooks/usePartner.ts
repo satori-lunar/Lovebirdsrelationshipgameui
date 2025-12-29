@@ -18,6 +18,7 @@ export function usePartner(relationship: Relationship | null | undefined) {
   return {
     partnerId,
     isConnected: !!relationship?.partner_b_id,
+    hasRelationship: !!relationship,
     inviteCode: relationship?.invite_code,
   };
 }

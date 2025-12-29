@@ -4,6 +4,7 @@ import { useRelationship } from './useRelationship';
 import { usePartner } from './usePartner';
 import { useAuth } from './useAuth';
 
+// Hook to manage daily questions for couples
 export function useDailyQuestion() {
   const { user } = useAuth();
   const { relationship } = useRelationship();
@@ -14,13 +15,13 @@ export function useDailyQuestion() {
     queryKey: ['dailyQuestion', relationship?.id],
     queryFn: async () => {
       if (!relationship) return null;
-      
+
       let todayQuestion = await questionService.getTodayQuestion(relationship.id);
-      
+
       if (!todayQuestion) {
         todayQuestion = await questionService.generateDailyQuestion(relationship.id);
       }
-      
+
       return todayQuestion;
     },
     enabled: !!relationship,
