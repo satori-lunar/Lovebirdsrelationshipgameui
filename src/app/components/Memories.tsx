@@ -62,6 +62,17 @@ export function Memories({ onBack }: MemoriesProps) {
   const [filterTag, setFilterTag] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'timeline' | 'grid'>('timeline');
 
+  // State for editing memories
+  const [isEditingMemory, setIsEditingMemory] = useState(false);
+  const [editingMemoryData, setEditingMemoryData] = useState({
+    title: '',
+    journalEntry: '',
+    tags: [] as string[],
+    customTag: '',
+    memoryDate: '',
+    isPrivate: false,
+  });
+
   // State for post-save confirmation
   const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [savedMemoryInfo, setSavedMemoryInfo] = useState<{
@@ -139,9 +150,17 @@ export function Memories({ onBack }: MemoriesProps) {
   const updateMemoryMutation = useMutation({
     mutationFn: (data: { memoryId: string; updates: Partial<Memory> }) =>
       memoryService.updateMemory(data.memoryId, data.updates),
-    onSuccess: () => {
+    onSuccess: (updatedMemory) => {
       queryClient.invalidateQueries({ queryKey: ['memories'] });
+      // Update the selected memory with the new data
+      setSelectedMemory(updatedMemory);
+      // Exit edit mode
+      setIsEditingMemory(false);
       toast.success('Memory updated!');
+    },
+    onError: (error) => {
+      console.error('Failed to update memory:', error);
+      toast.error('Failed to update memory. Please try again.');
     },
   });
 
@@ -196,6 +215,87 @@ export function Memories({ onBack }: MemoriesProps) {
       ...prev,
       tags: prev.tags.filter(tag => tag !== tagToRemove)
     }));
+  };
+
+  // Handle starting edit mode
+  const handleStartEdit = (memory: Memory) => {
+    setEditingMemoryData({
+      title: memory.title,
+      journalEntry: memory.journal_entry || '',
+      tags: [...memory.tags],
+      customTag: '',
+      memoryDate: memory.memory_date,
+      isPrivate: memory.is_private,
+    });
+    setIsEditingMemory(true);
+  };
+
+  // Handle canceling edit mode
+  const handleCancelEdit = () => {
+    setIsEditingMemory(false);
+    setEditingMemoryData({
+      title: '',
+      journalEntry: '',
+      tags: [],
+      customTag: '',
+      memoryDate: '',
+      isPrivate: false,
+    });
+  };
+
+  // Handle edit submission
+  const handleEditMemory = () => {
+    if (!selectedMemory || !editingMemoryData.title.trim()) {
+      toast.error('Please add a title for your memory');
+      return;
+    }
+
+    // Auto-categorize the updated memory
+    const category = memoryService.categorizeMemory(
+      editingMemoryData.title,
+      editingMemoryData.journalEntry,
+      editingMemoryData.tags
+    );
+
+    updateMemoryMutation.mutate({
+      memoryId: selectedMemory.id,
+      updates: {
+        title: editingMemoryData.title,
+        journal_entry: editingMemoryData.journalEntry || null,
+        tags: editingMemoryData.tags,
+        category: category,
+        is_private: editingMemoryData.isPrivate,
+        memory_date: editingMemoryData.memoryDate,
+      },
+    });
+  };
+
+  // Handle edit form tag operations
+  const handleEditRemoveTag = (tagToRemove: string) => {
+    setEditingMemoryData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handleEditAddCustomTag = () => {
+    if (editingMemoryData.customTag.trim() && !editingMemoryData.tags.includes(editingMemoryData.customTag.trim())) {
+      setEditingMemoryData(prev => ({
+        ...prev,
+        tags: [...prev.tags, prev.customTag.trim()],
+        customTag: ''
+      }));
+    }
+  };
+
+  const handleEditTagSuggestions = () => {
+    const suggestions = memoryService.suggestTags(
+      editingMemoryData.title,
+      editingMemoryData.journalEntry,
+      editingMemoryData.tags
+    );
+    const newTags = [...new Set([...editingMemoryData.tags, ...suggestions])];
+    setEditingMemoryData(prev => ({ ...prev, tags: newTags }));
   };
 
   // Filter and search memories
@@ -633,90 +733,191 @@ export function Memories({ onBack }: MemoriesProps) {
 
       {/* Memory Detail Modal */}
       {selectedMemory && (
-        <Dialog open={!!selectedMemory} onOpenChange={() => setSelectedMemory(null)}>
+        <Dialog open={!!selectedMemory} onOpenChange={() => {
+          setSelectedMemory(null);
+          handleCancelEdit();
+        }}>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between">
-                <span>{selectedMemory.title}</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      // TODO: Implement edit functionality
-                      toast.info('Edit functionality coming soon!');
-                    }}
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (confirm('Are you sure you want to delete this memory?')) {
-                        deleteMemoryMutation.mutate(selectedMemory.id);
-                      }
-                    }}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                <span>{isEditingMemory ? 'Edit Memory' : selectedMemory.title}</span>
+                {!isEditingMemory && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleStartEdit(selectedMemory)}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this memory?')) {
+                          deleteMemoryMutation.mutate(selectedMemory.id);
+                        }
+                      }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4 pt-4">
-              {selectedMemory.photo_url && (
-                <img
-                  src={selectedMemory.photo_url}
-                  alt={selectedMemory.title}
-                  className="w-full rounded-lg object-cover"
-                />
-              )}
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Calendar className="w-4 h-4" />
-                  {new Date(selectedMemory.memory_date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
+            {isEditingMemory ? (
+              // Edit Form
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">Title *</Label>
+                  <Input
+                    id="edit-title"
+                    value={editingMemoryData.title}
+                    onChange={(e) => setEditingMemoryData({ ...editingMemoryData, title: e.target.value })}
+                    placeholder="Give this memory a title..."
+                  />
                 </div>
 
-                {selectedMemory.category && (
-                  <Badge
-                    variant="secondary"
-                    className={MEMORY_CATEGORIES[selectedMemory.category as keyof typeof MEMORY_CATEGORIES]?.color || 'bg-gray-100 text-gray-700'}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Date</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editingMemoryData.memoryDate}
+                    onChange={(e) => setEditingMemoryData({ ...editingMemoryData, memoryDate: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-entry">Journal Entry</Label>
+                  <Textarea
+                    id="edit-entry"
+                    value={editingMemoryData.journalEntry}
+                    onChange={(e) => setEditingMemoryData({ ...editingMemoryData, journalEntry: e.target.value })}
+                    placeholder="Write about this special moment..."
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Tags</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleEditTagSuggestions}
+                      className="text-xs text-purple-600 hover:text-purple-700"
+                    >
+                      💡 Suggest tags
+                    </Button>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={editingMemoryData.customTag}
+                      onChange={(e) => setEditingMemoryData({ ...editingMemoryData, customTag: e.target.value })}
+                      placeholder="Add a tag..."
+                      onKeyPress={(e) => e.key === 'Enter' && handleEditAddCustomTag()}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleEditAddCustomTag}
+                      disabled={!editingMemoryData.customTag.trim()}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  {editingMemoryData.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {editingMemoryData.tags.map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="cursor-pointer hover:bg-red-100 hover:text-red-700"
+                          onClick={() => handleEditRemoveTag(tag)}
+                        >
+                          {tag} <X className="w-3 h-3 ml-1" />
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    className="flex-1"
                   >
-                    {MEMORY_CATEGORIES[selectedMemory.category as keyof typeof MEMORY_CATEGORIES]?.label || selectedMemory.category}
-                  </Badge>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleEditMemory}
+                    disabled={updateMemoryMutation.isPending}
+                    className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+                  >
+                    {updateMemoryMutation.isPending ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // View Mode
+              <div className="space-y-4 pt-4">
+                {selectedMemory.photo_url && (
+                  <img
+                    src={selectedMemory.photo_url}
+                    alt={selectedMemory.title}
+                    className="w-full rounded-lg object-cover"
+                  />
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Calendar className="w-4 h-4" />
+                    {new Date(selectedMemory.memory_date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </div>
+
+                  {selectedMemory.category && (
+                    <Badge
+                      variant="secondary"
+                      className={MEMORY_CATEGORIES[selectedMemory.category as keyof typeof MEMORY_CATEGORIES]?.color || 'bg-gray-100 text-gray-700'}
+                    >
+                      {MEMORY_CATEGORIES[selectedMemory.category as keyof typeof MEMORY_CATEGORIES]?.label || selectedMemory.category}
+                    </Badge>
+                  )}
+                </div>
+
+                {selectedMemory.journal_entry && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Journal Entry</h4>
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {selectedMemory.journal_entry}
+                    </p>
+                  </div>
+                )}
+
+                {selectedMemory.tags.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Tags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedMemory.tags.map((tag, idx) => (
+                        <Badge key={idx} variant="outline">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-
-              {selectedMemory.journal_entry && (
-                <div className="space-y-2">
-                  <h4 className="font-medium">Journal Entry</h4>
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {selectedMemory.journal_entry}
-                  </p>
-                </div>
-              )}
-
-              {selectedMemory.tags.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-medium">Tags</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedMemory.tags.map((tag, idx) => (
-                      <Badge key={idx} variant="outline">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       )}
