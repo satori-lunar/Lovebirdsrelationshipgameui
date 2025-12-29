@@ -81,7 +81,7 @@ export const onboardingService = {
       if (data.consent) upsertData.consent = data.consent;
 
       // Legacy fields for backward compatibility (optional)
-      if (data.partnerName) upsertData.partner_name = data.partnerName;
+      upsertData.partner_name = data.partnerName || ''; // Provide empty string for NOT NULL constraint
       if (data.livingTogether) upsertData.living_together = data.livingTogether;
       if (data.relationshipDuration) upsertData.relationship_duration = data.relationshipDuration;
       if (data.loveLanguages) upsertData.love_languages = data.loveLanguages;
