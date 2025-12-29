@@ -317,9 +317,11 @@ export interface Database {
           id: string;
           relationship_id: string;
           user_id: string;
+          title: string;
           photo_url: string | null;
           journal_entry: string | null;
           tags: string[];
+          category: 'date_night' | 'milestone' | 'trip' | 'everyday_moment' | 'growth_moment' | 'celebration' | 'other' | null;
           is_private: boolean;
           memory_date: string;
           created_at: string;
@@ -328,18 +330,22 @@ export interface Database {
           id?: string;
           relationship_id: string;
           user_id: string;
+          title: string;
           photo_url?: string | null;
           journal_entry?: string | null;
           tags?: string[];
+          category?: 'date_night' | 'milestone' | 'trip' | 'everyday_moment' | 'growth_moment' | 'celebration' | 'other' | null;
           is_private?: boolean;
           memory_date: string;
           created_at?: string;
         };
         Update: {
           id?: string;
+          title?: string;
           photo_url?: string | null;
           journal_entry?: string | null;
           tags?: string[];
+          category?: 'date_night' | 'milestone' | 'trip' | 'everyday_moment' | 'growth_moment' | 'celebration' | 'other' | null;
           is_private?: boolean;
           memory_date?: string;
         };
