@@ -14,6 +14,7 @@ interface SignUpProps {
 
 export function SignUp({ onSuccess, onBack }: SignUpProps) {
   const { signUp, user, loading: authLoading } = useAuth();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,8 +23,8 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password || !confirmPassword) {
+
+    if (!name || !email || !password || !confirmPassword) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -40,7 +41,7 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
 
     setIsLoading(true);
     try {
-      await signUp(email, password);
+      await signUp(email, password, name);
       toast.success('Account created successfully!');
       setSignUpSuccess(true);
       // Don't redirect immediately - wait for user session to be established
@@ -99,6 +100,20 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Your name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  disabled={isLoading}
+                  className="text-base"
+                  required
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
                 <Input
