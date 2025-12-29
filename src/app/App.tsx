@@ -64,16 +64,15 @@ export default function App() {
       return;
     }
 
-    // User is authenticated - but don't auto-redirect from sign-up or feature-slides
-    // Let the user complete the flow, then redirect will happen via onSuccess callbacks
-    
-    // Only redirect from entry screen if user has cached session
+    // User is authenticated
+    // Only auto-redirect if user has COMPLETED onboarding (not in progress)
     if (currentView === 'entry') {
-      if (onboarding === null) {
-        setCurrentView('onboarding');
-      } else if (onboarding) {
+      // If onboarding is completed, go to home
+      if (onboarding) {
         setCurrentView('home');
       }
+      // If onboarding is null/incomplete, stay on entry - let them choose sign in
+      // This handles cached sessions from incomplete sign-ups
     }
   }, [user, onboarding, authLoading, currentView]);
 
