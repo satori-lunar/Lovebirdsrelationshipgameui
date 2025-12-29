@@ -8,6 +8,16 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
 
+// Check if device has camera capabilities
+const hasCameraSupport = () => {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+};
+
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         (window.innerWidth <= 768 && window.innerHeight <= 1024);
+};
+
 interface MemoriesProps {
   onBack: () => void;
 }
@@ -142,8 +152,13 @@ export function Memories({ onBack }: MemoriesProps) {
                       <Button
                         type="button"
                         variant="outline"
-                        className="flex items-center gap-2"
+                        className={`flex items-center gap-2 ${!hasCameraSupport() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!hasCameraSupport()}
                         onClick={() => {
+                          if (!hasCameraSupport()) {
+                            toast.info('Camera not available on this device');
+                            return;
+                          }
                           const input = document.getElementById('camera-upload') as HTMLInputElement;
                           if (input) {
                             input.click();
@@ -155,38 +170,43 @@ export function Memories({ onBack }: MemoriesProps) {
                         <Camera className="w-4 h-4" />
                         Take Photo
                       </Button>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          console.log('Photo upload changed:', e.target.files);
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            console.log('Selected file:', file.name, file.type, file.size);
-                            setSelectedImage(file);
-                            toast.success('Photo selected!');
-                          }
-                        }}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture
-                        onChange={(e) => {
-                          console.log('Camera upload changed:', e.target.files);
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            console.log('Captured file:', file.name, file.type, file.size);
-                            setSelectedImage(file);
-                            toast.success('Photo captured!');
-                          }
-                        }}
-                        className="hidden"
-                        id="camera-upload"
-                      />
                     </div>
+                    {!hasCameraSupport() && (
+                      <p className="text-xs text-gray-500">
+                        💡 Camera not available on this device. Use "Choose Photo" to select from gallery.
+                      </p>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        console.log('Photo upload changed:', e.target.files);
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          console.log('Selected file:', file.name, file.type, file.size);
+                          setSelectedImage(file);
+                          toast.success('Photo selected!');
+                        }
+                      }}
+                      className="hidden"
+                      id="photo-upload"
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture={isMobileDevice() ? "environment" : undefined}
+                      onChange={(e) => {
+                        console.log('Camera upload changed:', e.target.files);
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          console.log('Captured file:', file.name, file.type, file.size);
+                          setSelectedImage(file);
+                          toast.success('Photo captured!');
+                        }
+                      }}
+                      className="hidden"
+                      id="camera-upload"
+                    />
                     {selectedImage && (
                       <div className="mt-2">
                         <img
