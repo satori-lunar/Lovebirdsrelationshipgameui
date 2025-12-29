@@ -10,6 +10,7 @@ interface DatePlanningProps {
 }
 
 type DateMode = 'select' | 'plan-for-partner' | 'swipe-together';
+type SwipeStage = 'welcome' | 'partner1' | 'partner2' | 'matches' | 'decision' | 'final';
 
 const dateIdeas = [
   {
@@ -401,28 +402,70 @@ const dateIdeas = [
 
 export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
   const [mode, setMode] = useState<DateMode>('select');
+  const [swipeStage, setSwipeStage] = useState<SwipeStage>('welcome');
   const [currentSwipeIndex, setCurrentSwipeIndex] = useState(0);
-  const [userLikes, setUserLikes] = useState<number[]>([]);
+  const [partner1Likes, setPartner1Likes] = useState<number[]>([]);
+  const [partner2Likes, setPartner2Likes] = useState<number[]>([]);
   const [matches, setMatches] = useState<number[]>([]);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
-  const [isSwipeComplete, setIsSwipeComplete] = useState(false);
+  const [finalDate, setFinalDate] = useState<number | null>(null);
+  const [decisionMethod, setDecisionMethod] = useState<'coin' | 'dice' | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const handleSwipe = (liked: boolean) => {
-    if (liked) {
-      const newLikes = [...userLikes, dateIdeas[currentSwipeIndex].id];
-      setUserLikes(newLikes);
-      
-      // Simulate partner also liked it (for demo)
-      if (Math.random() > 0.4) {
-        setMatches(prev => [...prev, dateIdeas[currentSwipeIndex].id]);
+    const currentDateId = dateIdeas[currentSwipeIndex].id;
+
+    if (swipeStage === 'partner1') {
+      if (liked) {
+        setPartner1Likes(prev => [...prev, currentDateId]);
+      }
+
+      if (currentSwipeIndex < dateIdeas.length - 1) {
+        setCurrentSwipeIndex(currentSwipeIndex + 1);
+      } else {
+        // Partner 1 done, move to partner 2
+        setCurrentSwipeIndex(0);
+        setSwipeStage('partner2');
+      }
+    } else if (swipeStage === 'partner2') {
+      if (liked) {
+        setPartner2Likes(prev => [...prev, currentDateId]);
+      }
+
+      if (currentSwipeIndex < dateIdeas.length - 1) {
+        setCurrentSwipeIndex(currentSwipeIndex + 1);
+      } else {
+        // Partner 2 done, calculate matches
+        const p2Likes = liked ? [...partner2Likes, currentDateId] : partner2Likes;
+        const matchedDates = partner1Likes.filter(id => p2Likes.includes(id));
+        setMatches(matchedDates);
+        setSwipeStage('matches');
       }
     }
-    
-    if (currentSwipeIndex < dateIdeas.length - 1) {
-      setCurrentSwipeIndex(currentSwipeIndex + 1);
-    } else {
-      setIsSwipeComplete(true);
-    }
+  };
+
+  const handleDecision = (method: 'coin' | 'dice') => {
+    setDecisionMethod(method);
+    setIsAnimating(true);
+
+    // Simulate decision animation
+    setTimeout(() => {
+      const randomMatch = matches[Math.floor(Math.random() * matches.length)];
+      setFinalDate(randomMatch);
+      setIsAnimating(false);
+      setSwipeStage('final');
+    }, 2000);
+  };
+
+  const resetSwipeFlow = () => {
+    setSwipeStage('welcome');
+    setCurrentSwipeIndex(0);
+    setPartner1Likes([]);
+    setPartner2Likes([]);
+    setMatches([]);
+    setFinalDate(null);
+    setDecisionMethod(null);
+    setIsAnimating(false);
   };
 
   const selectDateForPartner = (id: number) => {
@@ -473,7 +516,10 @@ export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
           </button>
 
           <button
-            onClick={() => setMode('swipe-together')}
+            onClick={() => {
+              setMode('swipe-together');
+              setSwipeStage('welcome');
+            }}
             className="w-full bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow text-left"
           >
             <div className="flex items-start gap-4">
@@ -483,7 +529,7 @@ export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
               <div className="flex-1">
                 <h3 className="font-semibold mb-1">Choose Together</h3>
                 <p className="text-sm text-gray-600">
-                  Swipe on date ideas and find your perfect match
+                  Both swipe on date ideas and find your perfect match
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
@@ -619,95 +665,196 @@ export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
     );
   }
 
-  if (mode === 'swipe-together' && !isSwipeComplete) {
-    const currentDate = dateIdeas[currentSwipeIndex];
-    
-    return (
-      <SwipeableDateCard
-        date={currentDate}
-        onSwipe={handleSwipe}
-        onBack={() => setMode('select')}
-        currentIndex={currentSwipeIndex}
-        totalCount={dateIdeas.length}
-      />
-    );
-  }
+  // Swipe Together Flow
+  if (mode === 'swipe-together') {
+    // Welcome Screen
+    if (swipeStage === 'welcome') {
+      return (
+        <WelcomeScreen
+          partnerName={partnerName}
+          onStart={() => setSwipeStage('partner1')}
+          onBack={() => setMode('select')}
+        />
+      );
+    }
 
-  if (mode === 'swipe-together' && isSwipeComplete) {
-    const matchedDates = dateIdeas.filter(d => matches.includes(d.id));
-    const winningDate = matchedDates.length > 0 ? matchedDates[0] : null;
+    // Partner 1 or Partner 2 Swiping
+    if (swipeStage === 'partner1' || swipeStage === 'partner2') {
+      const currentDate = dateIdeas[currentSwipeIndex];
+      const isPartner1 = swipeStage === 'partner1';
 
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 pb-12">
-          <div className="max-w-md mx-auto">
-            <h1 className="text-2xl mb-2">You Have {matches.length} Matches! 🎉</h1>
-            <p className="text-white/90 text-sm">
-              {winningDate ? "Here's your winning date" : "No matches this time, try again!"}
-            </p>
-          </div>
-        </div>
+      return (
+        <SwipeableDateCard
+          date={currentDate}
+          onSwipe={handleSwipe}
+          onBack={() => {
+            resetSwipeFlow();
+            setMode('select');
+          }}
+          currentIndex={currentSwipeIndex}
+          totalCount={dateIdeas.length}
+          partnerName={isPartner1 ? 'You' : partnerName}
+          isPartner1={isPartner1}
+        />
+      );
+    }
 
-        <div className="max-w-md mx-auto px-6 -mt-6 space-y-4">
-          {winningDate && (
-            <Card className="p-8 border-0 shadow-lg">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-2xl mb-2">Your Perfect Date</h2>
-              </div>
+    // Matches Screen
+    if (swipeStage === 'matches') {
+      return (
+        <MatchesView
+          matches={matches}
+          dateIdeas={dateIdeas}
+          onContinue={() => setSwipeStage('decision')}
+          onTryAgain={resetSwipeFlow}
+        />
+      );
+    }
 
-              <div className="text-6xl mb-4 text-center">{winningDate.image}</div>
-              <h3 className="text-xl text-center mb-3">{winningDate.title}</h3>
-              <p className="text-sm text-gray-600 text-center mb-6">{winningDate.description}</p>
-              
-              <Button
-                onClick={onBack}
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-              >
-                Schedule This Date
-              </Button>
-            </Card>
-          )}
+    // Decision Maker Screen
+    if (swipeStage === 'decision') {
+      return (
+        <DecisionMaker
+          onDecide={handleDecision}
+          isAnimating={isAnimating}
+          decisionMethod={decisionMethod}
+        />
+      );
+    }
 
-          {matches.length === 0 && (
-            <Card className="p-8 border-0 shadow-lg text-center">
-              <p className="text-gray-600 mb-4">No matches this time, but that's okay!</p>
-              <Button
-                onClick={() => {
-                  setIsSwipeComplete(false);
-                  setCurrentSwipeIndex(0);
-                  setUserLikes([]);
-                  setMatches([]);
-                }}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
-              >
-                Try Again
-              </Button>
-            </Card>
-          )}
-        </div>
-      </div>
-    );
+    // Final Result Screen
+    if (swipeStage === 'final' && finalDate) {
+      const date = dateIdeas.find(d => d.id === finalDate)!;
+      return (
+        <FinalDateScreen
+          date={date}
+          onDone={onBack}
+          onTryAgain={() => {
+            resetSwipeFlow();
+          }}
+        />
+      );
+    }
   }
 
   return null;
 }
 
+// Welcome Screen Component
+function WelcomeScreen({
+  partnerName,
+  onStart,
+  onBack
+}: {
+  partnerName: string;
+  onStart: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
+      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 pb-12">
+        <div className="max-w-md mx-auto">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 mb-6 hover:opacity-80"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+              <Heart className="w-6 h-6 fill-white" />
+            </div>
+            <h1 className="text-2xl">Date Night Swipe</h1>
+          </div>
+          <p className="text-white/90 text-sm">
+            Like Tinder, but for finding your perfect date together!
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto px-6 -mt-6 space-y-6">
+        <Card className="p-8 border-0 shadow-lg">
+          <div className="text-center mb-8">
+            <div className="text-6xl mb-4">💑</div>
+            <h2 className="text-2xl mb-3">How It Works</h2>
+            <p className="text-gray-600">
+              Both you and {partnerName} will swipe through date ideas separately, then we'll show you the matches!
+            </p>
+          </div>
+
+          <div className="space-y-4 mb-8">
+            <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl">
+              <div className="w-8 h-8 bg-pink-500 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
+                1
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1">You Swipe First</h3>
+                <p className="text-sm text-gray-600">Swipe right on dates you like, left on ones you don't</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl">
+              <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
+                2
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1">Pass to {partnerName}</h3>
+                <p className="text-sm text-gray-600">Then {partnerName} swipes through the same dates</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl">
+              <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
+                3
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1">See Your Matches</h3>
+                <p className="text-sm text-gray-600">We'll show you dates you both liked!</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl">
+              <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
+                4
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1">Pick the Winner</h3>
+                <p className="text-sm text-gray-600">Use a coin flip or dice roll to choose your final date</p>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            onClick={onStart}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white h-14 text-lg"
+          >
+            Start Swiping
+          </Button>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 // Swipeable Date Card Component
-function SwipeableDateCard({ 
-  date, 
-  onSwipe, 
+function SwipeableDateCard({
+  date,
+  onSwipe,
   onBack,
   currentIndex,
-  totalCount 
-}: { 
-  date: typeof dateIdeas[0]; 
+  totalCount,
+  partnerName,
+  isPartner1
+}: {
+  date: typeof dateIdeas[0];
   onSwipe: (liked: boolean) => void;
   onBack: () => void;
   currentIndex: number;
   totalCount: number;
+  partnerName: string;
+  isPartner1: boolean;
 }) {
   const [exitX, setExitX] = useState<number | string>('100%');
   const x = useMotionValue(0);
@@ -735,23 +882,28 @@ function SwipeableDateCard({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
-      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 pb-8">
+      <div className={`bg-gradient-to-r ${isPartner1 ? 'from-purple-500 to-pink-500' : 'from-pink-500 to-purple-500'} text-white p-6 pb-8`}>
         <div className="max-w-md mx-auto">
-          <button 
+          <button
             onClick={onBack}
             className="flex items-center gap-2 mb-6 hover:opacity-80"
           >
             <ChevronLeft className="w-5 h-5" />
             <span>Back</span>
           </button>
-          
-          <h1 className="text-2xl mb-2">Swipe for Dates</h1>
+
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+              <User className="w-5 h-5" />
+            </div>
+            <h1 className="text-2xl">{partnerName}'s Turn</h1>
+          </div>
           <p className="text-white/90 text-sm mb-4">
-            Swipe right for yes, left for no
+            Swipe right ❤️ for yes, left ✕ for no
           </p>
           <div className="flex items-center gap-2">
             <div className="flex-1 bg-white/20 rounded-full h-2">
-              <div 
+              <div
                 className="bg-white h-2 rounded-full transition-all"
                 style={{ width: `${((currentIndex + 1) / totalCount) * 100}%` }}
               />
@@ -866,6 +1018,283 @@ function SwipeableDateCard({
                   className="flex-1 h-16 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg transition-all"
                 >
                   <Heart className="w-8 h-8 fill-white" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// Matches View Component
+function MatchesView({
+  matches,
+  dateIdeas,
+  onContinue,
+  onTryAgain
+}: {
+  matches: number[];
+  dateIdeas: typeof dateIdeas;
+  onContinue: () => void;
+  onTryAgain: () => void;
+}) {
+  const matchedDates = dateIdeas.filter(d => matches.includes(d.id));
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
+      <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-6 pb-12">
+        <div className="max-w-md mx-auto">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h1 className="text-3xl mb-2">It's a Match!</h1>
+            <p className="text-white/90 text-lg">
+              You both liked {matches.length} {matches.length === 1 ? 'date' : 'dates'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto px-6 -mt-6 space-y-4">
+        {matchedDates.length === 0 ? (
+          <Card className="p-8 border-0 shadow-lg text-center">
+            <div className="text-5xl mb-4">😅</div>
+            <h2 className="text-2xl mb-3">No Matches This Time</h2>
+            <p className="text-gray-600 mb-6">
+              You didn't both like any of the same dates. Try again with more open minds!
+            </p>
+            <Button
+              onClick={onTryAgain}
+              className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+            >
+              Try Again
+            </Button>
+          </Card>
+        ) : (
+          <>
+            {matchedDates.map((date) => (
+              <Card key={date.id} className="p-6 border-0 shadow-lg">
+                <div className="flex items-start gap-4">
+                  <div className="text-5xl">{date.image}</div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-2 text-lg">{date.title}</h3>
+                    <p className="text-sm text-gray-600 mb-3">{date.description}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs px-3 py-1 bg-pink-100 text-pink-700 rounded-full">
+                        {date.category}
+                      </span>
+                      <span className="text-xs px-3 py-1 bg-purple-100 text-purple-700 rounded-full">
+                        {date.duration}
+                      </span>
+                      <span className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                        {date.budget}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+
+            {matchedDates.length > 1 && (
+              <Card className="p-6 border-0 shadow-lg bg-gradient-to-r from-pink-50 to-purple-50">
+                <p className="text-center text-sm text-gray-700 mb-4">
+                  💡 Can't decide? Let fate choose your perfect date!
+                </p>
+                <Button
+                  onClick={onContinue}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+                >
+                  Let Fate Decide
+                </Button>
+              </Card>
+            )}
+
+            {matchedDates.length === 1 && (
+              <Button
+                onClick={onContinue}
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+              >
+                Choose This Date
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Decision Maker Component
+function DecisionMaker({
+  onDecide,
+  isAnimating,
+  decisionMethod
+}: {
+  onDecide: (method: 'coin' | 'dice') => void;
+  isAnimating: boolean;
+  decisionMethod: 'coin' | 'dice' | null;
+}) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white p-6 pb-12">
+        <div className="max-w-md mx-auto text-center">
+          <div className="text-6xl mb-4">🎲</div>
+          <h1 className="text-3xl mb-2">Decision Time!</h1>
+          <p className="text-white/90 text-lg">
+            Choose how to pick your final date
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto px-6 -mt-6 space-y-4">
+        {!isAnimating ? (
+          <>
+            <button
+              onClick={() => onDecide('coin')}
+              className="w-full bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all text-left border-2 border-transparent hover:border-pink-500"
+            >
+              <div className="flex items-center gap-4">
+                <div className="text-6xl">🪙</div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-semibold mb-2">Coin Flip</h3>
+                  <p className="text-gray-600">
+                    Classic 50/50 decision - heads or tails?
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onDecide('dice')}
+              className="w-full bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all text-left border-2 border-transparent hover:border-purple-500"
+            >
+              <div className="flex items-center gap-4">
+                <div className="text-6xl">🎲</div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-semibold mb-2">Roll the Dice</h3>
+                  <p className="text-gray-600">
+                    Let the dice decide your destiny!
+                  </p>
+                </div>
+              </div>
+            </button>
+          </>
+        ) : (
+          <Card className="p-12 border-0 shadow-lg text-center">
+            <motion.div
+              animate={{
+                rotate: [0, 360, 720, 1080],
+                scale: [1, 1.2, 0.8, 1.2, 1]
+              }}
+              transition={{
+                duration: 2,
+                ease: "easeInOut"
+              }}
+              className="text-8xl mb-6"
+            >
+              {decisionMethod === 'coin' ? '🪙' : '🎲'}
+            </motion.div>
+            <h2 className="text-2xl font-semibold mb-2">
+              {decisionMethod === 'coin' ? 'Flipping...' : 'Rolling...'}
+            </h2>
+            <p className="text-gray-600">Making your decision...</p>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Final Date Screen Component
+function FinalDateScreen({
+  date,
+  onDone,
+  onTryAgain
+}: {
+  date: typeof dateIdeas[0];
+  onDone: () => void;
+  onTryAgain: () => void;
+}) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
+      <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6 pb-12">
+        <div className="max-w-md mx-auto text-center">
+          <div className="text-6xl mb-4">✨</div>
+          <h1 className="text-3xl mb-2">Your Perfect Date!</h1>
+          <p className="text-white/90 text-lg">
+            Time to make some memories together
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto px-6 -mt-6 space-y-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, type: "spring" }}
+        >
+          <Card className="p-8 border-0 shadow-2xl overflow-hidden relative">
+            {/* Gradient Background */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${date.color || 'from-pink-400 to-purple-500'} opacity-10`} />
+
+            {/* Content */}
+            <div className="relative z-10">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="w-10 h-10 text-white" />
+                </div>
+              </div>
+
+              <div className="text-8xl mb-6 text-center drop-shadow-lg">
+                {date.image}
+              </div>
+
+              <h2 className="text-3xl font-bold text-center mb-4 text-gray-800">
+                {date.title}
+              </h2>
+
+              <p className="text-base text-gray-700 text-center mb-8 leading-relaxed">
+                {date.description}
+              </p>
+
+              <div className="space-y-3 mb-8">
+                <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm">
+                  <Clock className="w-6 h-6 text-purple-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Duration</p>
+                    <p className="font-semibold text-gray-800">{date.duration}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm">
+                  <MapPin className="w-6 h-6 text-pink-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Location</p>
+                    <p className="font-semibold text-gray-800">{date.location}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm">
+                  <DollarSign className="w-6 h-6 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Budget</p>
+                    <p className="font-semibold text-gray-800">{date.budget}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  onClick={onDone}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white h-14 text-lg"
+                >
+                  Schedule This Date
+                </Button>
+                <Button
+                  onClick={onTryAgain}
+                  variant="outline"
+                  className="w-full h-12"
+                >
+                  Choose Different Date
                 </Button>
               </div>
             </div>
