@@ -4,6 +4,7 @@ import { useRelationship } from './useRelationship';
 import { usePartner } from './usePartner';
 import { useAuth } from './useAuth';
 
+// Hook to manage daily questions for couples
 export function useDailyQuestion() {
   const { user } = useAuth();
   const { relationship } = useRelationship();

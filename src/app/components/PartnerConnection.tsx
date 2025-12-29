@@ -26,7 +26,7 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
     try {
       await createRelationship();
       setShowInviteDialog(true);
-      toast.success('Invite code generated!');
+      toast.success('Invite code generated! Share it with your partner.');
     } catch (error: any) {
       toast.error(error.message || 'Failed to create invite code');
     }
