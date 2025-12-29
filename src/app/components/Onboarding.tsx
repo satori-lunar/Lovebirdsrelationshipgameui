@@ -110,14 +110,6 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Redirect to landing if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      // User is not authenticated, redirect will be handled by App.tsx
-      // This component shouldn't render if user is not authenticated
-    }
-  }, [user, authLoading]);
   const [birthday, setBirthday] = useState<Date | undefined>(undefined);
   const [pronounsOther, setPronounsOther] = useState('');
   const [formData, setFormData] = useState<OnboardingData>({
@@ -135,6 +127,21 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       email_opt_in: true
     }
   });
+
+  // Pre-fill name from user metadata if available
+  useEffect(() => {
+    if (user?.user_metadata?.name && !formData.name) {
+      updateField('name', user.user_metadata.name);
+    }
+  }, [user]);
+
+  // Redirect to landing if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      // User is not authenticated, redirect will be handled by App.tsx
+      // This component shouldn't render if user is not authenticated
+    }
+  }, [user, authLoading]);
 
   const updateField = (field: keyof OnboardingData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
