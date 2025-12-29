@@ -23,3 +23,7 @@ COMMENT ON COLUMN public.onboarding_responses.wants_needs IS 'JSON object contai
 COMMENT ON COLUMN public.onboarding_responses.preferences IS 'JSON object containing: date_types (array), gift_budget (string), nudge_frequency (string)';
 COMMENT ON COLUMN public.onboarding_responses.consent IS 'JSON object containing: share_with_partner (boolean), email_opt_in (boolean)';
 
+-- Allow daily_questions to be global (not tied to specific relationships)
+-- This enables a pool of questions that can be assigned to relationships
+ALTER TABLE public.daily_questions ALTER COLUMN relationship_id DROP NOT NULL;
+

@@ -2,6 +2,7 @@
 -- These questions help the system learn about user preferences and relationship dynamics
 
 -- Insert all the questions organized by category
+-- Note: relationship_id is NULL for global question templates
 INSERT INTO public.daily_questions (question_text, question_date, relationship_id) VALUES
 
 -- 🎬 Favorites & Preferences
