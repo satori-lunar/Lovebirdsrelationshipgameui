@@ -473,25 +473,35 @@ function SwipeableDateCard({
 }) {
   const [exitX, setExitX] = useState<number | string>('100%');
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-25, 25]);
-  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
-  
-  const likeOpacity = useTransform(x, [0, 150], [0, 1]);
-  const nopeOpacity = useTransform(x, [-150, 0], [1, 0]);
+  const y = useMotionValue(0);
+  const rotate = useTransform(x, [-300, 300], [-30, 30]);
+  const scale = useTransform(x, [-300, -100, 0, 100, 300], [0.8, 0.95, 1, 0.95, 0.8]);
+  const opacity = useTransform(x, [-300, -150, 0, 150, 300], [0, 1, 1, 1, 0]);
+
+  const likeOpacity = useTransform(x, [0, 120, 200], [0, 0.8, 1]);
+  const likeScale = useTransform(x, [0, 120, 200], [0.8, 1.1, 1.2]);
+  const nopeOpacity = useTransform(x, [-200, -120, 0], [1, 0.8, 0]);
+  const nopeScale = useTransform(x, [-200, -120, 0], [1.2, 1.1, 0.8]);
 
   const handleDragEnd = (_event: any, info: any) => {
-    const threshold = 100;
+    const threshold = 120;
     
     if (Math.abs(info.offset.x) > threshold) {
       const liked = info.offset.x > 0;
-      setExitX(info.offset.x > 0 ? '100%' : '-100%');
+      const exitDirection = liked ? 500 : -500;
+      setExitX(exitDirection);
+
+      // Add a small delay before triggering the callback for better UX
       setTimeout(() => {
         onSwipe(liked);
+        // Reset values for next card
         x.set(0);
-      }, 100);
+        y.set(0);
+      }, 200);
     } else {
-      // Spring back to center
-      x.set(0);
+      // Spring back to center with smooth animation
+      x.set(0, { type: "spring", stiffness: 300, damping: 30 });
+      y.set(0, { type: "spring", stiffness: 300, damping: 30 });
     }
   };
 
@@ -511,7 +521,7 @@ function SwipeableDateCard({
             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
               <User className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl">{partnerName}'s Turn</h1>
+            <h1 className="text-2xl">{partnerName === 'You' ? 'Your Turn' : `${partnerName}'s Turn`}</h1>
           </div>
           <p className="text-white/90 text-sm mb-4">
             Swipe right ❤️ for yes, left ✕ for no
@@ -531,42 +541,81 @@ function SwipeableDateCard({
       <div className="max-w-md mx-auto px-6 -mt-2 relative" style={{ height: '600px' }}>
         {/* Like overlay */}
         <motion.div
-          style={{ opacity: likeOpacity }}
+          style={{
+            opacity: likeOpacity,
+            scale: likeScale
+          }}
           className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
         >
-          <div className="bg-green-500/20 border-4 border-green-500 rounded-3xl p-8 w-full h-full flex items-center justify-center">
+          <motion.div
+            className="bg-green-500/20 border-4 border-green-500 rounded-3xl p-8 w-full h-full flex items-center justify-center"
+            animate={{ scale: likeOpacity.get() > 0.5 ? 1.05 : 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          >
             <div className="text-center">
-              <Heart className="w-20 h-20 text-green-500 fill-green-500 mx-auto mb-4" />
-              <p className="text-3xl font-bold text-green-500">LIKE</p>
+              <motion.div
+                animate={{ scale: likeOpacity.get() > 0.5 ? 1.2 : 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <Heart className="w-20 h-20 text-green-500 fill-green-500 mx-auto mb-4" />
+                <p className="text-3xl font-bold text-green-500">LIKE</p>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* Nope overlay */}
         <motion.div
-          style={{ opacity: nopeOpacity }}
+          style={{
+            opacity: nopeOpacity,
+            scale: nopeScale
+          }}
           className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
         >
-          <div className="bg-red-500/20 border-4 border-red-500 rounded-3xl p-8 w-full h-full flex items-center justify-center">
+          <motion.div
+            className="bg-red-500/20 border-4 border-red-500 rounded-3xl p-8 w-full h-full flex items-center justify-center"
+            animate={{ scale: nopeOpacity.get() > 0.5 ? 1.05 : 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          >
             <div className="text-center">
-              <X className="w-20 h-20 text-red-500 mx-auto mb-4" />
-              <p className="text-3xl font-bold text-red-500">NOPE</p>
+              <motion.div
+                animate={{ scale: nopeOpacity.get() > 0.5 ? 1.2 : 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <X className="w-20 h-20 text-red-500 mx-auto mb-4" />
+                <p className="text-3xl font-bold text-red-500">NOPE</p>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* Swipeable Card */}
         <motion.div
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
+          drag
+          dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+          dragElastic={0.7}
           onDragEnd={handleDragEnd}
           style={{ 
             x, 
+            y,
             rotate,
+            scale,
             opacity,
             cursor: 'grab'
           }}
-          whileDrag={{ cursor: 'grabbing' }}
+          whileDrag={{
+            cursor: 'grabbing',
+            scale: 1.05
+          }}
+          animate={{
+            x: exitX === '100%' ? 0 : exitX,
+            y: 0
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 30
+          }}
           className="absolute inset-0"
         >
           <Card className="border-0 shadow-2xl h-full flex flex-col overflow-hidden relative">
