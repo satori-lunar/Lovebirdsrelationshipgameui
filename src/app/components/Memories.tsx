@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { toast } from 'sonner';
 
 interface MemoriesProps {
   onBack: () => void;
@@ -50,6 +51,7 @@ export function Memories({ onBack }: MemoriesProps) {
       });
       setSelectedImage(null);
       setIsAddingMemory(false);
+      toast.success('Memory saved!');
     }
   };
 
@@ -117,6 +119,64 @@ export function Memories({ onBack }: MemoriesProps) {
                       onChange={(e) => setNewMemory({ ...newMemory, tags: e.target.value })}
                       placeholder="First date, Anniversary, Vacation..."
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Add a Photo</Label>
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setSelectedImage(file);
+                            toast.success('Photo selected!');
+                          }
+                        }}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <label htmlFor="photo-upload" className="cursor-pointer">
+                        <Button type="button" variant="outline" className="flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4" />
+                          Choose Photo
+                        </Button>
+                      </label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => {
+                          document.getElementById('camera-upload')?.click();
+                        }}
+                      >
+                        <Camera className="w-4 h-4" />
+                        Take Photo
+                      </Button>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setSelectedImage(file);
+                            toast.success('Photo captured!');
+                          }
+                        }}
+                        className="hidden"
+                        id="camera-upload"
+                      />
+                    </div>
+                    {selectedImage && (
+                      <div className="mt-2">
+                        <img
+                          src={URL.createObjectURL(selectedImage)}
+                          alt="Selected"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
                   </div>
                   <Button
                     onClick={handleAddMemory}
