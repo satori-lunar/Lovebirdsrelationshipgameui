@@ -269,6 +269,19 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                     We'll ask a few quick questions so we can help plan dates, gift ideas, and sweet nudges for your partner.
                   </p>
                 </div>
+
+                <div className="space-y-4 w-full max-w-xs">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">What should we call you?</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => updateField('name', e.target.value)}
+                      placeholder="Your name"
+                      className="text-base text-center"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
