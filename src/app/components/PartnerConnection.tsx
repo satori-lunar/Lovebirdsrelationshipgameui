@@ -157,43 +157,50 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
     );
   }
 
-  // Has relationship but not connected - show both invite and connect options
+  // Has relationship but not connected - show invite code and connect option
   return (
     <>
-      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30">
+      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30 space-y-3">
         <div className="flex items-center gap-3">
           <Users className="w-10 h-10 text-white/90" />
           <div className="flex-1">
-            <p className="font-semibold text-sm mb-1">Connect with {partnerName}</p>
-            <p className="text-xs text-white/80">Share your invite code or enter theirs</p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs border-white/50 text-white hover:bg-white/20"
-              onClick={async () => {
-                // If no invite code exists, generate one first
-                if (!currentInviteCode) {
-                  await handleCreateInvite();
-                } else {
-                  setShowInviteDialog(true);
-                }
-              }}
-              disabled={isCreating}
-            >
-              <Link2 className="w-3 h-3 mr-1" />
-              {isCreating ? 'Creating...' : 'Code'}
-            </Button>
-            <Button
-              size="sm"
-              className="bg-white text-purple-600 hover:bg-white/90 text-xs"
-              onClick={() => setShowConnectDialog(true)}
-            >
-              Connect
-            </Button>
+            <p className="font-semibold text-sm mb-1">Waiting for {partnerName}</p>
+            <p className="text-xs text-white/80">Share your code or enter theirs</p>
           </div>
         </div>
+
+        {currentInviteCode && (
+          <div className="bg-white/30 rounded-xl p-3">
+            <p className="text-xs text-white/90 mb-2 font-medium">Your Invite Code:</p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-white/50 rounded-lg px-3 py-2">
+                <p className="text-xl font-mono font-bold text-center tracking-widest text-gray-800">
+                  {currentInviteCode}
+                </p>
+              </div>
+              <Button
+                size="icon"
+                variant="secondary"
+                className="bg-white/80 hover:bg-white shrink-0"
+                onClick={handleCopyInviteCode}
+              >
+                {copied ? (
+                  <Check className="w-4 h-4 text-green-600" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <Button
+          size="sm"
+          className="w-full bg-white text-purple-600 hover:bg-white/90 text-xs"
+          onClick={() => setShowConnectDialog(true)}
+        >
+          Enter {partnerName}'s Code
+        </Button>
       </div>
 
       <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
