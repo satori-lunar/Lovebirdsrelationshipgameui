@@ -20,29 +20,7 @@ interface ImportantDate {
 }
 
 export function RelationshipTracker({ onBack, partnerName }: RelationshipTrackerProps) {
-  const [dates, setDates] = useState<ImportantDate[]>([
-    {
-      id: 1,
-      title: 'Our Anniversary',
-      date: '2025-06-15',
-      type: 'anniversary',
-      recurring: true
-    },
-    {
-      id: 2,
-      title: `${partnerName}'s Birthday`,
-      date: '2025-03-15',
-      type: 'birthday',
-      recurring: true
-    },
-    {
-      id: 3,
-      title: 'First Date Anniversary',
-      date: '2025-05-20',
-      type: 'custom',
-      recurring: true
-    }
-  ]);
+  const [dates, setDates] = useState<ImportantDate[]>([]);
 
   const [isAddingDate, setIsAddingDate] = useState(false);
   const [newDate, setNewDate] = useState({

@@ -28,6 +28,27 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
     isSavingGuess,
   } = useDailyQuestion();
 
+  // Show error if no relationship is established
+  if (!relationship) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-3xl p-8 shadow-lg text-center">
+            <Heart className="w-16 h-16 text-pink-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-4">Connect with Your Partner</h2>
+            <p className="text-gray-600 mb-6">
+              To answer daily questions, you need to connect with your partner first.
+              Go to Settings and use "Connect Partner" to get started.
+            </p>
+            <Button onClick={onComplete} className="w-full">
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [stage, setStage] = useState<'answer' | 'guess' | 'feedback'>('answer');
   const [answerText, setAnswerText] = useState('');
   const [guessText, setGuessText] = useState('');

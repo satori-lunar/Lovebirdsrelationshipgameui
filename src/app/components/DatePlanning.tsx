@@ -11,7 +11,7 @@ interface DatePlanningProps {
 
 type DateMode = 'select' | 'plan-for-partner' | 'swipe-together';
 
-const dateIdeas = [
+const mockDateIdeas = [
   {
     id: 1,
     title: "Sunset Picnic at the Park",

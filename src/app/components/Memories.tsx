@@ -23,6 +23,7 @@ interface Memory {
 export function Memories({ onBack }: MemoriesProps) {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [isAddingMemory, setIsAddingMemory] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [newMemory, setNewMemory] = useState({
     journalEntry: '',
     tags: '',
@@ -31,9 +32,10 @@ export function Memories({ onBack }: MemoriesProps) {
   });
 
   const handleAddMemory = () => {
-    if (newMemory.journalEntry.trim() || newMemory.tags.trim()) {
+    if (newMemory.journalEntry.trim() || newMemory.tags.trim() || selectedImage) {
       const memory: Memory = {
         id: Date.now().toString(),
+        photoUrl: selectedImage ? URL.createObjectURL(selectedImage) : undefined,
         journalEntry: newMemory.journalEntry || undefined,
         tags: newMemory.tags.split(',').map(t => t.trim()).filter(Boolean),
         memoryDate: newMemory.memoryDate,
@@ -46,6 +48,7 @@ export function Memories({ onBack }: MemoriesProps) {
         memoryDate: new Date().toISOString().split('T')[0],
         isPrivate: false,
       });
+      setSelectedImage(null);
       setIsAddingMemory(false);
     }
   };

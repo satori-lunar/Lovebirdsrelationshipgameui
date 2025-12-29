@@ -309,28 +309,17 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   
                   <div className="space-y-2">
                     <Label>Birthday</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start text-left font-normal"
-                        >
-                          {birthday ? format(birthday, 'PPP') : 'Select your birthday'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={birthday}
-                          onSelect={(date) => {
-                            console.log('Birthday selected:', date);
-                            setBirthday(date);
-                          }}
-                          disabled={(date) => date > new Date()}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <input
+                      type="date"
+                      value={birthday ? format(birthday, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => {
+                        const date = e.target.value ? new Date(e.target.value) : undefined;
+                        console.log('Birthday input changed:', date);
+                        setBirthday(date);
+                      }}
+                      max={format(new Date(), 'yyyy-MM-dd')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    />
                     <p className="text-xs text-gray-500">
                       Helps suggest age-appropriate ideas (only you see this).
                     </p>
