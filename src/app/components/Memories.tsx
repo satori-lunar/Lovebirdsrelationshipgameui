@@ -123,31 +123,33 @@ export function Memories({ onBack }: MemoriesProps) {
                   <div className="space-y-2">
                     <Label>Add a Photo</Label>
                     <div className="flex gap-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setSelectedImage(file);
-                            toast.success('Photo selected!');
-                          }
-                        }}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <label htmlFor="photo-upload" className="cursor-pointer">
-                        <Button type="button" variant="outline" className="flex items-center gap-2">
-                          <ImageIcon className="w-4 h-4" />
-                          Choose Photo
-                        </Button>
-                      </label>
                       <Button
                         type="button"
                         variant="outline"
                         className="flex items-center gap-2"
                         onClick={() => {
-                          document.getElementById('camera-upload')?.click();
+                          const input = document.getElementById('photo-upload') as HTMLInputElement;
+                          if (input) {
+                            input.click();
+                          } else {
+                            console.error('Photo upload input not found');
+                          }
+                        }}
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        Choose Photo
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => {
+                          const input = document.getElementById('camera-upload') as HTMLInputElement;
+                          if (input) {
+                            input.click();
+                          } else {
+                            console.error('Camera upload input not found');
+                          }
                         }}
                       >
                         <Camera className="w-4 h-4" />
@@ -156,10 +158,27 @@ export function Memories({ onBack }: MemoriesProps) {
                       <input
                         type="file"
                         accept="image/*"
-                        capture="environment"
                         onChange={(e) => {
+                          console.log('Photo upload changed:', e.target.files);
                           const file = e.target.files?.[0];
                           if (file) {
+                            console.log('Selected file:', file.name, file.type, file.size);
+                            setSelectedImage(file);
+                            toast.success('Photo selected!');
+                          }
+                        }}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture
+                        onChange={(e) => {
+                          console.log('Camera upload changed:', e.target.files);
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            console.log('Captured file:', file.name, file.type, file.size);
                             setSelectedImage(file);
                             toast.success('Photo captured!');
                           }
