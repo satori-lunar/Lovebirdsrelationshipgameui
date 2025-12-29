@@ -22,22 +22,6 @@ export const questionService = {
   },
 
   async generateDailyQuestion(relationshipId: string, context?: any): Promise<DailyQuestion> {
-    // This would typically call an AI service to generate questions
-    // For now, we'll use a fallback question bank
-    const questionBank = [
-      "What is your favorite movie?",
-      "What's your ideal way to spend a rainy day?",
-      "What's something you've always wanted to try but haven't yet?",
-      "What makes you feel most loved?",
-      "What's your favorite childhood memory?",
-      "What's something your partner does that makes you smile?",
-      "What's your favorite way to relax after a long day?",
-      "What's a small gesture that means a lot to you?",
-      "What's your favorite thing about your partner?",
-      "What's something you'd love to do together this month?",
-    ];
-
-    const randomQuestion = questionBank[Math.floor(Math.random() * questionBank.length)];
     const today = new Date().toISOString().split('T')[0];
 
     // Check if question already exists for today
@@ -46,13 +30,27 @@ export const questionService = {
       return existing;
     }
 
+    // Get a random question from the global question bank
+    const { data: questions, error } = await api.supabase
+      .from('daily_questions')
+      .select('*')
+      .is('relationship_id', null); // Get global questions (relationship_id is NULL)
+
+    if (error || !questions || questions.length === 0) {
+      throw new Error('No questions available');
+    }
+
+    // Select a random question
+    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+
+    // Create a new daily question for this relationship
     const question = await handleSupabaseError(
       api.supabase
         .from('daily_questions')
         .insert({
-          relationship_id: relationshipId,
-          question_text: randomQuestion,
+          question_text: randomQuestion.question_text,
           question_date: today,
+          relationship_id: relationshipId,
         })
         .select()
         .single()
