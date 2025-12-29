@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
-import { ChevronLeft, Sparkles, Heart, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, Sparkles, Heart, X, Users, CheckCircle, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import { dateIdeas } from '../data/dateIdeas';
+import { useAuth } from '../contexts/AuthContext';
+import { useRelationship } from '../hooks/useRelationship';
+import { dateService, type DateIdea, type DateMatch } from '../services/dateService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface DatePlanningProps {
   onBack: () => void;
@@ -11,51 +15,107 @@ interface DatePlanningProps {
 }
 
 type DateMode = 'select' | 'plan-for-partner' | 'swipe-together';
-type SwipeStage = 'welcome' | 'partner1' | 'partner2' | 'matches' | 'decision' | 'final';
+type SwipeStage = 'welcome' | 'swiping' | 'matches' | 'decision' | 'final';
 
 // Import types that are needed for the component
 import { User, Users, Clock, DollarSign, MapPin } from 'lucide-react';
 export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
+  const { user } = useAuth();
+  const { relationship } = useRelationship();
+  const queryClient = useQueryClient();
+
   const [mode, setMode] = useState<DateMode>('select');
   const [swipeStage, setSwipeStage] = useState<SwipeStage>('welcome');
   const [currentSwipeIndex, setCurrentSwipeIndex] = useState(0);
-  const [partner1Likes, setPartner1Likes] = useState<number[]>([]);
-  const [partner2Likes, setPartner2Likes] = useState<number[]>([]);
-  const [matches, setMatches] = useState<number[]>([]);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [finalDate, setFinalDate] = useState<number | null>(null);
   const [decisionMethod, setDecisionMethod] = useState<'coin' | 'dice' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Determine if current user is partner A
+  const isPartnerA = relationship ? user?.id === relationship.partner_a_id : true;
+
+  // Fetch swipe date ideas
+  const { data: swipeDateIdeas = [], isLoading: swipeIdeasLoading } = useQuery({
+    queryKey: ['swipe-date-ideas', relationship?.id],
+    queryFn: async () => {
+      if (!relationship?.id) return [];
+      // For now, return the static date ideas. In production, you'd generate personalized ones
+      return dateIdeas.slice(0, 30);
+    },
+    enabled: swipeStage === 'swiping' && !!relationship?.id,
+  });
+
+  // Fetch date matches (real-time updates)
+  const { data: dateMatches = [], isLoading: matchesLoading } = useQuery({
+    queryKey: ['date-matches', relationship?.id],
+    queryFn: async () => {
+      if (!relationship?.id) return [];
+      return dateService.getMatches(relationship.id);
+    },
+    enabled: !!relationship?.id,
+    refetchInterval: swipeStage === 'swiping' ? 2000 : false, // Poll every 2 seconds during swiping
+  });
+
+  // Like/Unlike date idea mutation
+  const likeDateMutation = useMutation({
+    mutationFn: async ({ dateIdeaId, liked }: { dateIdeaId: string; liked: boolean }) => {
+      if (!relationship?.id || !user?.id) throw new Error('Missing relationship or user');
+
+      if (liked) {
+        return dateService.likeDateIdea(dateIdeaId, relationship.id, user.id, isPartnerA);
+      } else {
+        // For unliking, we would need to update the match record
+        // For now, we'll just skip to next card
+        return null;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['date-matches'] });
+    },
+  });
+
+  // Calculate user's progress
+  const userProgress = dateMatches.filter(match => {
+    return isPartnerA ? match.partner_a_liked : match.partner_b_liked;
+  }).length;
+
+  const partnerProgress = dateMatches.filter(match => {
+    return isPartnerA ? match.partner_b_liked : match.partner_a_liked;
+  }).length;
+
+  // Check if both partners are done
+  const bothPartnersDone = userProgress >= swipeDateIdeas.length && partnerProgress >= swipeDateIdeas.length;
+
+  // Auto-advance to matches when both partners are done
+  useEffect(() => {
+    if (swipeStage === 'swiping' && bothPartnersDone && swipeDateIdeas.length > 0) {
+      // Small delay to show the completion state
+      setTimeout(() => {
+        setSwipeStage('matches');
+      }, 1500);
+    }
+  }, [swipeStage, bothPartnersDone, swipeDateIdeas.length]);
+
   const handleSwipe = (liked: boolean) => {
-    const currentDateId = dateIdeas[currentSwipeIndex].id;
+    if (!swipeDateIdeas[currentSwipeIndex]) return;
 
-    if (swipeStage === 'partner1') {
-      if (liked) {
-        setPartner1Likes(prev => [...prev, currentDateId]);
-      }
+    const currentDateId = swipeDateIdeas[currentSwipeIndex].id;
 
-      if (currentSwipeIndex < dateIdeas.length - 1) {
-        setCurrentSwipeIndex(currentSwipeIndex + 1);
-      } else {
-        // Partner 1 done, move to partner 2
-        setCurrentSwipeIndex(0);
-        setSwipeStage('partner2');
-      }
-    } else if (swipeStage === 'partner2') {
-      if (liked) {
-        setPartner2Likes(prev => [...prev, currentDateId]);
-      }
+    // Record the swipe in database
+    if (liked) {
+      likeDateMutation.mutate({ dateIdeaId: currentDateId, liked: true });
+    }
 
-      if (currentSwipeIndex < dateIdeas.length - 1) {
-        setCurrentSwipeIndex(currentSwipeIndex + 1);
-      } else {
-        // Partner 2 done, calculate matches
-        const p2Likes = liked ? [...partner2Likes, currentDateId] : partner2Likes;
-        const matchedDates = partner1Likes.filter(id => p2Likes.includes(id));
-        setMatches(matchedDates);
+    // Move to next card
+    if (currentSwipeIndex < swipeDateIdeas.length - 1) {
+      setCurrentSwipeIndex(currentSwipeIndex + 1);
+    } else {
+      // User is done swiping
+      if (bothPartnersDone) {
         setSwipeStage('matches');
       }
+      // If partner isn't done yet, just stay on the last card or show waiting state
     }
   };
 
@@ -75,9 +135,7 @@ export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
   const resetSwipeFlow = () => {
     setSwipeStage('welcome');
     setCurrentSwipeIndex(0);
-    setPartner1Likes([]);
-    setPartner2Likes([]);
-    setMatches([]);
+    setSelectedDate(null);
     setFinalDate(null);
     setDecisionMethod(null);
     setIsAnimating(false);
@@ -287,39 +345,159 @@ export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
       return (
         <WelcomeScreen
           partnerName={partnerName}
-          onStart={() => setSwipeStage('partner1')}
+          onStart={() => setSwipeStage('swiping')}
           onBack={() => setMode('select')}
         />
       );
     }
 
-    // Partner 1 or Partner 2 Swiping
-    if (swipeStage === 'partner1' || swipeStage === 'partner2') {
-      const currentDate = dateIdeas[currentSwipeIndex];
-      const isPartner1 = swipeStage === 'partner1';
+    // Simultaneous Swiping
+    if (swipeStage === 'swiping') {
+      if (swipeIdeasLoading) {
+        return (
+          <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center">
+            <Card className="p-8 text-center">
+              <Sparkles className="w-12 h-12 text-pink-500 mx-auto mb-4 animate-spin" />
+              <h2 className="text-xl mb-2">Loading Date Ideas...</h2>
+              <p className="text-gray-600">Getting the perfect dates ready for you both!</p>
+            </Card>
+          </div>
+        );
+      }
+
+      const currentDate = swipeDateIdeas[currentSwipeIndex];
+      const isUserDone = userProgress >= swipeDateIdeas.length;
+      const isPartnerDone = partnerProgress >= swipeDateIdeas.length;
 
       return (
-        <SwipeableDateCard
-          date={currentDate}
-          onSwipe={handleSwipe}
-          onBack={() => {
-            resetSwipeFlow();
-            setMode('select');
-          }}
-          currentIndex={currentSwipeIndex}
-          totalCount={dateIdeas.length}
-          partnerName={isPartner1 ? 'You' : partnerName}
-          isPartner1={isPartner1}
-        />
+        <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50">
+          {/* Header with Progress */}
+          <div className="bg-white shadow-sm">
+            <div className="max-w-md mx-auto px-6 py-4">
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => {
+                    resetSwipeFlow();
+                    setMode('select');
+                  }}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                  <span>Back</span>
+                </button>
+                <div className="text-sm text-gray-500">
+                  {currentSwipeIndex + 1} of {swipeDateIdeas.length}
+                </div>
+              </div>
+
+              {/* Progress Bars */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium">You</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(userProgress / swipeDateIdeas.length) * 100}%` }}
+                    />
+                  </div>
+                  {isUserDone && <CheckCircle className="w-4 h-4 text-green-500" />}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-pink-500" />
+                  <span className="text-sm font-medium">{partnerName}</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-pink-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(partnerProgress / swipeDateIdeas.length) * 100}%` }}
+                    />
+                  </div>
+                  {isPartnerDone && <CheckCircle className="w-4 h-4 text-green-500" />}
+                </div>
+              </div>
+
+              {/* Status Message */}
+              <div className="mt-4 text-center">
+                {isUserDone && isPartnerDone ? (
+                  <div className="text-green-600 font-medium">
+                    🎉 Both done! Let's see your matches!
+                  </div>
+                ) : isUserDone && !isPartnerDone ? (
+                  <div className="text-blue-600">
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    Waiting for {partnerName} to finish...
+                  </div>
+                ) : !isUserDone && isPartnerDone ? (
+                  <div className="text-pink-600">
+                    {partnerName} is done! Keep swiping to find matches.
+                  </div>
+                ) : (
+                  <div className="text-gray-600">
+                    Swipe right for dates you like! 💕
+                  </div>
+                )}
+              </div>
+
+              {/* Continue Button */}
+              {isUserDone && isPartnerDone && (
+                <Button
+                  onClick={() => setSwipeStage('matches')}
+                  className="w-full mt-4 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+                >
+                  See Our Matches! 💕
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Swipe Card */}
+          {!isUserDone && currentDate && (
+            <SwipeableDateCard
+              date={currentDate}
+              onSwipe={handleSwipe}
+              onBack={() => {
+                resetSwipeFlow();
+                setMode('select');
+              }}
+              currentIndex={currentSwipeIndex}
+              totalCount={swipeDateIdeas.length}
+              partnerName="You"
+              isPartner1={true}
+            />
+          )}
+
+          {/* Waiting State */}
+          {isUserDone && !isPartnerDone && (
+            <div className="flex-1 flex items-center justify-center p-6">
+              <Card className="p-8 text-center max-w-sm">
+                <Heart className="w-16 h-16 text-pink-400 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">You're all done!</h2>
+                <p className="text-gray-600 mb-4">
+                  Great job swiping through all the dates. Now let's wait for {partnerName} to finish their swipes.
+                </p>
+                <div className="text-sm text-gray-500">
+                  {partnerName} has swiped through {partnerProgress} of {swipeDateIdeas.length} dates
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
       );
     }
 
     // Matches Screen
     if (swipeStage === 'matches') {
+      // Get matched date ideas from the matches
+      const matchedDateIds = dateMatches.map(match => match.date_idea_id);
+      const matchedDateIdeas = swipeDateIdeas.filter(idea =>
+        matchedDateIds.includes(idea.id)
+      );
+
       return (
         <MatchesView
-          matches={matches}
-          dateIdeas={dateIdeas}
+          matches={matchedDateIds}
+          dateIdeas={swipeDateIdeas}
           onContinue={() => setSwipeStage('decision')}
           onTryAgain={resetSwipeFlow}
         />
