@@ -30,10 +30,14 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
     if (user && open) {
       // Connect with partner if invite code was provided during signup
       const connectPartner = async () => {
-        if (pendingInviteCode && user.id) {
+        if (pendingInviteCode && user?.id) {
           try {
-            await relationshipService.connectPartner(pendingInviteCode, user.id);
-            toast.success('Successfully connected with your partner!');
+            // Get fresh session to ensure we have the latest user data
+            const session = await authService.getSession();
+            if (session?.user?.id) {
+              await relationshipService.connectPartner(pendingInviteCode, session.user.id);
+              toast.success('Successfully connected with your partner!');
+            }
           } catch (inviteError: any) {
             console.error('Failed to connect partner:', inviteError);
             toast.error(inviteError.message || 'Failed to connect with partner. You can try connecting later in Settings.');

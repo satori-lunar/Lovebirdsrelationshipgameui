@@ -71,11 +71,11 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
       const checkSession = async () => {
         try {
           const session = await authService.getSession();
-          if (session) {
+          if (session && session.user) {
             // Connect with partner if invite code was provided
-            if (pendingInviteCode && user?.id) {
+            if (pendingInviteCode) {
               try {
-                await relationshipService.connectPartner(pendingInviteCode, user.id);
+                await relationshipService.connectPartner(pendingInviteCode, session.user.id);
                 toast.success('Successfully connected with your partner!');
               } catch (inviteError: any) {
                 console.error('Failed to connect partner:', inviteError);
