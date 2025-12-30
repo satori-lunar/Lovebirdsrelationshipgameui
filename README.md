@@ -41,6 +41,10 @@ pnpm install
    - Go to SQL Editor and run the migrations in order:
      - `supabase/migrations/001_initial_schema.sql`
      - `supabase/migrations/002_rls_policies.sql`
+     - `supabase/migrations/003_update_onboarding_schema.sql`
+     - `supabase/migrations/004_add_daily_questions.sql`
+     - `supabase/migrations/005_enhance_memories_schema.sql`
+     - `supabase/migrations/006_fix_onboarding_responses_rls.sql`
    - Create a storage bucket named `memories` for photo uploads
    - Get your project URL and anon key from Settings > API
 
