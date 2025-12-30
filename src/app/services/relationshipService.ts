@@ -61,29 +61,63 @@ export const relationshipService = {
   },
 
   async connectPartner(inviteCode: string, partnerBId: string): Promise<Relationship> {
+    console.log('🔗 Attempting to connect partner with invite code:', inviteCode);
+
     const relationship = await this.getRelationshipByInviteCode(inviteCode);
 
     if (!relationship) {
+      console.error('❌ Invalid invite code:', inviteCode);
       throw new Error('Invalid invite code');
     }
 
+    console.log('✓ Found relationship:', {
+      id: relationship.id,
+      partner_a_id: relationship.partner_a_id,
+      partner_b_id: relationship.partner_b_id,
+      connecting_as: partnerBId
+    });
+
     if (relationship.partner_a_id === partnerBId) {
+      console.error('❌ User trying to connect to themselves');
       throw new Error('Cannot connect to yourself');
     }
 
-    const updated = await handleSupabaseError(
-      api.supabase
-        .from('relationships')
-        .update({
-          partner_b_id: partnerBId,
-          connected_at: new Date().toISOString(),
-        })
-        .eq('id', relationship.id)
-        .select()
-        .single()
-    );
+    console.log('🔄 Updating relationship to connect partner_b...');
 
-    return updated;
+    try {
+      const updated = await handleSupabaseError(
+        api.supabase
+          .from('relationships')
+          .update({
+            partner_b_id: partnerBId,
+            connected_at: new Date().toISOString(),
+          })
+          .eq('id', relationship.id)
+          .select()
+          .single()
+      );
+
+      console.log('✅ Successfully connected partner!', {
+        relationship_id: updated.id,
+        partner_a_id: updated.partner_a_id,
+        partner_b_id: updated.partner_b_id,
+        connected_at: updated.connected_at
+      });
+
+      return updated;
+    } catch (error: any) {
+      console.error('❌ Failed to update relationship:', error);
+
+      // Provide more helpful error messages
+      if (error.code === '42501' || error.message?.includes('row-level security')) {
+        throw new Error(
+          'Permission denied. Please ensure the relationship UPDATE policy allows partner connections. ' +
+          'See SUPABASE_SETUP.md for migration instructions.'
+        );
+      }
+
+      throw error;
+    }
   },
 
   async getRelationship(userId: string): Promise<Relationship | null> {
