@@ -13,6 +13,7 @@ import { DateChallenge } from './components/DateChallenge';
 import { DatesWrapper } from './components/DatesWrapper';
 import { GiftGuidance } from './components/GiftGuidance';
 import { LoveNudges } from './components/LoveNudges';
+import { SurpriseVault } from './components/SurpriseVault';
 import { RelationshipTracker } from './components/RelationshipTracker';
 import { Memories } from './components/Memories';
 import { Settings } from './components/Settings';
@@ -22,7 +23,7 @@ import { useAuth } from './hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'nudges' | 'tracker' | 'memories' | 'settings' | 'insights';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'tracker' | 'memories' | 'settings' | 'insights';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -185,6 +186,13 @@ export default function App() {
         <LoveNudges
           onBack={handleBack}
           onNavigate={handleNavigate}
+          partnerName={userData.partnerName || 'your partner'}
+        />
+      )}
+
+      {currentView === 'vault' && userData && (
+        <SurpriseVault
+          onBack={handleBack}
           partnerName={userData.partnerName || 'your partner'}
         />
       )}
