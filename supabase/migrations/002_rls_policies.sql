@@ -23,10 +23,22 @@ CREATE POLICY "Users can insert their own profile"
   ON public.users FOR INSERT
   WITH CHECK (auth.uid() = id);
 
+-- Allow authenticated users to insert user profiles during signup
+DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON public.users;
+CREATE POLICY "Enable insert for authenticated users only"
+  ON public.users FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
 CREATE POLICY "Users can update their own profile"
   ON public.users FOR UPDATE
   USING (auth.uid() = id);
+
+-- Allow authenticated users to update their own profiles
+DROP POLICY IF EXISTS "Enable update for authenticated users only" ON public.users;
+CREATE POLICY "Enable update for authenticated users only"
+  ON public.users FOR UPDATE
+  USING (auth.role() = 'authenticated' AND auth.uid() = id);
 
 -- Relationships policies
 DROP POLICY IF EXISTS "Users can view their own relationships" ON public.relationships;
