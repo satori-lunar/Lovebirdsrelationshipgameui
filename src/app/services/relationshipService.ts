@@ -121,15 +121,24 @@ export const relationshipService = {
   },
 
   async getRelationship(userId: string): Promise<Relationship | null> {
-    const relationship = await handleSupabaseError(
-      api.supabase
+    try {
+      const { data: relationship, error } = await api.supabase
         .from('relationships')
         .select('*')
         .or(`partner_a_id.eq.${userId},partner_b_id.eq.${userId}`)
-        .single()
-    );
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 errors
 
-    return relationship;
+      if (error) {
+        console.error('Error fetching relationship:', error);
+        // Return null instead of throwing - user just doesn't have a relationship yet
+        return null;
+      }
+
+      return relationship;
+    } catch (error) {
+      console.error('Unexpected error in getRelationship:', error);
+      return null;
+    }
   },
 
   async getPartnerId(userId: string, relationshipId: string): Promise<string | null> {
