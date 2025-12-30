@@ -1,9 +1,8 @@
-import { useState, useMemo } from 'react';
-import { Heart, Sparkles, ChevronLeft, BookmarkPlus, Check } from 'lucide-react';
+import { Heart, Sparkles, ChevronLeft, BookmarkPlus, Check, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
-import { loveLanguageSuggestions } from '../data/loveLanguageSuggestions';
+import { useSuggestions } from '../hooks/useSuggestions';
 
 interface LoveLanguageSuggestionsProps {
   onBack: () => void;
@@ -11,69 +10,36 @@ interface LoveLanguageSuggestionsProps {
 }
 
 export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSuggestionsProps) {
-  const [saved, setSaved] = useState<number[]>([]);
-  const [completed, setCompleted] = useState<number[]>([]);
-  const { partnerLoveLanguages, partnerOnboarding, isLoading } = usePartnerOnboarding();
+  const { partnerLoveLanguages, partnerOnboarding } = usePartnerOnboarding();
 
-  // Debug logging
-  console.log('💜 LoveLanguageSuggestions Debug:', {
-    partnerName,
-    partnerLoveLanguages,
-    partnerOnboarding,
+  // Use personalized suggestions from the service
+  const {
+    suggestions,
     isLoading,
-  });
+    personalizationTier,
+    markAsSaved,
+    markAsCompleted,
+    unmarkAsSaved,
+    unmarkAsCompleted,
+    refresh,
+    isRefreshing,
+  } = useSuggestions({ category: 'love_language' });
 
-  // Filter suggestions based on partner's love languages
-  const suggestions = useMemo(() => {
-    // Get partner's primary and secondary love languages
-    const primary = partnerLoveLanguages?.primary;
-    const secondary = partnerLoveLanguages?.secondary;
-
-    // If no love languages set, default to showing Words of Affirmation
-    if (!primary && !secondary) {
-      return loveLanguageSuggestions
-        .filter(s => s.loveLanguage === 'Words of Affirmation')
-        .slice(0, 3);
+  // Toggle functions for saved/completed
+  const toggleSave = (suggestionId: string, currentlySaved: boolean) => {
+    if (currentlySaved) {
+      unmarkAsSaved(suggestionId);
+    } else {
+      markAsSaved(suggestionId);
     }
-
-    // Filter suggestions for primary love language (2 suggestions)
-    const primarySuggestions = primary
-      ? loveLanguageSuggestions
-          .filter(s => s.loveLanguage === primary)
-          .slice(0, 2)
-      : [];
-
-    // Filter suggestions for secondary love language (1 suggestion)
-    const secondarySuggestions = secondary
-      ? loveLanguageSuggestions
-          .filter(s => s.loveLanguage === secondary)
-          .slice(0, 1)
-      : [];
-
-    // Combine primary and secondary suggestions
-    const combined = [...primarySuggestions, ...secondarySuggestions];
-
-    // If we have less than 3 total, fill up with more from primary
-    if (combined.length < 3 && primary) {
-      const additional = loveLanguageSuggestions
-        .filter(s => s.loveLanguage === primary)
-        .slice(2, 3);
-      combined.push(...additional);
-    }
-
-    return combined;
-  }, [partnerLoveLanguages]);
-
-  const toggleSave = (id: number) => {
-    setSaved(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
   };
 
-  const toggleComplete = (id: number) => {
-    setCompleted(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+  const toggleComplete = (suggestionId: string, currentlyCompleted: boolean) => {
+    if (currentlyCompleted) {
+      unmarkAsCompleted(suggestionId);
+    } else {
+      markAsCompleted(suggestionId);
+    }
   };
 
   // Get partner's primary love language
@@ -168,26 +134,39 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
           </div>
         </Card>
 
+        {/* Refresh Button */}
+        <div className="mb-4 flex justify-end">
+          <Button
+            onClick={refresh}
+            disabled={isRefreshing}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Get New Suggestions'}
+          </Button>
+        </div>
+
         {/* Suggestions */}
         <div className="space-y-4">
           {suggestions.map((suggestion) => (
             <Card key={suggestion.id} className="p-6 border-0 shadow-md hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <h3 className="font-semibold mb-1">{suggestion.title}</h3>
+                  <h3 className="font-semibold mb-1">{suggestion.metadata?.title || suggestion.suggestion_type}</h3>
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
-                      {suggestion.timeEstimate}
+                      {suggestion.time_estimate}
                     </span>
                     <span className="text-xs px-2 py-1 bg-pink-100 text-pink-700 rounded-full">
                       {suggestion.difficulty}
                     </span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => toggleSave(suggestion.id)}
+                <button
+                  onClick={() => toggleSave(suggestion.id, suggestion.saved)}
                   className={`flex-shrink-0 ml-3 ${
-                    saved.includes(suggestion.id) ? 'text-pink-500' : 'text-gray-300'
+                    suggestion.saved ? 'text-pink-500' : 'text-gray-300'
                   }`}
                 >
                   <BookmarkPlus className="w-6 h-6" />
@@ -195,19 +174,28 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
               </div>
 
               <p className="text-sm text-gray-600 mb-4">
-                {suggestion.description}
+                {suggestion.suggestion_text}
               </p>
+
+              {/* Why this suggestion */}
+              {suggestion.data_sources?.reason && (
+                <div className="mb-3 p-2 bg-purple-50 rounded-lg">
+                  <p className="text-xs text-purple-700 italic">
+                    💡 {suggestion.data_sources.reason}
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 <Button
-                  onClick={() => toggleComplete(suggestion.id)}
+                  onClick={() => toggleComplete(suggestion.id, suggestion.completed)}
                   className={`flex-1 ${
-                    completed.includes(suggestion.id)
+                    suggestion.completed
                       ? 'bg-green-500 hover:bg-green-600'
                       : 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600'
                   } text-white`}
                 >
-                  {completed.includes(suggestion.id) ? (
+                  {suggestion.completed ? (
                     <>
                       <Check className="w-4 h-4 mr-2" />
                       Completed!
@@ -222,12 +210,12 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
         </div>
 
         {/* Saved Count */}
-        {saved.length > 0 && (
+        {suggestions.filter(s => s.saved).length > 0 && (
           <div className="mt-6 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm">
               <BookmarkPlus className="w-4 h-4 text-pink-500" />
               <span className="text-sm">
-                {saved.length} saved for later
+                {suggestions.filter(s => s.saved).length} saved for later
               </span>
             </div>
           </div>
