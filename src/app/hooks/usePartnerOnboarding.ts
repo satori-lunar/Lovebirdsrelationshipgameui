@@ -35,6 +35,7 @@ export function usePartnerOnboarding() {
     partnerOnboarding,
     isLoading,
     error,
+    partnerName: partnerOnboarding?.name || 'your partner',
     partnerBirthday: partnerOnboarding?.birthday,
     partnerLoveLanguages: {
       primary: partnerOnboarding?.love_language_primary,
