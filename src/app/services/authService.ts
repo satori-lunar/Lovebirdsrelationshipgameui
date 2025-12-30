@@ -22,6 +22,11 @@ export const authService = {
       const { data: authData, error: authError } = await api.supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            name: name || '',
+          }
+        }
       });
 
       if (authError) {
