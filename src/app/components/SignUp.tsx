@@ -70,28 +70,20 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
       // Verify session exists before redirecting
       const checkSession = async () => {
         try {
-          console.log('Checking session for partner connection...');
           const session = await authService.getSession();
-          console.log('Session result:', session);
           if (session && session.user) {
-            console.log('Session valid, user ID:', session.user.id);
             // Connect with partner if invite code was provided
             if (pendingInviteCode) {
-              console.log('Attempting to connect with partner using code:', pendingInviteCode);
               try {
-                console.log('Calling relationshipService.connectPartner...');
                 const result = await relationshipService.connectPartner(pendingInviteCode, session.user.id);
-                console.log('Partner connection successful:', result);
                 toast.success('Successfully connected with your partner!');
+                setPendingInviteCode(null);
               } catch (inviteError: any) {
                 console.error('Failed to connect partner:', inviteError);
-                console.error('Error details:', inviteError.message, inviteError.code, inviteError.details);
                 const errorMessage = inviteError.message || 'Failed to connect with partner. You can try connecting later in Settings.';
                 toast.error(errorMessage);
-                // Don't clear pendingInviteCode so user can try again
-                return;
+                setPendingInviteCode(null);
               }
-              setPendingInviteCode(null);
             }
 
             // Reset form state
@@ -109,8 +101,26 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
               onSuccess();
             }, 1500);
           } else {
-            // No session yet, wait and check again
-            setTimeout(checkSession, 500);
+            // No session yet, give up and proceed
+            console.log('Session not available, proceeding without partner connection');
+            if (pendingInviteCode) {
+              toast.error('Unable to connect with partner right now. You can try connecting later in Settings.');
+              setPendingInviteCode(null);
+            }
+
+            // Reset form state anyway
+            setName('');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setInviteCode('');
+            setHasInviteCode(false);
+            setSignUpSuccess(false);
+
+            setIsLoading(false);
+            setTimeout(() => {
+              onSuccess();
+            }, 1000);
           }
         } catch (error) {
           console.error('Error checking session:', error);

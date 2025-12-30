@@ -36,8 +36,6 @@ export const relationshipService = {
   },
 
   async getRelationshipByInviteCode(inviteCode: string): Promise<Relationship | null> {
-    console.log('getRelationshipByInviteCode called with:', inviteCode);
-
     const relationship = await handleSupabaseError(
       api.supabase
         .from('relationships')
@@ -46,36 +44,24 @@ export const relationshipService = {
         .single()
     );
 
-    console.log('Relationship query result:', relationship);
-
-    if (!relationship) {
-      console.log('No relationship found for invite code');
-      return null;
-    }
+    if (!relationship) return null;
 
     // Check if code is expired
     const expiresAt = new Date(relationship.invite_code_expires_at);
-    console.log('Invite code expires at:', expiresAt, 'Current time:', new Date());
     if (expiresAt < new Date()) {
-      console.log('Invite code has expired');
       throw new Error('Invite code has expired');
     }
 
     // Check if already connected
     if (relationship.partner_b_id) {
-      console.log('Invite code already used by partner:', relationship.partner_b_id);
       throw new Error('This invite code has already been used');
     }
 
-    console.log('Invite code is valid');
     return relationship;
   },
 
   async connectPartner(inviteCode: string, partnerBId: string): Promise<Relationship> {
-    console.log('connectPartner called with:', { inviteCode, partnerBId });
-
     const relationship = await this.getRelationshipByInviteCode(inviteCode);
-    console.log('Found relationship:', relationship);
 
     if (!relationship) {
       throw new Error('Invalid invite code');
@@ -85,7 +71,6 @@ export const relationshipService = {
       throw new Error('Cannot connect to yourself');
     }
 
-    console.log('Updating relationship with partner_b_id...');
     const updated = await handleSupabaseError(
       api.supabase
         .from('relationships')
@@ -98,7 +83,6 @@ export const relationshipService = {
         .single()
     );
 
-    console.log('Partner connection completed:', updated);
     return updated;
   },
 
