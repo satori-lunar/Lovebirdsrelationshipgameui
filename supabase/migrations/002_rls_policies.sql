@@ -18,14 +18,9 @@ CREATE POLICY "Users can view their own profile"
   ON public.users FOR SELECT
   USING (auth.uid() = id);
 
+-- Allow users to create their own profile (more permissive for signup)
 DROP POLICY IF EXISTS "Users can insert their own profile" ON public.users;
 CREATE POLICY "Users can insert their own profile"
-  ON public.users FOR INSERT
-  WITH CHECK (auth.uid() = id);
-
--- Allow authenticated users to insert user profiles during signup
-DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON public.users;
-CREATE POLICY "Enable insert for authenticated users only"
   ON public.users FOR INSERT
   WITH CHECK (auth.role() = 'authenticated');
 

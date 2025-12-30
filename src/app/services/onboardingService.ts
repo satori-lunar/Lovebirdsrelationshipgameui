@@ -6,27 +6,15 @@ export const onboardingService = {
     // Note: Session validation is handled at the component level
     // to avoid timing issues with auth state updates
 
-    // Note: Auth validation is handled at component level
-    // Since onboarding only renders when user exists, we trust the auth state
-    console.log('Onboarding save - user is authenticated from context');
-
-    // Ensure user exists in users table (required for foreign key and RLS)
-    // This is critical - onboarding_responses has a foreign key to users
+    // Ensure user profile exists before saving onboarding data
     try {
-      // Try to create user profile if it doesn't exist
-      // Use upsert to avoid conflicts
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + 7);
-
-      console.log('Attempting user profile upsert...');
+      console.log('Ensuring user profile exists for onboarding...');
       const { error: upsertError } = await api.supabase
         .from('users')
         .upsert({
           id: userId,
-          email: '', // Will be filled from auth if available
+          email: '', // Will be updated if available
           name: data.name || null,
-          trial_start_date: new Date().toISOString(),
-          trial_end_date: trialEndDate.toISOString(),
         }, {
           onConflict: 'id'
         });
@@ -34,12 +22,11 @@ export const onboardingService = {
       console.log('User profile upsert result:', { error: upsertError });
       if (upsertError) {
         console.error('Failed to ensure user profile exists:', upsertError);
-        // Don't fail onboarding - try to continue anyway
-        // The foreign key constraint will provide feedback if user truly doesn't exist
+        // Continue anyway - onboarding might still work
       }
     } catch (error) {
-      console.error('User profile creation failed:', error);
-      // Continue with onboarding - user is authenticated
+      console.error('User profile upsert failed:', error);
+      // Continue with onboarding
     }
 
     // Use upsert (insert or update) to handle existing onboarding
