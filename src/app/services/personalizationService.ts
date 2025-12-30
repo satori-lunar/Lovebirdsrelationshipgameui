@@ -36,6 +36,9 @@ export interface PersonalizationContext {
       planning_style?: string;
       avoid?: string[];
       notes?: string;
+      favorite_activities?: string[];
+      favorite_cuisines?: string[];
+      wishes?: string;
     };
   };
   insights: {
@@ -106,6 +109,9 @@ export const personalizationService = {
             planning_style: partnerOnboarding?.wants_needs?.planning_style,
             avoid: partnerOnboarding?.wants_needs?.avoid || [],
             notes: partnerOnboarding?.wants_needs?.notes,
+            favorite_activities: partnerOnboarding?.wants_needs?.favorite_activities || [],
+            favorite_cuisines: partnerOnboarding?.wants_needs?.favorite_cuisines || [],
+            wishes: partnerOnboarding?.wants_needs?.wishes,
           },
         },
         insights: {

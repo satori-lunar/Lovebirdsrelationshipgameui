@@ -43,11 +43,15 @@ export function interpolateTemplate(
       context.partner.name
     );
 
-    // Replace {favorite_activity} with actual activity from keywords
-    if (context.insights.keywords.activities?.length > 0) {
+    // Replace {favorite_activity} - prioritize onboarding data, fall back to keywords
+    const favoriteActivity =
+      context.partner.wants_needs.favorite_activities?.[0] ||
+      context.insights.keywords.activities?.[0];
+
+    if (favoriteActivity) {
       description = description.replace(
         /\{favorite_activity\}/g,
-        context.insights.keywords.activities[0]
+        favoriteActivity
       );
     }
 
@@ -59,11 +63,15 @@ export function interpolateTemplate(
       );
     }
 
-    // Replace {favorite_cuisine} with actual cuisine from keywords
-    if (context.insights.keywords.foods?.length > 0) {
+    // Replace {favorite_cuisine} - prioritize onboarding data, fall back to keywords
+    const favoriteCuisine =
+      context.partner.wants_needs.favorite_cuisines?.[0] ||
+      context.insights.keywords.foods?.[0];
+
+    if (favoriteCuisine) {
       description = description.replace(
         /\{favorite_cuisine\}/g,
-        context.insights.keywords.foods[0]
+        favoriteCuisine
       );
     }
 

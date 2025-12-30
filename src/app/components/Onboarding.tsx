@@ -107,6 +107,33 @@ const NUDGE_FREQUENCY_OPTIONS = [
   'Only for milestones'
 ];
 
+// NEW: Enhanced personalization options
+const CUISINE_OPTIONS = [
+  'Italian',
+  'Mexican',
+  'Japanese/Sushi',
+  'Chinese',
+  'Thai',
+  'Indian',
+  'American comfort food',
+  'Mediterranean',
+  'French',
+  'Other/varies'
+];
+
+const ACTIVITY_OPTIONS = [
+  'Reading',
+  'Cooking/Baking',
+  'Hiking/Nature',
+  'Gaming',
+  'Sports/Fitness',
+  'Art/Crafts',
+  'Music/Concerts',
+  'Movies/TV',
+  'Photography',
+  'Traveling'
+];
+
 export function Onboarding({ onComplete }: OnboardingProps) {
   const { user, loading: authLoading } = useAuth();
 
@@ -593,8 +620,94 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                           {gift}
                         </button>
                       ))}
-                </div>
-              </div>
+                    </div>
+                  </div>
+
+                  {/* NEW: Favorite Activities */}
+                  <div className="space-y-2">
+                    <Label>My favorite activities/hobbies (select up to 3)</Label>
+                    <p className="text-xs text-gray-500">This helps us suggest dates and gifts you'll love</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ACTIVITY_OPTIONS.map(activity => (
+                        <button
+                          key={activity}
+                          onClick={() => {
+                            const currentActivities = formData.wants_needs?.favorite_activities || [];
+                            const isSelected = currentActivities.includes(activity);
+
+                            if (isSelected) {
+                              updateWantsNeeds('favorite_activities', currentActivities.filter(a => a !== activity));
+                            } else if (currentActivities.length < 3) {
+                              updateWantsNeeds('favorite_activities', [...currentActivities, activity]);
+                            } else {
+                              toast.error('Please select up to 3 activities');
+                            }
+                          }}
+                          className={`p-3 border rounded-lg transition-all text-sm ${
+                            formData.wants_needs?.favorite_activities?.includes(activity)
+                              ? 'border-pink-500 bg-pink-50 text-pink-700'
+                              : 'border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          {activity}
+                        </button>
+                      ))}
+                    </div>
+                    {formData.wants_needs?.favorite_activities && formData.wants_needs.favorite_activities.length > 0 && (
+                      <p className="text-xs text-gray-500">
+                        {formData.wants_needs.favorite_activities.length} of 3 selected
+                      </p>
+                    )}
+                  </div>
+
+                  {/* NEW: Favorite Cuisines */}
+                  <div className="space-y-2">
+                    <Label>Favorite cuisines (select up to 3)</Label>
+                    <p className="text-xs text-gray-500">For restaurant and cooking date ideas</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {CUISINE_OPTIONS.map(cuisine => (
+                        <button
+                          key={cuisine}
+                          onClick={() => {
+                            const currentCuisines = formData.wants_needs?.favorite_cuisines || [];
+                            const isSelected = currentCuisines.includes(cuisine);
+
+                            if (isSelected) {
+                              updateWantsNeeds('favorite_cuisines', currentCuisines.filter(c => c !== cuisine));
+                            } else if (currentCuisines.length < 3) {
+                              updateWantsNeeds('favorite_cuisines', [...currentCuisines, cuisine]);
+                            } else {
+                              toast.error('Please select up to 3 cuisines');
+                            }
+                          }}
+                          className={`p-3 border rounded-lg transition-all text-sm ${
+                            formData.wants_needs?.favorite_cuisines?.includes(cuisine)
+                              ? 'border-pink-500 bg-pink-50 text-pink-700'
+                              : 'border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          {cuisine}
+                        </button>
+                      ))}
+                    </div>
+                    {formData.wants_needs?.favorite_cuisines && formData.wants_needs.favorite_cuisines.length > 0 && (
+                      <p className="text-xs text-gray-500">
+                        {formData.wants_needs.favorite_cuisines.length} of 3 selected
+                      </p>
+                    )}
+                  </div>
+
+                  {/* NEW: Things I wish my partner would do */}
+                  <div className="space-y-2">
+                    <Label>Things I wish my partner would do more often (optional)</Label>
+                    <p className="text-xs text-gray-500">We'll use this to suggest meaningful actions they can take</p>
+                    <Textarea
+                      value={formData.wants_needs?.wishes || ''}
+                      onChange={(e) => updateWantsNeeds('wishes', e.target.value)}
+                      placeholder="e.g., Plan surprise dates, leave me notes, cook together, give me backrubs..."
+                      rows={3}
+                    />
+                  </div>
 
                   {/* Planning Style */}
                   <div className="space-y-2">
