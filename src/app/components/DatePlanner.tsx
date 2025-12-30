@@ -1,20 +1,15 @@
-import { ChevronLeft, Gift, Heart, Sparkles, DollarSign, Calendar, RefreshCw, Check } from 'lucide-react';
+import { ChevronLeft, Calendar, Heart, Sparkles, RefreshCw, Check, MapPin } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
-import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
-import { getUpcomingEvents, formatDaysUntil, formatEventDate } from '../utils/upcomingEvents';
 import { useSuggestions } from '../hooks/useSuggestions';
-import { useState } from 'react';
 
-interface GiftGuidanceProps {
+interface DatePlannerProps {
   onBack: () => void;
   partnerName: string;
 }
 
-export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
-  const { partnerBirthday } = usePartnerOnboarding();
-
-  // Use personalized gift suggestions
+export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
+  // Use personalized date suggestions
   const {
     suggestions,
     isLoading,
@@ -25,10 +20,7 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
     unmarkAsCompleted,
     refresh,
     isRefreshing,
-  } = useSuggestions({ category: 'gift' });
-
-  // Get upcoming gift-worthy events
-  const upcomingEvents = getUpcomingEvents(partnerName, partnerBirthday);
+  } = useSuggestions({ category: 'date' });
 
   // Toggle save/complete handlers
   const toggleSave = (id: string, currentlySaved: boolean) => {
@@ -63,12 +55,12 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <Gift className="w-6 h-6" />
+                <Calendar className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl">Gift Ideas</h1>
+                <h1 className="text-2xl">Date Ideas</h1>
                 <p className="text-white/90 text-sm">
-                  Thoughtful gifts for {partnerName}
+                  Perfect dates for you and {partnerName}
                 </p>
               </div>
             </div>
@@ -86,43 +78,10 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
       </div>
 
       <div className="max-w-md mx-auto px-6 -mt-6">
-        {/* Upcoming Occasions */}
-        <Card className="p-5 mb-6 bg-white/90 backdrop-blur-sm border-0 shadow-lg">
-          <div className="flex items-center gap-2 mb-3">
-            <Calendar className="w-5 h-5 text-purple-600" />
-            <h3 className="font-semibold">Upcoming Occasions</h3>
-          </div>
-          {upcomingEvents.length > 0 ? (
-            <div className="space-y-2">
-              {upcomingEvents.map((event) => (
-                <div key={event.id} className="flex items-center justify-between p-3 bg-pink-50 rounded-lg">
-                  <div>
-                    <p className="font-semibold text-sm">{event.title}</p>
-                    <p className="text-xs text-gray-600">{formatEventDate(event.date)}</p>
-                  </div>
-                  <span className="text-xs px-2 py-1 bg-pink-200 text-pink-700 rounded-full">
-                    {formatDaysUntil(event.daysUntil)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-3 bg-pink-50 rounded-lg">
-              <div>
-                <p className="font-semibold text-sm">{partnerName}'s Birthday</p>
-                <p className="text-xs text-gray-600">Coming soon</p>
-              </div>
-              <span className="text-xs px-2 py-1 bg-pink-200 text-pink-700 rounded-full">
-                Soon
-              </span>
-            </div>
-          )}
-        </Card>
-
-        {/* Personalized Gift Suggestions */}
+        {/* Personalized Date Suggestions */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Personalized for {partnerName}</h2>
+            <h2 className="font-semibold">Personalized Date Ideas</h2>
             {personalizationTier > 1 && (
               <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
                 Tier {personalizationTier}
@@ -134,15 +93,15 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
             <Card className="p-8 text-center border-0 shadow-md">
               <div className="flex items-center justify-center gap-2">
                 <RefreshCw className="w-5 h-5 animate-spin text-purple-600" />
-                <p className="text-gray-600">Creating personalized gift ideas...</p>
+                <p className="text-gray-600">Creating personalized date ideas...</p>
               </div>
             </Card>
           ) : suggestions.length === 0 ? (
             <Card className="p-8 text-center border-0 shadow-md">
-              <Gift className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">No gift suggestions yet</p>
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 mb-2">No date suggestions yet</p>
               <p className="text-sm text-gray-500 mb-4">
-                Complete your partner's onboarding or answer more daily questions to get personalized gift ideas!
+                Complete your partner's onboarding or answer more daily questions to get personalized date ideas!
               </p>
               <Button
                 onClick={refresh}
@@ -162,11 +121,17 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
                       <h3 className="font-semibold mb-1">
                         {suggestion.metadata?.title || suggestion.suggestion_type}
                       </h3>
-                      {suggestion.metadata?.budget && (
-                        <div className="text-sm text-gray-600">
-                          {suggestion.metadata.budget}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        {suggestion.metadata?.budget && (
+                          <span>{suggestion.metadata.budget}</span>
+                        )}
+                        {suggestion.time_estimate && (
+                          <>
+                            <span>•</span>
+                            <span>{suggestion.time_estimate}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     {suggestion.completed && (
                       <div className="flex items-center gap-1 text-green-600 text-xs bg-green-50 px-2 py-1 rounded-full">
@@ -191,11 +156,10 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
                     <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
                       {suggestion.difficulty} effort
                     </span>
-                    {suggestion.metadata?.occasion && (
+                    {suggestion.metadata?.environment && (
                       <span className="text-xs px-2 py-1 bg-pink-100 text-pink-700 rounded-full">
-                        {Array.isArray(suggestion.metadata.occasion)
-                          ? suggestion.metadata.occasion.join(', ')
-                          : suggestion.metadata.occasion}
+                        <MapPin className="w-3 h-3 inline mr-1" />
+                        {suggestion.metadata.environment}
                       </span>
                     )}
                   </div>
@@ -237,8 +201,8 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
                         </>
                       ) : (
                         <>
-                          <Gift className="w-4 h-4 mr-1" />
-                          Got This
+                          <Calendar className="w-4 h-4 mr-1" />
+                          Plan This
                         </>
                       )}
                     </Button>
@@ -249,21 +213,30 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
           )}
         </div>
 
-        {/* Budget Guide */}
-        <Card className="p-5 mt-8 bg-gradient-to-r from-purple-50 to-pink-50 border-0">
-          <h3 className="font-semibold mb-3">Budget Guide</h3>
+        {/* Date Style Guide */}
+        <Card className="p-5 mt-6 bg-gradient-to-r from-purple-50 to-pink-50 border-0">
+          <h3 className="font-semibold mb-3">Date Styles</h3>
           <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Free - $</span>
-              <span>Under $25</span>
+            <div className="flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-purple-600 mt-0.5" />
+              <div>
+                <span className="font-medium">Adventurous:</span>{' '}
+                <span className="text-gray-600">Outdoor activities, exploring, trying new things</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">$$</span>
-              <span>$25 - $100</span>
+            <div className="flex items-start gap-2">
+              <Heart className="w-4 h-4 text-pink-600 mt-0.5" />
+              <div>
+                <span className="font-medium">Relaxed:</span>{' '}
+                <span className="text-gray-600">Cozy, low-key, comfortable settings</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">$$$</span>
-              <span>$100+</span>
+            <div className="flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-purple-600 mt-0.5" />
+              <div>
+                <span className="font-medium">Cultural:</span>{' '}
+                <span className="text-gray-600">Museums, shows, art experiences</span>
+              </div>
             </div>
           </div>
         </Card>
@@ -278,7 +251,7 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
               </p>
               <p className="text-sm text-gray-600">
                 {personalizationTier === 1 &&
-                  "Basic suggestions. Complete your partner's onboarding to unlock more personalized gift ideas!"}
+                  "Basic suggestions. Complete your partner's onboarding to unlock more personalized date ideas!"}
                 {personalizationTier === 2 &&
                   `Based on ${partnerName}'s onboarding preferences and love language. Save partner insights from daily questions to get even more personalized suggestions!`}
                 {personalizationTier === 3 &&

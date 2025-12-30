@@ -8,6 +8,7 @@ import { Home } from './components/Home';
 import { DailyQuestion } from './components/DailyQuestion';
 import { LoveLanguageSuggestions } from './components/LoveLanguageSuggestions';
 import { DatePlanning } from './components/DatePlanning';
+import { DatePlanner } from './components/DatePlanner';
 import { GiftGuidance } from './components/GiftGuidance';
 import { RelationshipTracker } from './components/RelationshipTracker';
 import { Memories } from './components/Memories';
@@ -164,7 +165,7 @@ export default function App() {
       )}
 
       {currentView === 'dates' && userData && (
-        <DatePlanning
+        <DatePlanner
           onBack={handleBack}
           partnerName={userData.partnerName || 'your partner'}
         />
