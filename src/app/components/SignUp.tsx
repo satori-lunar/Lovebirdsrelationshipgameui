@@ -70,16 +70,26 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
       // Verify session exists before redirecting
       const checkSession = async () => {
         try {
+          console.log('Checking session for partner connection...');
           const session = await authService.getSession();
+          console.log('Session result:', session);
           if (session && session.user) {
+            console.log('Session valid, user ID:', session.user.id);
             // Connect with partner if invite code was provided
             if (pendingInviteCode) {
+              console.log('Attempting to connect with partner using code:', pendingInviteCode);
               try {
-                await relationshipService.connectPartner(pendingInviteCode, session.user.id);
+                console.log('Calling relationshipService.connectPartner...');
+                const result = await relationshipService.connectPartner(pendingInviteCode, session.user.id);
+                console.log('Partner connection successful:', result);
                 toast.success('Successfully connected with your partner!');
               } catch (inviteError: any) {
                 console.error('Failed to connect partner:', inviteError);
-                toast.error(inviteError.message || 'Failed to connect with partner. You can try connecting later in Settings.');
+                console.error('Error details:', inviteError.message, inviteError.code, inviteError.details);
+                const errorMessage = inviteError.message || 'Failed to connect with partner. You can try connecting later in Settings.';
+                toast.error(errorMessage);
+                // Don't clear pendingInviteCode so user can try again
+                return;
               }
               setPendingInviteCode(null);
             }
