@@ -3,6 +3,16 @@ import type { OnboardingData, OnboardingResponse } from '../types/onboarding';
 
 export const onboardingService = {
   async saveOnboarding(userId: string, data: OnboardingData): Promise<OnboardingResponse> {
+    // Validate session before proceeding
+    const sessionCheck = await api.validateSession();
+    if (!sessionCheck?.user) {
+      throw new Error('Your session has expired. Please sign in again.');
+    }
+
+    if (sessionCheck.user.id !== userId) {
+      throw new Error('Session mismatch. Please sign in again.');
+    }
+
     // First, ensure user exists in users table (required for foreign key)
     // This is critical - onboarding_responses has a foreign key to users
     try {
@@ -121,6 +131,18 @@ export const onboardingService = {
   },
 
   async getOnboarding(userId: string): Promise<OnboardingResponse | null> {
+    // Validate session before proceeding
+    const sessionCheck = await api.validateSession();
+    if (!sessionCheck?.user) {
+      console.warn('No valid session for onboarding query');
+      return null;
+    }
+
+    if (sessionCheck.user.id !== userId) {
+      console.warn('Session user mismatch for onboarding query');
+      return null;
+    }
+
     try {
       const { data, error } = await api.supabase
         .from('onboarding_responses')

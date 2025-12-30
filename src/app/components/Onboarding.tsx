@@ -108,6 +108,32 @@ const NUDGE_FREQUENCY_OPTIONS = [
 
 export function Onboarding({ onComplete }: OnboardingProps) {
   const { user, loading: authLoading } = useAuth();
+
+  // Show loading while auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-lg text-center">
+          <Heart className="w-16 h-16 text-pink-500 fill-pink-500 mx-auto mb-4 animate-pulse" />
+          <h2 className="text-2xl font-bold mb-4">Setting up your account...</h2>
+          <p className="text-gray-600">Please wait while we get everything ready for you.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-lg text-center">
+          <Heart className="w-16 h-16 text-pink-500 fill-pink-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-4">Please sign in</h2>
+          <p className="text-gray-600">You need to be signed in to complete onboarding.</p>
+        </div>
+      </div>
+    );
+  }
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [birthday, setBirthday] = useState<Date | undefined>(undefined);
@@ -203,13 +229,25 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   const handleComplete = async () => {
-    if (!user) {
+    if (!user || !user.id) {
       toast.error('Please sign in to continue');
+      return;
+    }
+
+    // Double-check auth session is still valid
+    if (authLoading) {
+      toast.error('Authenticating... Please wait.');
       return;
     }
 
     setIsSaving(true);
     try {
+      // Double-check session is valid before saving
+      const session = await authService.getSession();
+      if (!session?.user?.id) {
+        throw new Error('Session expired. Please sign in again.');
+      }
+
       const dataToSave: OnboardingData = {
         ...formData,
         birthday: birthday ? format(birthday, 'yyyy-MM-dd') : undefined,
@@ -218,11 +256,17 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
       console.log('Saving onboarding data:', dataToSave);
 
-      await onboardingService.saveOnboarding(user.id, dataToSave);
+      await onboardingService.saveOnboarding(session.user.id, dataToSave);
       toast.success('Onboarding complete!');
       onComplete();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save onboarding data');
+      console.error('Onboarding save error:', error);
+      if (error.message?.includes('Auth session missing') || error.message?.includes('Session expired')) {
+        toast.error('Your session expired. Please sign in again.');
+        // Could redirect to sign in here
+      } else {
+        toast.error(error.message || 'Failed to save onboarding data');
+      }
     } finally {
       setIsSaving(false);
     }

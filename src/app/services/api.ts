@@ -19,9 +19,35 @@ export class ApiError extends Error {
 export async function handleSupabaseError<T>(promise: Promise<{ data: T | null; error: any }>) {
   const { data, error } = await promise;
   if (error) {
+    // Handle auth session issues specifically
+    if (error.message?.includes('Auth session missing') ||
+        error.message?.includes('JWT') ||
+        error.code === 'PGRST301' ||
+        error.status === 401) {
+      throw new ApiError('Your session has expired. Please sign in again.', 401, 'AUTH_SESSION_MISSING');
+    }
     throw new ApiError(error.message || 'An error occurred', error.status, error.code);
   }
   return data;
+}
+
+// Validate session before making database calls
+export async function validateSession(): Promise<{ user: any } | null> {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('Session validation error:', error);
+      return null;
+    }
+    if (!session?.user) {
+      console.warn('No active session found');
+      return null;
+    }
+    return { user: session.user };
+  } catch (error) {
+    console.error('Failed to validate session:', error);
+    return null;
+  }
 }
 
 export const api = {
