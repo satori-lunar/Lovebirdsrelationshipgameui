@@ -4,7 +4,9 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Textarea } from './ui/textarea';
 import { useAuth } from '../hooks/useAuth';
+import { useRelationship } from '../hooks/useRelationship';
 import { usePartner } from '../hooks/usePartner';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { toast } from 'sonner';
@@ -39,15 +41,13 @@ const REQUEST_TYPES = [
 
 export function PartnerRequests({ onBack }: PartnerRequestsProps) {
   const { user } = useAuth();
-  const { partner, relationship } = usePartner();
+  const { relationship } = useRelationship();
+  const { partnerId } = usePartner(relationship);
+  const { partnerName } = usePartnerOnboarding();
   const queryClient = useQueryClient();
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [requestMessage, setRequestMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'send' | 'received' | 'sent'>('send');
-
-  const partnerId = relationship?.user1_id === user?.id
-    ? relationship?.user2_id
-    : relationship?.user1_id;
 
   // Fetch received requests
   const { data: receivedRequests = [], isLoading: loadingReceived } = useQuery({
@@ -319,7 +319,7 @@ export function PartnerRequests({ onBack }: PartnerRequestsProps) {
                 <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 mb-2">No requests yet</p>
                 <p className="text-sm text-gray-400">
-                  {partner?.name || 'Your partner'} hasn't sent any requests yet
+                  {partnerName || 'Your partner'} hasn't sent any requests yet
                 </p>
               </Card>
             ) : (
@@ -344,7 +344,7 @@ export function PartnerRequests({ onBack }: PartnerRequestsProps) {
                           <div>
                             <p className="font-semibold text-gray-800">{config.label}</p>
                             <p className="text-sm text-gray-600">
-                              From {partner?.name || 'Your partner'}
+                              From {partnerName || 'Your partner'}
                             </p>
                           </div>
                           {getStatusBadge(request.status)}
@@ -412,7 +412,7 @@ export function PartnerRequests({ onBack }: PartnerRequestsProps) {
                 <HandHeart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 mb-2">No requests sent yet</p>
                 <p className="text-sm text-gray-400">
-                  Send your first request to {partner?.name || 'your partner'}!
+                  Send your first request to {partnerName || 'your partner'}!
                 </p>
               </Card>
             ) : (
@@ -432,7 +432,7 @@ export function PartnerRequests({ onBack }: PartnerRequestsProps) {
                           <div>
                             <p className="font-semibold text-gray-800">{config.label}</p>
                             <p className="text-sm text-gray-600">
-                              To {partner?.name || 'Your partner'}
+                              To {partnerName || 'Your partner'}
                             </p>
                           </div>
                           {getStatusBadge(request.status)}

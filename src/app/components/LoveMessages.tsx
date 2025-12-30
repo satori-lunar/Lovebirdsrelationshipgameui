@@ -4,7 +4,9 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Textarea } from './ui/textarea';
 import { useAuth } from '../hooks/useAuth';
+import { useRelationship } from '../hooks/useRelationship';
 import { usePartner } from '../hooks/usePartner';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { toast } from 'sonner';
@@ -55,16 +57,14 @@ const MESSAGE_TEMPLATES = {
 
 export function LoveMessages({ onBack }: LoveMessagesProps) {
   const { user } = useAuth();
-  const { partner, relationship } = usePartner();
+  const { relationship } = useRelationship();
+  const { partnerId } = usePartner(relationship);
+  const { partnerName } = usePartnerOnboarding();
   const queryClient = useQueryClient();
   const [messageText, setMessageText] = useState('');
   const [selectedType, setSelectedType] = useState<'custom' | keyof typeof MESSAGE_TEMPLATES>('custom');
   const [showTemplates, setShowTemplates] = useState(false);
   const [activeTab, setActiveTab] = useState<'send' | 'received' | 'sent'>('send');
-
-  const partnerId = relationship?.user1_id === user?.id
-    ? relationship?.user2_id
-    : relationship?.user1_id;
 
   // Fetch messages
   const { data: receivedMessages = [], isLoading: loadingReceived } = useQuery({
@@ -206,7 +206,7 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
               <div>
                 <h1 className="text-2xl">Love Messages</h1>
                 <p className="text-white/90 text-sm">
-                  Send sweet notes to {partner?.name || 'your partner'}
+                  Send sweet notes to {partnerName || 'your partner'}
                 </p>
               </div>
             </div>
@@ -366,7 +366,7 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
                 <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 mb-2">No messages yet</p>
                 <p className="text-sm text-gray-400">
-                  {partner?.name || 'Your partner'} hasn't sent you any messages yet
+                  {partnerName || 'Your partner'} hasn't sent you any messages yet
                 </p>
               </Card>
             ) : (
@@ -387,7 +387,7 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-sm font-medium text-gray-600">
-                          From {partner?.name || 'Your partner'}
+                          From {partnerName || 'Your partner'}
                         </p>
                         {!message.read && (
                           <span className="text-xs bg-pink-500 text-white px-2 py-1 rounded-full">
@@ -419,7 +419,7 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
                 <Send className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500 mb-2">No messages sent yet</p>
                 <p className="text-sm text-gray-400">
-                  Send your first message to {partner?.name || 'your partner'}!
+                  Send your first message to {partnerName || 'your partner'}!
                 </p>
               </Card>
             ) : (
@@ -429,7 +429,7 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
                     <div className="text-2xl">{getMessageIcon(message.message_type)}</div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-600 mb-2">
-                        To {partner?.name || 'Your partner'}
+                        To {partnerName || 'Your partner'}
                       </p>
                       <p className="text-gray-800 mb-2">{message.message_text}</p>
                       <p className="text-xs text-gray-400">
