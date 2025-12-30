@@ -47,6 +47,24 @@ export const authService = {
         throw new Error('Failed to create user account');
       }
 
+      // CRITICAL: Explicitly set the session to ensure it's available for subsequent requests
+      // This fixes the 401 Unauthorized errors that occur when trying to save onboarding data
+      if (authData.session) {
+        console.log('✓ Session returned from signup, explicitly setting it in client');
+        const { error: sessionError } = await api.supabase.auth.setSession({
+          access_token: authData.session.access_token,
+          refresh_token: authData.session.refresh_token,
+        });
+
+        if (sessionError) {
+          console.error('Failed to set session after signup:', sessionError);
+        } else {
+          console.log('✓ Session successfully set in Supabase client');
+        }
+      } else {
+        console.warn('⚠️ No session returned from signup - this may cause authentication issues');
+      }
+
       // Try to create user profile (don't fail signup if table doesn't exist yet)
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 7);
