@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Heart, Sparkles, ChevronLeft, BookmarkPlus, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 
 interface LoveLanguageSuggestionsProps {
   onBack: () => void;
@@ -38,18 +39,24 @@ const suggestions = [
 export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSuggestionsProps) {
   const [saved, setSaved] = useState<number[]>([]);
   const [completed, setCompleted] = useState<number[]>([]);
+  const { partnerLoveLanguages, isLoading } = usePartnerOnboarding();
 
   const toggleSave = (id: number) => {
-    setSaved(prev => 
+    setSaved(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
   const toggleComplete = (id: number) => {
-    setCompleted(prev => 
+    setCompleted(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
+
+  // Get partner's primary love language
+  const primaryLoveLanguage = partnerLoveLanguages?.primary ||
+                              partnerLoveLanguages?.all?.[0] ||
+                              'Words of Affirmation';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
@@ -77,13 +84,50 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
       </div>
 
       <div className="max-w-md mx-auto px-6 -mt-6">
+        {/* Partner's Love Languages */}
+        <Card className="p-5 mb-4 bg-white/90 backdrop-blur-sm border-0 shadow-lg">
+          <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <Heart className="w-5 h-5 text-pink-500" />
+            {partnerName}'s Love Languages
+          </h3>
+          {isLoading ? (
+            <p className="text-sm text-gray-600">Loading...</p>
+          ) : (
+            <div className="space-y-2">
+              {partnerLoveLanguages?.primary && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full font-semibold">
+                    Primary
+                  </span>
+                  <span className="text-sm font-semibold">{partnerLoveLanguages.primary}</span>
+                </div>
+              )}
+              {partnerLoveLanguages?.secondary && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full font-semibold">
+                    Secondary
+                  </span>
+                  <span className="text-sm">{partnerLoveLanguages.secondary}</span>
+                </div>
+              )}
+              {!partnerLoveLanguages?.primary && !partnerLoveLanguages?.secondary && partnerLoveLanguages?.all && partnerLoveLanguages.all.length > 0 && (
+                <div className="space-y-1">
+                  {partnerLoveLanguages.all.map((lang, idx) => (
+                    <div key={idx} className="text-sm">• {lang}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+
         {/* Info Card */}
         <Card className="p-4 mb-6 bg-white/90 backdrop-blur-sm border-0 shadow-lg">
           <div className="flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm">
-                Based on {partnerName}'s love language: <span className="font-semibold">Words of Affirmation</span>
+                Based on {partnerName}'s love language: <span className="font-semibold">{primaryLoveLanguage}</span>
               </p>
               <p className="text-xs text-gray-600 mt-1">
                 Choose one, save for later, or ignore - no pressure! 💛
