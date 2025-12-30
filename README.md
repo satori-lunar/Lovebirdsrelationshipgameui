@@ -38,6 +38,10 @@ pnpm install
 
 3. Set up Supabase:
    - Create a new Supabase project at https://supabase.com
+   - **CRITICAL:** Disable email confirmation:
+     - Go to Authentication -> Providers -> Email
+     - Turn OFF "Confirm email"
+     - Save changes (required for immediate onboarding)
    - Go to SQL Editor and run the migrations in order:
      - `supabase/migrations/001_initial_schema.sql`
      - `supabase/migrations/002_rls_policies.sql`
@@ -47,6 +51,8 @@ pnpm install
      - `supabase/migrations/006_fix_onboarding_responses_rls.sql`
    - Create a storage bucket named `memories` for photo uploads
    - Get your project URL and anon key from Settings > API
+
+   See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for detailed setup and troubleshooting.
 
 4. Create `.env` file in the root directory:
 ```env

@@ -63,6 +63,26 @@ export const authService = {
         }
       } else {
         console.warn('⚠️ No session returned from signup - this may cause authentication issues');
+        console.error('╔════════════════════════════════════════════════════════════════╗');
+        console.error('║  EMAIL CONFIRMATION IS ENABLED IN SUPABASE                     ║');
+        console.error('║                                                                ║');
+        console.error('║  This app requires immediate onboarding after signup.         ║');
+        console.error('║  Please disable email confirmation in Supabase:               ║');
+        console.error('║                                                                ║');
+        console.error('║  1. Go to Supabase Dashboard → Authentication → Providers     ║');
+        console.error('║  2. Select Email provider                                     ║');
+        console.error('║  3. Turn OFF "Confirm email" setting                          ║');
+        console.error('║  4. Save changes                                              ║');
+        console.error('║                                                                ║');
+        console.error('║  Current user will need to confirm email or be deleted.       ║');
+        console.error('╚════════════════════════════════════════════════════════════════╝');
+
+        throw new Error(
+          'Email confirmation is enabled in Supabase. ' +
+          'This app requires immediate access after signup. ' +
+          'Please disable email confirmation in Supabase settings: ' +
+          'Authentication → Providers → Email → Turn OFF "Confirm email"'
+        );
       }
 
       // Try to create user profile (don't fail signup if table doesn't exist yet)
