@@ -88,11 +88,28 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                         {partnerName} answered!
                       </span>
                     )}
+                    {canSeeFeedback && (
+                      <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full animate-pulse">
+                        Results ready!
+                      </span>
+                    )}
                   </div>
-                  {hasCompletedDailyQuestion ? (
+                  {canSeeFeedback ? (
                     <div>
-                      <p className="text-sm text-gray-600 mb-2">✓ All done for today!</p>
-                      <p className="text-xs text-gray-500">Come back tomorrow for a new question</p>
+                      <p className="text-sm text-gray-600 mb-3">
+                        🎉 {partnerName} has answered! See if you got it right
+                      </p>
+                      <Button
+                        onClick={() => onNavigate('daily-question')}
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+                      >
+                        View Results
+                      </Button>
+                    </div>
+                  ) : hasCompletedDailyQuestion ? (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">✓ Waiting for {partnerName} to answer</p>
+                      <p className="text-xs text-gray-500">We'll let you know when they respond!</p>
                     </div>
                   ) : (
                     <>
