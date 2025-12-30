@@ -243,13 +243,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
     setIsSaving(true);
     try {
-      // Double-check session is valid before saving
-      const session = await authService.getSession();
-      if (!session?.user?.id) {
-        throw new Error('Session expired. Please sign in again.');
+      // User is authenticated since they reached onboarding
+      if (!user?.id) {
+        throw new Error('Authentication required. Please sign in again.');
       }
-
-      const userId = session.user.id;
+      const userId = user.id;
 
       const dataToSave: OnboardingData = {
         ...formData,
