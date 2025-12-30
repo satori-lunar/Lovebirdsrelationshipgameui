@@ -27,7 +27,7 @@ export default function App() {
   const { data: onboarding, error: onboardingError } = useQuery({
     queryKey: ['onboarding', user?.id],
     queryFn: () => onboardingService.getOnboarding(user!.id),
-    enabled: !!user && !!user.id,
+    enabled: !!user && !!user.id && currentView !== 'sign-up' && currentView !== 'sign-in',
     retry: false,
     refetchOnWindowFocus: false,
   });

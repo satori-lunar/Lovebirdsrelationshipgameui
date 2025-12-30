@@ -36,16 +36,25 @@ export async function validateSession(): Promise<{ user: any } | null> {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) {
-      console.error('Session validation error:', error);
+      // Don't log session errors during signup/initialization as they're expected
+      if (!error.message?.includes('Auth session missing') || !window.location.pathname.includes('sign')) {
+        console.error('Session validation error:', error);
+      }
       return null;
     }
     if (!session?.user) {
-      console.warn('No active session found');
+      // Don't log missing session during signup
+      if (!window.location.pathname.includes('sign')) {
+        console.warn('No active session found');
+      }
       return null;
     }
     return { user: session.user };
   } catch (error) {
-    console.error('Failed to validate session:', error);
+    // Don't log session errors during signup/initialization
+    if (!window.location.pathname.includes('sign')) {
+      console.error('Failed to validate session:', error);
+    }
     return null;
   }
 }
