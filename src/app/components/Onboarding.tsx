@@ -357,6 +357,20 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                   </div>
                   
                   <div className="space-y-2">
+                    <Label htmlFor="partnerName">What's your partner's name?</Label>
+                    <Input
+                      id="partnerName"
+                      value={formData.partnerName || ''}
+                      onChange={(e) => updateField('partnerName', e.target.value)}
+                      placeholder="Partner's name"
+                      className="text-base"
+                    />
+                    <p className="text-xs text-gray-500">
+                      We'll use this to personalize the app for both of you.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Birthday</Label>
                     <input
                       type="date"
