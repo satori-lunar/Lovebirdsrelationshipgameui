@@ -130,7 +130,13 @@ export default function App() {
       )}
 
       {currentView === 'onboarding' && user && (
-        <Onboarding onComplete={handleOnboardingComplete} />
+        <div>
+          {/* Debug: Show auth state */}
+          <div style={{ position: 'fixed', top: 0, left: 0, background: 'red', color: 'white', padding: '10px', zIndex: 9999 }}>
+            Auth Debug: User ID: {user?.id}, Email: {user?.email}, Name: {user?.user_metadata?.name}
+          </div>
+          <Onboarding onComplete={handleOnboardingComplete} />
+        </div>
       )}
 
       <AuthModal
