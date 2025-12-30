@@ -39,6 +39,10 @@ export interface DateTemplate {
   optionalData: string[];
   personalizationTier: 1 | 2 | 3 | 4;
   avoidIf: string[];
+  sharedHobbies?: string[];
+  growthAreas?: string[];
+  travelAspirations?: string[];
+  insideJokes?: string[];
 }
 
 export const dateSuggestionTemplates: DateTemplate[] = [
@@ -80,6 +84,10 @@ export const dateSuggestionTemplates: DateTemplate[] = [
     optionalData: ['coffee_preference', 'favorite_neighborhood'],
     personalizationTier: 1,
     avoidIf: [],
+    sharedHobbies: ['walking', 'coffee', 'neighborhood exploration'],
+    growthAreas: ['exploring new places', 'taking it slow'],
+    travelAspirations: [],
+    insideJokes: [],
   },
 
   {
@@ -176,6 +184,10 @@ export const dateSuggestionTemplates: DateTemplate[] = [
     optionalData: ['hiking_experience', 'favorite_trails'],
     personalizationTier: 2,
     avoidIf: [],
+    sharedHobbies: ['hiking', 'outdoor activities', 'nature', 'photography'],
+    growthAreas: ['physical challenges', 'trying new trails'],
+    travelAspirations: ['national parks', 'mountain ranges'],
+    insideJokes: [],
   },
 
   {
@@ -399,6 +411,10 @@ export const dateSuggestionTemplates: DateTemplate[] = [
     optionalData: ['favorite_cuisine', 'cooking_interest'],
     personalizationTier: 2,
     avoidIf: ['public_attention'],
+    sharedHobbies: ['cooking', 'baking', 'trying new foods', 'culinary adventures'],
+    growthAreas: ['learning new skills', 'trying unfamiliar cuisines'],
+    travelAspirations: ['{favorite_cuisine} countries', 'culinary tours'],
+    insideJokes: [],
   },
 
   {
@@ -510,6 +526,10 @@ export const dateSuggestionTemplates: DateTemplate[] = [
     optionalData: ['favorite_movies', 'movie_genres'],
     personalizationTier: 2,
     avoidIf: [],
+    sharedHobbies: ['movies', 'watching films', 'popcorn', 'cozy evenings'],
+    growthAreas: ['watching different genres', 'discussing films'],
+    travelAspirations: ['film festivals', 'movie locations'],
+    insideJokes: ['movie references', 'running gags from shared films'],
   },
 
   {

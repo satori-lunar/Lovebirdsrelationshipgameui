@@ -40,6 +40,10 @@ export interface PersonalizationContext {
       favorite_activities?: string[];
       favorite_cuisines?: string[];
       wishes?: string;
+      shared_hobbies?: string[];
+      growth_areas?: string[];
+      travel_aspirations?: string[];
+      inside_jokes?: string[];
     };
   };
   insights: {

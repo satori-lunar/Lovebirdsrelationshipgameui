@@ -79,6 +79,38 @@ export function interpolateTemplate(
     const season = getCurrentSeason();
     description = description.replace(/\{season\}/g, season);
 
+    // Replace {shared_hobby} with a shared hobby
+    if (context.partner.wants_needs.shared_hobbies?.length > 0) {
+      description = description.replace(
+        /\{shared_hobby\}/g,
+        context.partner.wants_needs.shared_hobbies[0]
+      );
+    }
+
+    // Replace {growth_area} with a growth area
+    if (context.partner.wants_needs.growth_areas?.length > 0) {
+      description = description.replace(
+        /\{growth_area\}/g,
+        context.partner.wants_needs.growth_areas[0]
+      );
+    }
+
+    // Replace {travel_aspiration} with a travel aspiration
+    if (context.partner.wants_needs.travel_aspirations?.length > 0) {
+      description = description.replace(
+        /\{travel_aspiration\}/g,
+        context.partner.wants_needs.travel_aspirations[0]
+      );
+    }
+
+    // Replace {inside_joke} with an inside joke
+    if (context.partner.wants_needs.inside_jokes?.length > 0) {
+      description = description.replace(
+        /\{inside_joke\}/g,
+        context.partner.wants_needs.inside_jokes[0]
+      );
+    }
+
     interpolatedTemplate.description = description;
   }
 
@@ -224,6 +256,30 @@ function calculateRelevanceScore(
     }
   }
 
+  // Shared hobbies match (+15 points per match, max 45)
+  if ('sharedHobbies' in template && template.sharedHobbies && context.partner.wants_needs.shared_hobbies) {
+    const hobbyMatches = countMatches(template.sharedHobbies, context.partner.wants_needs.shared_hobbies);
+    score += Math.min(hobbyMatches * 15, 45);
+  }
+
+  // Growth areas match (+20 points per match, max 60)
+  if ('growthAreas' in template && template.growthAreas && context.partner.wants_needs.growth_areas) {
+    const growthMatches = countMatches(template.growthAreas, context.partner.wants_needs.growth_areas);
+    score += Math.min(growthMatches * 20, 60);
+  }
+
+  // Travel aspirations match (+25 points per match, max 75)
+  if ('travelAspirations' in template && template.travelAspirations && context.partner.wants_needs.travel_aspirations) {
+    const travelMatches = countMatches(template.travelAspirations, context.partner.wants_needs.travel_aspirations);
+    score += Math.min(travelMatches * 25, 75);
+  }
+
+  // Inside jokes match (+30 points per match, max 90)
+  if ('insideJokes' in template && template.insideJokes && context.partner.wants_needs.inside_jokes) {
+    const jokeMatches = countMatches(template.insideJokes, context.partner.wants_needs.inside_jokes);
+    score += Math.min(jokeMatches * 30, 90);
+  }
+
   return Math.max(0, score); // Ensure score doesn't go negative
 }
 
@@ -243,6 +299,25 @@ function countKeywordMatches(
     keywords.forEach((keyword) => {
       const keywordLower = keyword.toLowerCase();
       if (description.includes(keywordLower) || title.includes(keywordLower)) {
+        matches++;
+      }
+    });
+  });
+
+  return matches;
+}
+
+/**
+ * Count matches between two arrays of strings
+ */
+function countMatches(templateArray: string[], contextArray: string[]): number {
+  let matches = 0;
+  const templateLower = templateArray.map(item => item.toLowerCase());
+  const contextLower = contextArray.map(item => item.toLowerCase());
+
+  templateLower.forEach((templateItem) => {
+    contextLower.forEach((contextItem) => {
+      if (templateItem.includes(contextItem) || contextItem.includes(templateItem)) {
         matches++;
       }
     });
@@ -401,6 +476,38 @@ export function generateReason(
   const keywordMatches = countKeywordMatches(template, context);
   if (keywordMatches > 0) {
     reasons.push(`Based on ${context.partner.name}'s saved answers`);
+  }
+
+  // Shared hobbies match
+  if ('sharedHobbies' in template && template.sharedHobbies && context.partner.wants_needs.shared_hobbies) {
+    const hobbyMatches = countMatches(template.sharedHobbies, context.partner.wants_needs.shared_hobbies);
+    if (hobbyMatches > 0) {
+      reasons.push(`Matches shared hobbies you both enjoy`);
+    }
+  }
+
+  // Growth areas match
+  if ('growthAreas' in template && template.growthAreas && context.partner.wants_needs.growth_areas) {
+    const growthMatches = countMatches(template.growthAreas, context.partner.wants_needs.growth_areas);
+    if (growthMatches > 0) {
+      reasons.push(`Supports growth areas you've discussed`);
+    }
+  }
+
+  // Travel aspirations match
+  if ('travelAspirations' in template && template.travelAspirations && context.partner.wants_needs.travel_aspirations) {
+    const travelMatches = countMatches(template.travelAspirations, context.partner.wants_needs.travel_aspirations);
+    if (travelMatches > 0) {
+      reasons.push(`Connects to travel dreams you've shared`);
+    }
+  }
+
+  // Inside jokes match
+  if ('insideJokes' in template && template.insideJokes && context.partner.wants_needs.inside_jokes) {
+    const jokeMatches = countMatches(template.insideJokes, context.partner.wants_needs.inside_jokes);
+    if (jokeMatches > 0) {
+      reasons.push(`Incorporates your special inside jokes`);
+    }
   }
 
   // Return first 2 reasons, or undefined if none

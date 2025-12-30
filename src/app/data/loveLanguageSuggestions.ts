@@ -12,6 +12,10 @@ export interface LoveLanguageSuggestion {
   optionalData: string[]; // Optional data for enhancement
   personalizationTier: 1 | 2 | 3 | 4;
   avoidIf: string[]; // Skip if partner has these "avoid" preferences
+  sharedHobbies?: string[];
+  growthAreas?: string[];
+  travelAspirations?: string[];
+  insideJokes?: string[];
 }
 
 export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
@@ -243,9 +247,18 @@ export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
     id: 11,
     title: "Plan a 'no phones, no plans' evening",
     description: "Set aside an evening with zero distractions - just you two, fully present.",
+    category: 'love_language',
     loveLanguage: "Quality Time",
     timeEstimate: "2-3 hours",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: [],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: [],
+    sharedHobbies: [],
+    growthAreas: ['being present', 'deepening connection'],
+    travelAspirations: [],
+    insideJokes: [],
   },
   {
     id: 12,
@@ -275,9 +288,18 @@ export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
     id: 15,
     title: "Do a shared activity neither of you is good at",
     description: "Try something new together - pottery, dancing, painting. The awkwardness makes it memorable!",
+    category: 'love_language',
     loveLanguage: "Quality Time",
     timeEstimate: "1-3 hours",
-    difficulty: "Medium"
+    difficulty: "Medium",
+    requiresData: [],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: [],
+    sharedHobbies: ['trying new activities', 'being silly together'],
+    growthAreas: ['stepping outside comfort zones', 'embracing imperfection'],
+    travelAspirations: [],
+    insideJokes: ['shared awkward moments', 'learning experiences'],
   },
   {
     id: 16,
@@ -390,9 +412,18 @@ export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
     id: 21,
     title: "Take over something they're overwhelmed by",
     description: "Notice what's stressing them out and quietly handle it without being asked.",
+    category: 'love_language',
     loveLanguage: "Acts of Service",
     timeEstimate: "30-60 minutes",
-    difficulty: "Medium"
+    difficulty: "Medium",
+    requiresData: [],
+    optionalData: [],
+    personalizationTier: 2,
+    avoidIf: [],
+    sharedHobbies: [],
+    growthAreas: ['managing stress', 'supporting each other'],
+    travelAspirations: [],
+    insideJokes: [],
   },
   {
     id: 22,
@@ -511,9 +542,18 @@ export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
     id: 31,
     title: "Give them something symbolic of your relationship",
     description: "Choose or create something that represents your journey together.",
+    category: 'love_language',
     loveLanguage: "Receiving Gifts",
     timeEstimate: "30-60 minutes",
-    difficulty: "Medium"
+    difficulty: "Medium",
+    requiresData: [],
+    optionalData: [],
+    personalizationTier: 3,
+    avoidIf: [],
+    sharedHobbies: ['crafting', 'meaningful souvenirs'],
+    growthAreas: ['expressing appreciation', 'celebrating milestones'],
+    travelAspirations: ['relationship landmarks', 'meaningful destinations'],
+    insideJokes: ['relationship references', 'shared memories'],
   },
   {
     id: 32,
