@@ -11,6 +11,10 @@ export interface WantsNeeds {
   planning_style?: 'Spontaneously' | 'Planned in advance' | 'A mix';
   avoid?: string;
   notes?: string;
+  // NEW: Enhanced personalization fields
+  favorite_activities?: string[];
+  favorite_cuisines?: string[];
+  wishes?: string; // Things I wish my partner would do
 }
 
 export interface Preferences {
