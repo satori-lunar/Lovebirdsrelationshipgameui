@@ -150,7 +150,10 @@ export default function App() {
       )}
 
       {currentView === 'daily-question' && (
-        <DailyQuestion onComplete={handleBack} />
+        <DailyQuestion
+          onComplete={handleBack}
+          partnerName={userData?.partnerName || 'your partner'}
+        />
       )}
 
       {currentView === 'love-language' && userData && (

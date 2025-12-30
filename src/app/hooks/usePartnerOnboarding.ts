@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 import { usePartner } from './usePartner';
 import { useRelationship } from './useRelationship';
+import { useEffect } from 'react';
 
 /**
  * Hook to fetch partner's onboarding data
@@ -17,6 +18,18 @@ export function usePartnerOnboarding() {
     enabled: !!partnerId,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 usePartnerOnboarding Debug:', {
+      partnerId,
+      hasPartnerOnboarding: !!partnerOnboarding,
+      birthday: partnerOnboarding?.birthday,
+      fullData: partnerOnboarding,
+      isLoading,
+      error,
+    });
+  }, [partnerId, partnerOnboarding, isLoading, error]);
 
   return {
     partnerOnboarding,
