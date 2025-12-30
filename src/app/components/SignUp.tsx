@@ -97,7 +97,14 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
 
             // Session is available, wait a moment then redirect
             setIsLoading(false);
-            setTimeout(() => {
+            // Ensure auth context is updated before redirecting
+            setTimeout(async () => {
+              try {
+                // Refresh user state to ensure it's properly set
+                await authService.getCurrentUser();
+              } catch (error) {
+                console.warn('Failed to refresh user state:', error);
+              }
               onSuccess();
             }, 1500);
           } else {
@@ -118,7 +125,14 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
             setSignUpSuccess(false);
 
             setIsLoading(false);
-            setTimeout(() => {
+            // Even without session, ensure auth context is updated
+            setTimeout(async () => {
+              try {
+                // Try to refresh user state anyway
+                await authService.getCurrentUser();
+              } catch (error) {
+                console.warn('Failed to refresh user state:', error);
+              }
               onSuccess();
             }, 1000);
           }

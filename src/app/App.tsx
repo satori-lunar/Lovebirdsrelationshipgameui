@@ -120,10 +120,10 @@ export default function App() {
           onSuccess={() => {
             // After successful sign up, redirect to onboarding
             // New users always need to complete onboarding
-            // Wait a moment to show success message
+            // Wait a moment to show success message and ensure auth state is ready
             setTimeout(() => {
               setCurrentView('onboarding');
-            }, 1500);
+            }, 2000); // Increased delay to ensure auth state is established
           }}
           onBack={() => setCurrentView('feature-slides')}
         />
