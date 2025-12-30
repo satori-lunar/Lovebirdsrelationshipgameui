@@ -1,10 +1,17 @@
+export type LoveLanguage = 'Words of Affirmation' | 'Quality Time' | 'Acts of Service' | 'Receiving Gifts' | 'Physical Touch';
+
 export interface LoveLanguageSuggestion {
   id: number;
   title: string;
   description: string;
-  loveLanguage: 'Words of Affirmation' | 'Quality Time' | 'Acts of Service' | 'Receiving Gifts' | 'Physical Touch';
+  category: 'love_language';
+  loveLanguage: LoveLanguage;
   timeEstimate: string;
   difficulty: 'Easy' | 'Medium' | 'High';
+  requiresData: string[]; // Required data fields for personalization
+  optionalData: string[]; // Optional data for enhancement
+  personalizationTier: 1 | 2 | 3 | 4;
+  avoidIf: string[]; // Skip if partner has these "avoid" preferences
 }
 
 export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
@@ -12,82 +19,132 @@ export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
   {
     id: 1,
     title: "Write a 'This is what I see in you' note",
-    description: "Take 10 minutes to write down the qualities you see in them that they might not see in themselves.",
+    description: "Take 10 minutes to write down the qualities you see in {partner_name} that they might not see in themselves.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "10 minutes",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['partner_strengths'],
+    personalizationTier: 1,
+    avoidIf: []
   },
   {
     id: 2,
     title: "Text them one thing you respect about them",
-    description: "Send a simple text about something specific you respect - their work ethic, kindness, or how they handle challenges.",
+    description: "Send {partner_name} a simple text about something specific you respect - their work ethic, kindness, or how they handle challenges.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "2 minutes",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['respected_qualities'],
+    personalizationTier: 1,
+    avoidIf: []
   },
   {
     id: 3,
     title: "Record a 30-second voice memo",
-    description: "Send them a voice message reminding them they're not alone, especially during a tough time.",
+    description: "Send {partner_name} a voice message reminding them they're not alone, especially during a tough time.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "5 minutes",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['current_challenges'],
+    personalizationTier: 2,
+    avoidIf: []
   },
   {
     id: 4,
     title: "Finish this sentence for them: 'One day you'll realize…'",
-    description: "Complete this sentence in a way that speaks to their potential and future.",
+    description: "Complete this sentence for {partner_name} in a way that speaks to their potential and future.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "5 minutes",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['future_goals'],
+    personalizationTier: 1,
+    avoidIf: []
   },
   {
     id: 5,
     title: "Praise something they don't realize they're good at",
-    description: "Point out a skill or quality they take for granted but you deeply appreciate.",
+    description: "Point out a skill or quality {partner_name} takes for granted but you deeply appreciate.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "5 minutes",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['hidden_talents'],
+    personalizationTier: 2,
+    avoidIf: []
   },
   {
     id: 6,
     title: "Write them a future-focused encouragement",
-    description: "Write about what you believe they'll accomplish or who they're becoming.",
+    description: "Write {partner_name} about what you believe they'll accomplish or who they're becoming.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "10 minutes",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['aspirations'],
+    personalizationTier: 1,
+    avoidIf: []
   },
   {
     id: 7,
     title: "Thank them for how they love you",
-    description: "Be specific about what their love means to you and how it impacts your life.",
+    description: "Be specific with {partner_name} about what their love means to you and how it impacts your life.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "10 minutes",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['love_examples'],
+    personalizationTier: 1,
+    avoidIf: []
   },
   {
     id: 8,
     title: "Tell them what first made you fall for them",
-    description: "Share the moment or quality that made you realize they were special.",
+    description: "Share with {partner_name} the moment or quality that made you realize they were special.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "10 minutes",
-    difficulty: "Easy"
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['first_date_memory', 'relationship_milestones'],
+    personalizationTier: 3,
+    avoidIf: []
   },
   {
     id: 9,
     title: "Affirm them in an area they feel insecure about",
-    description: "Gently speak truth into an area where they doubt themselves.",
+    description: "Gently speak truth to {partner_name} into an area where they doubt themselves.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "15 minutes",
-    difficulty: "Medium"
+    difficulty: "Medium",
+    requiresData: ['partner_name'],
+    optionalData: ['insecurities'],
+    personalizationTier: 3,
+    avoidIf: []
   },
   {
     id: 10,
     title: "Write a note titled 'Why I choose you'",
-    description: "List the reasons you continue to choose them every day, not just why you chose them once.",
+    description: "List the reasons you continue to choose {partner_name} every day, not just why you chose them once.",
+    category: 'love_language',
     loveLanguage: "Words of Affirmation",
     timeEstimate: "15 minutes",
-    difficulty: "Medium"
+    difficulty: "Medium",
+    requiresData: ['partner_name'],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: []
   },
 
   // Quality Time

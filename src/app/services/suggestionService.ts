@@ -1,220 +1,234 @@
-import { api, handleSupabaseError } from './api';
-import type { Tables, Updates } from './api';
+/**
+ * Suggestion Service
+ *
+ * Generates personalized suggestions for love languages, gifts, and dates
+ * using the personalization engine and template libraries.
+ */
 
-export type LoveLanguageSuggestion = Tables<'love_language_suggestions'>;
+import { api, handleSupabaseError } from './api';
+import { personalizationService } from './personalizationService';
+import {
+  interpolateTemplate,
+  rankTemplates,
+  getWeekStartDate,
+  filterByMinScore,
+  type ScoredTemplate,
+} from '../utils/suggestionPersonalizer';
+import { giftSuggestionTemplates } from '../data/giftSuggestionTemplates';
+import { dateSuggestionTemplates } from '../data/dateSuggestionTemplates';
+import { loveLanguageSuggestions } from '../data/loveLanguageSuggestions';
+
+export type SuggestionCategory = 'love_language' | 'gift' | 'date';
+
+export interface Suggestion {
+  id: string;
+  user_id: string;
+  category: SuggestionCategory;
+  suggestion_text: string;
+  suggestion_type: string;
+  time_estimate: string;
+  difficulty: string;
+  week_start_date: string;
+  saved: boolean;
+  completed: boolean;
+  created_at: string;
+  data_sources?: any;
+  personalization_tier?: number;
+  metadata?: any;
+}
 
 export const suggestionService = {
-  async getWeeklySuggestions(userId: string): Promise<LoveLanguageSuggestion[]> {
-    // Get Monday of current week
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const monday = new Date(today.setDate(diff));
-    monday.setHours(0, 0, 0, 0);
-    const weekStart = monday.toISOString().split('T')[0];
+  /**
+   * Get suggestions for a specific category and week
+   */
+  async getSuggestions(
+    userId: string,
+    category: SuggestionCategory,
+    weekStart?: string
+  ): Promise<Suggestion[]> {
+    const weekStartDate = weekStart || getWeekStartDate();
 
     const suggestions = await handleSupabaseError(
       api.supabase
-        .from('love_language_suggestions')
+        .from('suggestions')
         .select('*')
         .eq('user_id', userId)
-        .eq('week_start_date', weekStart)
+        .eq('category', category)
+        .eq('week_start_date', weekStartDate)
         .order('created_at', { ascending: true })
     );
 
     return suggestions || [];
   },
 
-  async generateSuggestions(userId: string, partnerData: any): Promise<LoveLanguageSuggestion[]> {
-    // Get Monday of current week
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const monday = new Date(today.setDate(diff));
-    monday.setHours(0, 0, 0, 0);
-    const weekStart = monday.toISOString().split('T')[0];
+  /**
+   * Generate personalized suggestions for a category
+   * Returns existing suggestions if already generated for this week
+   */
+  async generateSuggestions(
+    userId: string,
+    partnerId: string,
+    category: SuggestionCategory
+  ): Promise<Suggestion[]> {
+    const weekStart = getWeekStartDate();
 
     // Check if suggestions already exist for this week
-    const existing = await this.getWeeklySuggestions(userId);
+    const existing = await this.getSuggestions(userId, category, weekStart);
     if (existing.length > 0) {
       return existing;
     }
 
-    // Generate suggestions based on love language
-    const loveLanguages = partnerData.love_languages || [];
-    const suggestions: any[] = [];
+    try {
+      // Get personalization context
+      const context = await personalizationService.getPersonalizationContext(
+        userId,
+        partnerId
+      );
 
-    if (loveLanguages.includes('words')) {
-      suggestions.push({
+      // Get appropriate template library
+      const templates = this.getTemplatesByCategory(category);
+
+      // Filter templates by category (for mixed libraries)
+      const categoryTemplates = templates.filter(
+        (t: any) => t.category === category
+      );
+
+      // Rank templates by relevance
+      const rankedTemplates = rankTemplates(categoryTemplates as any, context);
+
+      // Filter by minimum score (30+)
+      const relevantTemplates = filterByMinScore(rankedTemplates, 30);
+
+      // Take top 3 suggestions
+      const topSuggestions = relevantTemplates.slice(0, 3);
+
+      // If less than 3, fill with lower-scored suggestions
+      if (topSuggestions.length < 3) {
+        const additional = rankedTemplates.slice(
+          topSuggestions.length,
+          3
+        );
+        topSuggestions.push(...additional);
+      }
+
+      // Interpolate templates with actual data
+      const interpolatedSuggestions = topSuggestions.map((template) =>
+        interpolateTemplate(template, context)
+      );
+
+      // Convert to database format
+      const suggestionsToInsert = interpolatedSuggestions.map((template: any, index) => ({
         user_id: userId,
-        suggestion_text: "Write a short love letter and leave it somewhere they'll find it - in their bag, on the mirror, or their pillow.",
-        suggestion_type: "Words of Affirmation",
-        time_estimate: "15 minutes",
-        difficulty: "Easy",
+        category,
+        suggestion_text: template.description,
+        suggestion_type: this.getSuggestionType(template),
+        time_estimate: template.timeEstimate || template.timeRequired || 'Varies',
+        difficulty: template.difficulty || template.effort || 'Medium',
         week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Create an affirmation scavenger hunt with 5-7 notes, each highlighting something you love about them.",
-        suggestion_type: "Words of Affirmation",
-        time_estimate: "30 minutes",
-        difficulty: "Medium",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Pick up their favorite flowers and attach a handwritten note thanking them for specific things they've done recently.",
-        suggestion_type: "Words of Affirmation",
-        time_estimate: "20 minutes",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-    } else if (loveLanguages.includes('quality-time')) {
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Plan a device-free evening together - no phones, no distractions, just focused time together.",
-        suggestion_type: "Quality Time",
-        time_estimate: "2-3 hours",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Take a walk together and ask meaningful questions about their day, dreams, or feelings.",
-        suggestion_type: "Quality Time",
-        time_estimate: "30 minutes",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Cook a meal together and make it an experience - try a new recipe, play music, and enjoy the process.",
-        suggestion_type: "Quality Time",
-        time_estimate: "1-2 hours",
-        difficulty: "Medium",
-        week_start_date: weekStart,
-      });
-    } else if (loveLanguages.includes('gifts')) {
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Surprise them with a small, thoughtful gift that shows you've been paying attention to what they need or want.",
-        suggestion_type: "Receiving Gifts",
-        time_estimate: "30 minutes",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Create a personalized gift that represents a special memory or inside joke between you two.",
-        suggestion_type: "Receiving Gifts",
-        time_estimate: "1-2 hours",
-        difficulty: "Medium",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Pick up something small 'just because' - their favorite snack, a book they mentioned, or a small trinket.",
-        suggestion_type: "Receiving Gifts",
-        time_estimate: "15 minutes",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-    } else if (loveLanguages.includes('acts')) {
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Take on one of their regular chores or tasks without being asked - do the dishes, take out the trash, or handle something they usually do.",
-        suggestion_type: "Acts of Service",
-        time_estimate: "15-30 minutes",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Prepare their favorite meal or bring them breakfast in bed.",
-        suggestion_type: "Acts of Service",
-        time_estimate: "30-45 minutes",
-        difficulty: "Medium",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Help them with a project or task they've been putting off - offer your time and assistance.",
-        suggestion_type: "Acts of Service",
-        time_estimate: "1-2 hours",
-        difficulty: "Medium",
-        week_start_date: weekStart,
-      });
-    } else if (loveLanguages.includes('touch')) {
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Give them a long, meaningful hug when they least expect it - hold it for at least 20 seconds.",
-        suggestion_type: "Physical Touch",
-        time_estimate: "1 minute",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Offer a back or shoulder massage after a long day - no expectations, just care.",
-        suggestion_type: "Physical Touch",
-        time_estimate: "15-20 minutes",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Hold their hand, put your arm around them, or sit close while watching TV or talking.",
-        suggestion_type: "Physical Touch",
-        time_estimate: "Ongoing",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-    } else {
-      // Default suggestions
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Write a short note expressing appreciation for something specific they did recently.",
-        suggestion_type: "General",
-        time_estimate: "5 minutes",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Plan a surprise date or activity based on their interests.",
-        suggestion_type: "General",
-        time_estimate: "1-2 hours",
-        difficulty: "Medium",
-        week_start_date: weekStart,
-      });
-      suggestions.push({
-        user_id: userId,
-        suggestion_text: "Do something thoughtful that shows you've been listening to their needs.",
-        suggestion_type: "General",
-        time_estimate: "30 minutes",
-        difficulty: "Easy",
-        week_start_date: weekStart,
-      });
+        saved: false,
+        completed: false,
+        data_sources: {
+          reason: template.reason,
+          score: template.score,
+          template_id: template.id,
+          keywords_used: Object.keys(context.insights.keywords),
+        },
+        personalization_tier: context.tier,
+        metadata: {
+          title: template.title,
+          budget: (template as any).budget,
+          occasion: (template as any).occasion,
+          environment: (template as any).environment,
+        },
+      }));
+
+      // Insert suggestions into database
+      const inserted = await handleSupabaseError(
+        api.supabase.from('suggestions').insert(suggestionsToInsert).select()
+      );
+
+      // Save generation metadata
+      await this.saveGenerationMetadata(userId, category, weekStart, context);
+
+      return inserted || [];
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      throw error;
     }
-
-    // Insert suggestions
-    const inserted = await handleSupabaseError(
-      api.supabase
-        .from('love_language_suggestions')
-        .insert(suggestions)
-        .select()
-    );
-
-    return inserted || [];
   },
 
+  /**
+   * Get template library for a category
+   */
+  getTemplatesByCategory(category: SuggestionCategory): any[] {
+    switch (category) {
+      case 'gift':
+        return giftSuggestionTemplates;
+      case 'date':
+        return dateSuggestionTemplates;
+      case 'love_language':
+        return loveLanguageSuggestions;
+      default:
+        return [];
+    }
+  },
+
+  /**
+   * Get suggestion type from template
+   */
+  getSuggestionType(template: any): string {
+    if (template.loveLanguage) {
+      return Array.isArray(template.loveLanguage)
+        ? template.loveLanguage[0]
+        : template.loveLanguage;
+    }
+    if (template.giftType) {
+      return template.giftType;
+    }
+    if (template.dateType) {
+      return template.dateType;
+    }
+    return 'General';
+  },
+
+  /**
+   * Save metadata about suggestion generation
+   */
+  async saveGenerationMetadata(
+    userId: string,
+    category: SuggestionCategory,
+    weekStart: string,
+    context: any
+  ): Promise<void> {
+    try {
+      await api.supabase.from('suggestion_generation_metadata').upsert({
+        user_id: userId,
+        category,
+        week_start_date: weekStart,
+        onboarding_data_version: context.dataSources.onboarding_updated,
+        partner_onboarding_data_version:
+          context.dataSources.partner_onboarding_updated,
+        saved_insights_count: context.dataSources.insights_count,
+        daily_answers_count: context.dataSources.answers_count,
+        personalization_tier: context.tier,
+        generated_at: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Error saving generation metadata:', error);
+      // Non-critical, don't throw
+    }
+  },
+
+  /**
+   * Update a suggestion (mark as saved, completed, etc.)
+   */
   async updateSuggestion(
     suggestionId: string,
-    updates: Partial<Updates<'love_language_suggestions'>>
-  ): Promise<LoveLanguageSuggestion> {
+    updates: Partial<Suggestion>
+  ): Promise<Suggestion> {
     const updated = await handleSupabaseError(
       api.supabase
-        .from('love_language_suggestions')
+        .from('suggestions')
         .update(updates)
         .eq('id', suggestionId)
         .select()
@@ -223,5 +237,76 @@ export const suggestionService = {
 
     return updated;
   },
-};
 
+  /**
+   * Force refresh suggestions (delete and regenerate)
+   */
+  async forceRefresh(
+    userId: string,
+    partnerId: string,
+    category: SuggestionCategory
+  ): Promise<Suggestion[]> {
+    const weekStart = getWeekStartDate();
+
+    // Delete existing suggestions for this week
+    await api.supabase
+      .from('suggestions')
+      .delete()
+      .eq('user_id', userId)
+      .eq('category', category)
+      .eq('week_start_date', weekStart);
+
+    // Generate new suggestions
+    return this.generateSuggestions(userId, partnerId, category);
+  },
+
+  /**
+   * Get weekly suggestions (backwards compatible)
+   * Defaults to love_language category
+   */
+  async getWeeklySuggestions(userId: string): Promise<Suggestion[]> {
+    return this.getSuggestions(userId, 'love_language');
+  },
+
+  /**
+   * Get all suggestions across all categories
+   */
+  async getAllSuggestions(userId: string): Promise<{
+    love_language: Suggestion[];
+    gift: Suggestion[];
+    date: Suggestion[];
+  }> {
+    const weekStart = getWeekStartDate();
+
+    const [loveLanguage, gifts, dates] = await Promise.all([
+      this.getSuggestions(userId, 'love_language', weekStart),
+      this.getSuggestions(userId, 'gift', weekStart),
+      this.getSuggestions(userId, 'date', weekStart),
+    ]);
+
+    return {
+      love_language: loveLanguage,
+      gift: gifts,
+      date: dates,
+    };
+  },
+
+  /**
+   * Get personalization tier for a user
+   */
+  async getPersonalizationTier(
+    userId: string,
+    partnerId: string
+  ): Promise<number> {
+    try {
+      const context = await personalizationService.getPersonalizationContext(
+        userId,
+        partnerId
+      );
+      return context.tier;
+    } catch (error) {
+      console.error('Error getting personalization tier:', error);
+      return 1; // Default to tier 1
+    }
+  },
+};
