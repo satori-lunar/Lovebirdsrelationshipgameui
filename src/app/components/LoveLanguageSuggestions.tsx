@@ -39,7 +39,15 @@ const suggestions = [
 export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSuggestionsProps) {
   const [saved, setSaved] = useState<number[]>([]);
   const [completed, setCompleted] = useState<number[]>([]);
-  const { partnerLoveLanguages, isLoading } = usePartnerOnboarding();
+  const { partnerLoveLanguages, partnerOnboarding, isLoading } = usePartnerOnboarding();
+
+  // Debug logging
+  console.log('💜 LoveLanguageSuggestions Debug:', {
+    partnerName,
+    partnerLoveLanguages,
+    partnerOnboarding,
+    isLoading,
+  });
 
   const toggleSave = (id: number) => {
     setSaved(prev =>
@@ -57,6 +65,10 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
   const primaryLoveLanguage = partnerLoveLanguages?.primary ||
                               partnerLoveLanguages?.all?.[0] ||
                               'Words of Affirmation';
+
+  const hasLoveLanguageData = partnerLoveLanguages?.primary ||
+                              partnerLoveLanguages?.secondary ||
+                              (partnerLoveLanguages?.all && partnerLoveLanguages.all.length > 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
@@ -92,7 +104,7 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
           </h3>
           {isLoading ? (
             <p className="text-sm text-gray-600">Loading...</p>
-          ) : (
+          ) : hasLoveLanguageData ? (
             <div className="space-y-2">
               {partnerLoveLanguages?.primary && (
                 <div className="flex items-center gap-2">
@@ -117,6 +129,11 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
                   ))}
                 </div>
               )}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-600">
+              <p>Love language not set yet.</p>
+              <p className="text-xs mt-1">Ask {partnerName} to complete their onboarding to see their love languages here!</p>
             </div>
           )}
         </Card>
