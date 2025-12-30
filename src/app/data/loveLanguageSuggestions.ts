@@ -146,6 +146,97 @@ export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
     personalizationTier: 1,
     avoidIf: []
   },
+  {
+    id: 51,
+    title: "Leave surprise sticky notes with affirmations",
+    description: "Hide sticky notes with specific compliments in places {partner_name} will find them throughout the day - mirror, car, lunch bag, computer.",
+    category: 'love_language',
+    loveLanguage: "Words of Affirmation",
+    timeEstimate: "10 minutes",
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: []
+  },
+  {
+    id: 52,
+    title: "Create a '10 reasons I admire you' list",
+    description: "Write down 10 specific qualities you admire about {partner_name} and share it over breakfast or before bed.",
+    category: 'love_language',
+    loveLanguage: "Words of Affirmation",
+    timeEstimate: "15 minutes",
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['admired_qualities'],
+    personalizationTier: 1,
+    avoidIf: []
+  },
+  {
+    id: 53,
+    title: "Send them a playlist with song titles that form a message",
+    description: "Create a playlist where the song titles, when read in order, form a message of love or encouragement for {partner_name}.",
+    category: 'love_language',
+    loveLanguage: "Words of Affirmation",
+    timeEstimate: "20 minutes",
+    difficulty: "Medium",
+    requiresData: ['partner_name'],
+    optionalData: ['favorite_music'],
+    personalizationTier: 2,
+    avoidIf: []
+  },
+  {
+    id: 54,
+    title: "Write a letter to their future self",
+    description: "Write a letter to {partner_name}'s future self (5 years from now), describing the amazing person they're becoming and what you hope they've accomplished.",
+    category: 'love_language',
+    loveLanguage: "Words of Affirmation",
+    timeEstimate: "20 minutes",
+    difficulty: "Medium",
+    requiresData: ['partner_name'],
+    optionalData: ['future_goals'],
+    personalizationTier: 2,
+    avoidIf: []
+  },
+  {
+    id: 55,
+    title: "Publicly appreciate them on social media",
+    description: "Post a thoughtful appreciation of {partner_name} on social media, highlighting something specific they did or a quality you love.",
+    category: 'love_language',
+    loveLanguage: "Words of Affirmation",
+    timeEstimate: "10 minutes",
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: ['public_attention']
+  },
+  {
+    id: 56,
+    title: "Record a video message when you're apart",
+    description: "Record a short video telling {partner_name} specific things you appreciate about them. Send it when they least expect it.",
+    category: 'love_language',
+    loveLanguage: "Words of Affirmation",
+    timeEstimate: "5 minutes",
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: []
+  },
+  {
+    id: 57,
+    title: "Brag about them to others (and tell them you did)",
+    description: "Tell a friend or family member something you're proud of about {partner_name}, then let them know you were bragging about them.",
+    category: 'love_language',
+    loveLanguage: "Words of Affirmation",
+    timeEstimate: "5 minutes",
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: []
+  },
 
   // Quality Time
   {
@@ -226,7 +317,72 @@ export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
     description: "Go back to the place where your story began, physically or talk through the memory.",
     loveLanguage: "Quality Time",
     timeEstimate: "1-3 hours",
-    difficulty: "Medium"
+    difficulty: "Easy"
+  },
+  {
+    id: 58,
+    title: "Have a 'teach me something' session",
+    description: "Ask {partner_name} to teach you something they're passionate about or skilled at. Be fully engaged and ask questions.",
+    category: 'love_language',
+    loveLanguage: "Quality Time",
+    timeEstimate: "1-2 hours",
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['hobbies', 'skills'],
+    personalizationTier: 2,
+    avoidIf: []
+  },
+  {
+    id: 59,
+    title: "Create a time capsule together",
+    description: "Gather meaningful items, write letters to your future selves, and seal them away to open in 5 or 10 years.",
+    category: 'love_language',
+    loveLanguage: "Quality Time",
+    timeEstimate: "1-2 hours",
+    difficulty: "Medium",
+    requiresData: ['partner_name'],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: []
+  },
+  {
+    id: 60,
+    title: "Plan a surprise adventure day",
+    description: "Plan a full day of surprise activities for {partner_name} - they won't know where you're going until you arrive at each spot.",
+    category: 'love_language',
+    loveLanguage: "Quality Time",
+    timeEstimate: "4-8 hours",
+    difficulty: "High",
+    requiresData: ['partner_name'],
+    optionalData: ['favorite_activities', 'interests'],
+    personalizationTier: 3,
+    avoidIf: []
+  },
+  {
+    id: 61,
+    title: "Have a deep conversation with question cards",
+    description: "Use conversation starter cards or create your own meaningful questions. Take turns answering honestly and vulnerably.",
+    category: 'love_language',
+    loveLanguage: "Quality Time",
+    timeEstimate: "1-2 hours",
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: []
+  },
+  {
+    id: 62,
+    title: "Recreate your first date",
+    description: "Plan an evening that mirrors your first date - same restaurant, same activity, reminisce about how far you've come with {partner_name}.",
+    category: 'love_language',
+    loveLanguage: "Quality Time",
+    timeEstimate: "2-4 hours",
+    difficulty: "Medium",
+    requiresData: ['partner_name'],
+    optionalData: ['first_date_memory'],
+    personalizationTier: 3,
+    avoidIf: []
   },
 
   // Acts of Service
@@ -309,6 +465,45 @@ export const loveLanguageSuggestions: LoveLanguageSuggestion[] = [
     loveLanguage: "Acts of Service",
     timeEstimate: "Varies",
     difficulty: "Medium"
+  },
+  {
+    id: 63,
+    title: "Meal prep for their busy week",
+    description: "Spend an afternoon preparing {partner_name}'s favorite meals for the week ahead. Package them nicely with labels and heating instructions.",
+    category: 'love_language',
+    loveLanguage: "Acts of Service",
+    timeEstimate: "2-3 hours",
+    difficulty: "Medium",
+    requiresData: ['partner_name'],
+    optionalData: ['favorite_meals', 'dietary_preferences'],
+    personalizationTier: 2,
+    avoidIf: []
+  },
+  {
+    id: 64,
+    title: "Fix or maintain something important to them",
+    description: "Repair their broken item, maintain their car, or fix something they've been putting off. Show you care through practical help.",
+    category: 'love_language',
+    loveLanguage: "Acts of Service",
+    timeEstimate: "1-3 hours",
+    difficulty: "High",
+    requiresData: ['partner_name'],
+    optionalData: [],
+    personalizationTier: 1,
+    avoidIf: []
+  },
+  {
+    id: 65,
+    title: "Create a relaxing bedtime routine for them",
+    description: "Prepare everything for {partner_name}'s perfect bedtime - warm drink, fresh sheets, dimmed lights, their book ready, phone charging.",
+    category: 'love_language',
+    loveLanguage: "Acts of Service",
+    timeEstimate: "20 minutes",
+    difficulty: "Easy",
+    requiresData: ['partner_name'],
+    optionalData: ['bedtime_preferences'],
+    personalizationTier: 2,
+    avoidIf: []
   },
 
   // Receiving Gifts
