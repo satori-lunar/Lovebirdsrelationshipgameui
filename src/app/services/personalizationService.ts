@@ -12,6 +12,7 @@
 import { api } from './api';
 import { onboardingService } from './onboardingService';
 import { insightsService } from './insightsService';
+import { startOfWeek, format } from 'date-fns';
 
 export interface PersonalizationContext {
   tier: 1 | 2 | 3 | 4;
@@ -47,11 +48,17 @@ export interface PersonalizationContext {
     themes: Record<string, any[]>;
     count: number;
   };
+  weeklyWishes: {
+    current?: string;
+    recent: string[];
+    count: number;
+  };
   dataSources: {
     onboarding_updated?: string;
     partner_onboarding_updated?: string;
     insights_count: number;
     answers_count: number;
+    weekly_wishes_count: number;
   };
 }
 
@@ -65,12 +72,13 @@ export const personalizationService = {
   ): Promise<PersonalizationContext> {
     try {
       // Fetch all data in parallel
-      const [userOnboarding, partnerOnboarding, savedInsights, recentAnswers] =
+      const [userOnboarding, partnerOnboarding, savedInsights, recentAnswers, weeklyWishes] =
         await Promise.all([
           onboardingService.getOnboarding(userId),
           onboardingService.getOnboarding(partnerId),
           insightsService.getSavedInsights(userId),
           this.getRecentAnswersCount(userId),
+          this.getWeeklyWishes(userId),
         ]);
 
       // Calculate personalization tier
@@ -120,11 +128,17 @@ export const personalizationService = {
           themes,
           count: savedInsights.length,
         },
+        weeklyWishes: {
+          current: weeklyWishes.current,
+          recent: weeklyWishes.recent,
+          count: weeklyWishes.count,
+        },
         dataSources: {
           onboarding_updated: userOnboarding?.updated_at,
           partner_onboarding_updated: partnerOnboarding?.updated_at,
           insights_count: savedInsights.length,
           answers_count: recentAnswers,
+          weekly_wishes_count: weeklyWishes.count,
         },
       };
 
@@ -410,5 +424,47 @@ export const personalizationService = {
 
     // Check if any of the suggestion's avoid triggers match partner's avoid list
     return avoidIf.some((trigger) => partnerAvoidList.includes(trigger));
+  },
+
+  /**
+   * Get weekly wishes for the user
+   */
+  async getWeeklyWishes(userId: string): Promise<{
+    current?: string;
+    recent: string[];
+    count: number;
+  }> {
+    try {
+      const currentWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+      // Fetch this week's wish
+      const { data: currentWish } = await api.supabase
+        .from('weekly_wishes')
+        .select('wish_text')
+        .eq('user_id', userId)
+        .eq('week_start_date', currentWeekStart)
+        .single();
+
+      // Fetch recent wishes (last 4 weeks)
+      const { data: recentWishes } = await api.supabase
+        .from('weekly_wishes')
+        .select('wish_text')
+        .eq('user_id', userId)
+        .order('week_start_date', { ascending: false })
+        .limit(4);
+
+      return {
+        current: currentWish?.wish_text,
+        recent: recentWishes?.map(w => w.wish_text) || [],
+        count: recentWishes?.length || 0,
+      };
+    } catch (error) {
+      console.error('Error fetching weekly wishes:', error);
+      return {
+        current: undefined,
+        recent: [],
+        count: 0,
+      };
+    }
   },
 };

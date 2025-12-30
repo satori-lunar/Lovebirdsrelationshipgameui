@@ -186,6 +186,13 @@ function calculateRelevanceScore(
   const keywordMatches = countKeywordMatches(template, context);
   score += keywordMatches * 10;
 
+  // Weekly wishes match (+40 points for strong match)
+  // This is prioritized highly since it's explicitly what the user wants
+  if (context.weeklyWishes.current || context.weeklyWishes.recent.length > 0) {
+    const wishMatches = countWishMatches(template, context);
+    score += wishMatches * 40; // High weight for explicit wishes
+  }
+
   // Appropriate for personalization tier (+5 points)
   if ('personalizationTier' in template) {
     if (template.personalizationTier <= context.tier) {
@@ -245,6 +252,100 @@ function countKeywordMatches(
 }
 
 /**
+ * Count matches between template and weekly wishes
+ * Weekly wishes are what the user explicitly wants their partner to do more of
+ */
+function countWishMatches(
+  template: Template,
+  context: PersonalizationContext
+): number {
+  let matches = 0;
+  const description = template.description.toLowerCase();
+  const title = template.title.toLowerCase();
+
+  // Combine current and recent wishes
+  const allWishes = [
+    context.weeklyWishes.current,
+    ...context.weeklyWishes.recent
+  ].filter(Boolean) as string[];
+
+  // Extract keywords from wishes
+  const wishKeywords = extractWishKeywords(allWishes);
+
+  // Check if template matches any wish keywords
+  wishKeywords.forEach((keyword) => {
+    if (description.includes(keyword) || title.includes(keyword)) {
+      matches++;
+    }
+  });
+
+  return matches;
+}
+
+/**
+ * Extract meaningful keywords from wish text
+ */
+function extractWishKeywords(wishes: string[]): string[] {
+  const keywords: string[] = [];
+
+  wishes.forEach((wish) => {
+    const lowerWish = wish.toLowerCase();
+
+    // Common patterns in wishes
+    const patterns = [
+      'plan.*date',
+      'surprise',
+      'cook',
+      'note',
+      'message',
+      'hug',
+      'cuddle',
+      'quality time',
+      'ask about',
+      'listen',
+      'help',
+      'clean',
+      'dinner',
+      'lunch',
+      'breakfast',
+      'gift',
+      'present',
+      'compliment',
+      'appreciate',
+      'thank',
+      'kiss',
+      'massage',
+      'backrub',
+      'back rub',
+      'adventure',
+      'explore',
+      'try new',
+      'romantic',
+      'thoughtful',
+    ];
+
+    patterns.forEach((pattern) => {
+      const regex = new RegExp(pattern, 'gi');
+      if (regex.test(lowerWish)) {
+        keywords.push(pattern.replace(/\.\*/g, ' '));
+      }
+    });
+
+    // Also extract individual words (3+ chars) excluding common words
+    const words = lowerWish.split(/\s+/);
+    const commonWords = ['the', 'and', 'or', 'but', 'for', 'with', 'more', 'often', 'would', 'could', 'should', 'like', 'want', 'wish'];
+    words.forEach((word) => {
+      const cleanWord = word.replace(/[^a-z]/g, '');
+      if (cleanWord.length >= 3 && !commonWords.includes(cleanWord)) {
+        keywords.push(cleanWord);
+      }
+    });
+  });
+
+  return [...new Set(keywords)];
+}
+
+/**
  * Generate explanation for why this suggestion was chosen
  */
 export function generateReason(
@@ -288,6 +389,12 @@ export function generateReason(
     if (template.budget === context.partner.preferences.gift_budget) {
       reasons.push(`Fits ${context.partner.name}'s budget comfort level`);
     }
+  }
+
+  // Weekly wishes match (high priority!)
+  const wishMatches = countWishMatches(template, context);
+  if (wishMatches > 0) {
+    reasons.push(`Matches what you wished for more of`);
   }
 
   // Insight keyword matches
