@@ -63,17 +63,8 @@ export const authService = {
         // Don't throw - auth was successful, profile can be created later
       }
 
-      // Handle invite code if provided
-      if (inviteCode) {
-        try {
-          const { relationshipService } = await import('./relationshipService');
-          await relationshipService.connectPartner(inviteCode, authData.user.id);
-          console.log('Successfully connected partner with invite code');
-        } catch (inviteError) {
-          console.warn('Failed to connect with invite code (this is okay, user can try again later):', inviteError);
-          // Don't fail the entire signup - user can connect later
-        }
-      }
+      // Note: Partner connection with invite code is now handled at the component level
+      // after the auth session is fully established
 
       return authData;
     } catch (error: any) {

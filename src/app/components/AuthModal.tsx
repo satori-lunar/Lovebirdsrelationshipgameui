@@ -4,6 +4,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { useAuth } from '../hooks/useAuth';
+import { relationshipService } from '../services/relationshipService';
 import { toast } from 'sonner';
 
 interface AuthModalProps {
@@ -20,12 +21,29 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
   const [name, setName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [hasInviteCode, setHasInviteCode] = useState(false);
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { signUp, signIn, user } = useAuth();
 
   // Close modal and call onSuccess when user is authenticated
   useEffect(() => {
     if (user && open) {
+      // Connect with partner if invite code was provided during signup
+      const connectPartner = async () => {
+        if (pendingInviteCode && user.id) {
+          try {
+            await relationshipService.connectPartner(pendingInviteCode, user.id);
+            toast.success('Successfully connected with your partner!');
+          } catch (inviteError: any) {
+            console.error('Failed to connect partner:', inviteError);
+            toast.error(inviteError.message || 'Failed to connect with partner. You can try connecting later in Settings.');
+          }
+          setPendingInviteCode(null);
+        }
+      };
+
+      connectPartner();
+
       // User is now authenticated, wait a moment to show success message, then close modal
       const timer = setTimeout(() => {
         setEmail('');
@@ -36,10 +54,10 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
         onOpenChange(false);
         onSuccess();
       }, 1500); // Give user time to see success message
-      
+
       return () => clearTimeout(timer);
     }
-  }, [user, open, onOpenChange, onSuccess]);
+  }, [user, open, onOpenChange, onSuccess, pendingInviteCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,11 +75,12 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
     setIsLoading(true);
     try {
       if (isSignUp) {
-        const finalInviteCode = hasInviteCode ? inviteCode.trim().toUpperCase() : undefined;
-        await signUp(email, password, name, finalInviteCode);
+        const finalInviteCode = hasInviteCode ? inviteCode.trim().toUpperCase() : null;
+        await signUp(email, password, name);
         toast.success('Account created successfully!');
         if (finalInviteCode) {
-          toast.success('Connected with your partner!');
+          setPendingInviteCode(finalInviteCode);
+          toast.info('Connecting with your partner...');
         }
         // Don't close modal here - let useEffect handle it when user state updates
         // This allows for automatic sign-in if email confirmation is disabled

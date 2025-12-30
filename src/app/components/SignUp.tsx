@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
+import { relationshipService } from '../services/relationshipService';
 import { toast } from 'sonner';
 
 interface SignUpProps {
@@ -22,6 +23,7 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
   const [hasInviteCode, setHasInviteCode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,11 +45,12 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
 
     setIsLoading(true);
     try {
-      const finalInviteCode = hasInviteCode ? inviteCode.trim().toUpperCase() : undefined;
-      await signUp(email, password, name, finalInviteCode);
+      const finalInviteCode = hasInviteCode ? inviteCode.trim().toUpperCase() : null;
+      await signUp(email, password, name);
       toast.success('Account created successfully!');
       if (finalInviteCode) {
-        toast.success('Connected with your partner!');
+        setPendingInviteCode(finalInviteCode);
+        toast.info('Connecting with your partner...');
       }
       setSignUpSuccess(true);
       // Don't redirect immediately - wait for user session to be established
@@ -69,6 +72,27 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
         try {
           const session = await authService.getSession();
           if (session) {
+            // Connect with partner if invite code was provided
+            if (pendingInviteCode && user?.id) {
+              try {
+                await relationshipService.connectPartner(pendingInviteCode, user.id);
+                toast.success('Successfully connected with your partner!');
+              } catch (inviteError: any) {
+                console.error('Failed to connect partner:', inviteError);
+                toast.error(inviteError.message || 'Failed to connect with partner. You can try connecting later in Settings.');
+              }
+              setPendingInviteCode(null);
+            }
+
+            // Reset form state
+            setName('');
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setInviteCode('');
+            setHasInviteCode(false);
+            setSignUpSuccess(false);
+
             // Session is available, wait a moment then redirect
             setIsLoading(false);
             setTimeout(() => {
@@ -90,7 +114,7 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
       
       checkSession();
     }
-  }, [signUpSuccess, user, authLoading, onSuccess]);
+  }, [signUpSuccess, user, authLoading, onSuccess, pendingInviteCode]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex flex-col items-center justify-center p-6">
