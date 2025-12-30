@@ -106,7 +106,7 @@ export function DragonPet({ onBack }: DragonPetProps) {
       </div>
 
       {/* Main habitat view */}
-      <div className="pt-16 pb-4 px-4 max-w-md mx-auto">
+      <div className="pt-16 pb-24 px-4 max-w-md mx-auto">
         <DragonHabitat
           dragon={dragon}
           onFeedClick={handleFeed}
@@ -117,15 +117,14 @@ export function DragonPet({ onBack }: DragonPetProps) {
       </div>
 
       {/* Bottom action buttons */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t-2 border-purple-200 p-4 z-40">
-        <div className="max-w-md mx-auto flex items-center justify-around gap-2">
+      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-purple-600 to-pink-600 border-t-2 border-purple-700 p-3 z-50 shadow-2xl">
+        <div className="max-w-md mx-auto flex items-center justify-around gap-3">
           <Button
             onClick={() => {
               setMenuView('inventory');
               setShowMenu(true);
             }}
-            variant="outline"
-            className="flex-1 flex items-center gap-2 border-2 border-purple-300 hover:bg-purple-50"
+            className="flex-1 flex items-center justify-center gap-2 bg-white/95 hover:bg-white text-purple-700 border-2 border-white/30 shadow-lg font-semibold"
           >
             <Package className="w-4 h-4" />
             <span>Items ({inventory.length})</span>
@@ -136,8 +135,7 @@ export function DragonPet({ onBack }: DragonPetProps) {
               setMenuView('partner');
               setShowMenu(true);
             }}
-            variant="outline"
-            className="flex-1 flex items-center gap-2 border-2 border-pink-300 hover:bg-pink-50"
+            className="flex-1 flex items-center justify-center gap-2 bg-white/95 hover:bg-white text-pink-700 border-2 border-white/30 shadow-lg font-semibold"
           >
             <Users className="w-4 h-4" />
             <span>Partner</span>

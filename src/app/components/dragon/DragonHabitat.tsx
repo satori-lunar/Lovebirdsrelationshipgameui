@@ -349,7 +349,7 @@ export function DragonHabitat({ dragon, onFeedClick, onPlayClick, isFeeding, isP
       </div>
 
       {/* Cozy stone cave nook */}
-      <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 w-80">
+      <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 w-80">
         <svg width="320" height="200" viewBox="0 0 320 200">
           {/* Stone arch/cave */}
           <defs>
@@ -424,18 +424,8 @@ export function DragonHabitat({ dragon, onFeedClick, onPlayClick, isFeeding, isP
         </svg>
       </div>
 
-      {/* Wooden toy animals */}
-      <div className="absolute bottom-28 right-28">
-        <svg width="40" height="30" viewBox="0 0 40 30">
-          <rect x="15" y="15" width="10" height="12" rx="2" fill="#92400e"/>
-          <circle cx="20" cy="12" r="5" fill="#92400e"/>
-          <rect x="16" y="27" width="2" height="3" fill="#78350f"/>
-          <rect x="22" y="27" width="2" height="3" fill="#78350f"/>
-        </svg>
-      </div>
-
       {/* Dragon/Egg in center on cushions */}
-      <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-20">
+      <div className="absolute bottom-40 left-1/2 transform -translate-x-1/2 z-20">
         <motion.div
           animate={{
             y: [0, -8, 0],
