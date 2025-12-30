@@ -47,6 +47,44 @@ export const authService = {
         throw new Error('Failed to create user account');
       }
 
+      // CRITICAL: Explicitly set the session to ensure it's available for subsequent requests
+      // This fixes the 401 Unauthorized errors that occur when trying to save onboarding data
+      if (authData.session) {
+        console.log('✓ Session returned from signup, explicitly setting it in client');
+        const { error: sessionError } = await api.supabase.auth.setSession({
+          access_token: authData.session.access_token,
+          refresh_token: authData.session.refresh_token,
+        });
+
+        if (sessionError) {
+          console.error('Failed to set session after signup:', sessionError);
+        } else {
+          console.log('✓ Session successfully set in Supabase client');
+        }
+      } else {
+        console.warn('⚠️ No session returned from signup - this may cause authentication issues');
+        console.error('╔════════════════════════════════════════════════════════════════╗');
+        console.error('║  EMAIL CONFIRMATION IS ENABLED IN SUPABASE                     ║');
+        console.error('║                                                                ║');
+        console.error('║  This app requires immediate onboarding after signup.         ║');
+        console.error('║  Please disable email confirmation in Supabase:               ║');
+        console.error('║                                                                ║');
+        console.error('║  1. Go to Supabase Dashboard → Authentication → Providers     ║');
+        console.error('║  2. Select Email provider                                     ║');
+        console.error('║  3. Turn OFF "Confirm email" setting                          ║');
+        console.error('║  4. Save changes                                              ║');
+        console.error('║                                                                ║');
+        console.error('║  Current user will need to confirm email or be deleted.       ║');
+        console.error('╚════════════════════════════════════════════════════════════════╝');
+
+        throw new Error(
+          'Email confirmation is enabled in Supabase. ' +
+          'This app requires immediate access after signup. ' +
+          'Please disable email confirmation in Supabase settings: ' +
+          'Authentication → Providers → Email → Turn OFF "Confirm email"'
+        );
+      }
+
       // Try to create user profile (don't fail signup if table doesn't exist yet)
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 7);
