@@ -241,6 +241,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       return;
     }
 
+    console.log('🎯 Onboarding handleComplete called');
+    console.log('👤 User from context:', { id: user?.id, email: user?.email, name: user?.user_metadata?.name });
+
     setIsSaving(true);
     try {
       // User is authenticated since they reached onboarding
@@ -248,6 +251,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         throw new Error('Authentication required. Please sign in again.');
       }
       const userId = user.id;
+      console.log('🔄 Starting onboarding save for userId:', userId);
 
       const dataToSave: OnboardingData = {
         ...formData,

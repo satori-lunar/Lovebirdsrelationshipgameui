@@ -7,9 +7,9 @@ export const onboardingService = {
     // to avoid timing issues with auth state updates
 
     // Ensure user profile exists before saving onboarding data
+    console.log('🔄 Creating user profile for userId:', userId, 'with name:', data.name);
     try {
-      console.log('Ensuring user profile exists for onboarding...');
-      const { error: upsertError } = await api.supabase
+      const { data: upsertResult, error: upsertError } = await api.supabase
         .from('users')
         .upsert({
           id: userId,
@@ -17,16 +17,41 @@ export const onboardingService = {
           name: data.name || null,
         }, {
           onConflict: 'id'
-        });
+        })
+        .select();
 
-      console.log('User profile upsert result:', { error: upsertError });
+      console.log('✅ User profile upsert completed:', {
+        success: !upsertError,
+        result: upsertResult,
+        error: upsertError
+      });
+
       if (upsertError) {
-        console.error('Failed to ensure user profile exists:', upsertError);
-        // Continue anyway - onboarding might still work
+        console.error('❌ Failed to ensure user profile exists:', upsertError);
+        // Try alternative approach - direct insert
+        console.log('🔄 Trying direct insert approach...');
+        try {
+          const { data: insertResult, error: insertError } = await api.supabase
+            .from('users')
+            .insert({
+              id: userId,
+              email: '',
+              name: data.name || null,
+            })
+            .select();
+
+          console.log('✅ Direct insert result:', {
+            success: !insertError,
+            result: insertResult,
+            error: insertError
+          });
+        } catch (insertError) {
+          console.error('❌ Direct insert also failed:', insertError);
+        }
       }
     } catch (error) {
-      console.error('User profile upsert failed:', error);
-      // Continue with onboarding
+      console.error('❌ User profile upsert failed:', error);
+      // Continue with onboarding anyway
     }
 
     // Use upsert (insert or update) to handle existing onboarding
