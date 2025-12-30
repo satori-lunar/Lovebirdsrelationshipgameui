@@ -33,31 +33,31 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
     if (!primary && !secondary) {
       return loveLanguageSuggestions
         .filter(s => s.loveLanguage === 'Words of Affirmation')
-        .slice(0, 10);
+        .slice(0, 3);
     }
 
-    // Filter suggestions for primary love language (7 suggestions)
+    // Filter suggestions for primary love language (2 suggestions)
     const primarySuggestions = primary
       ? loveLanguageSuggestions
           .filter(s => s.loveLanguage === primary)
-          .slice(0, 7)
+          .slice(0, 2)
       : [];
 
-    // Filter suggestions for secondary love language (3 suggestions)
+    // Filter suggestions for secondary love language (1 suggestion)
     const secondarySuggestions = secondary
       ? loveLanguageSuggestions
           .filter(s => s.loveLanguage === secondary)
-          .slice(0, 3)
+          .slice(0, 1)
       : [];
 
     // Combine primary and secondary suggestions
     const combined = [...primarySuggestions, ...secondarySuggestions];
 
-    // If we have less than 10 total, fill up with more from primary
-    if (combined.length < 10 && primary) {
+    // If we have less than 3 total, fill up with more from primary
+    if (combined.length < 3 && primary) {
       const additional = loveLanguageSuggestions
         .filter(s => s.loveLanguage === primary)
-        .slice(7, 10);
+        .slice(2, 3);
       combined.push(...additional);
     }
 
