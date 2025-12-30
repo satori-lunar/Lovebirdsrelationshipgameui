@@ -9,6 +9,8 @@ import { DailyQuestion } from './components/DailyQuestion';
 import { LoveLanguageSuggestions } from './components/LoveLanguageSuggestions';
 import { DatePlanning } from './components/DatePlanning';
 import { DatePlanner } from './components/DatePlanner';
+import { DateChallenge } from './components/DateChallenge';
+import { DatesWrapper } from './components/DatesWrapper';
 import { GiftGuidance } from './components/GiftGuidance';
 import { LoveNudges } from './components/LoveNudges';
 import { RelationshipTracker } from './components/RelationshipTracker';
@@ -166,7 +168,7 @@ export default function App() {
       )}
 
       {currentView === 'dates' && userData && (
-        <DatePlanner
+        <DatesWrapper
           onBack={handleBack}
           partnerName={userData.partnerName || 'your partner'}
         />
