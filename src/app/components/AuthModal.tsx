@@ -27,10 +27,14 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
 
   // Close modal and call onSuccess when user is authenticated
   useEffect(() => {
+    console.log('AuthModal useEffect - user:', !!user, 'open:', open);
     if (user && open) {
+      console.log('User authenticated, preparing to close modal');
+
       // Connect with partner if invite code was provided during signup
       const connectPartner = async () => {
         if (pendingInviteCode && user?.id) {
+          console.log('Connecting with partner...');
           try {
             // Get fresh session to ensure we have the latest user data
             const session = await authService.getSession();
@@ -50,6 +54,7 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
 
       // User is now authenticated, wait a moment to show success message, then close modal
       const timer = setTimeout(() => {
+        console.log('Closing modal and calling onSuccess');
         setEmail('');
         setPassword('');
         setName('');
@@ -64,14 +69,18 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
   }, [user, open, onOpenChange, onSuccess, pendingInviteCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('=== AUTH MODAL SUBMIT STARTED ===');
     e.preventDefault();
-    
+    console.log('Form submitted, isSignUp:', isSignUp, 'email:', email, 'hasPassword:', !!password);
+
     if (!email || !password) {
+      console.log('Validation failed: missing email or password');
       toast.error('Please fill in all fields');
       return;
     }
 
     if (isSignUp && !name) {
+      console.log('Validation failed: missing name for signup');
       toast.error('Please enter your name');
       return;
     }
@@ -89,8 +98,11 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
         // Don't close modal here - let useEffect handle it when user state updates
         // This allows for automatic sign-in if email confirmation is disabled
       } else {
+        console.log('Attempting sign in with:', email);
         await signIn(email, password);
+        console.log('Sign in completed successfully');
         toast.success('Signed in successfully!');
+        console.log('Sign in toast shown, waiting for modal to close...');
         // For sign in, user state should update immediately
         // useEffect will handle closing the modal
       }

@@ -69,7 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    await authService.signIn({ email, password });
+    console.log('Auth context signIn called with:', email);
+    const result = await authService.signIn({ email, password });
+    console.log('Auth service signIn completed, user:', result.user);
+    // The auth state change listener should update the user state
   };
 
   const signOut = async () => {
