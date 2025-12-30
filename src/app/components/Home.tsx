@@ -352,6 +352,20 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                 <p className="text-xs text-gray-600">Never forget</p>
               </div>
             </button>
+
+            <button
+              onClick={() => onNavigate('dragon')}
+              className="group bg-gradient-to-br from-purple-500 to-pink-500 p-5 rounded-3xl shadow-md hover:shadow-xl transition-all text-left relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity -mr-10 -mt-10"></div>
+              <div className="relative">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold text-sm mb-1 text-white">Dragon Pet 🐉</h3>
+                <p className="text-xs text-white/90">Grow your dragon!</p>
+              </div>
+            </button>
           </motion.div>
         </div>
 
