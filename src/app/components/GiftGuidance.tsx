@@ -170,7 +170,7 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
                 Soon
               </span>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Gift Categories */}
