@@ -5,7 +5,6 @@ export interface SignUpData {
   email: string;
   password: string;
   name?: string;
-  inviteCode?: string;
 }
 
 export interface SignInData {
@@ -14,7 +13,7 @@ export interface SignInData {
 }
 
 export const authService = {
-  async signUp({ email, password, name }: SignUpData) {
+  async signUp(email: string, password: string, name?: string) {
     try {
       // Log the attempt
       console.log('Attempting sign up with email:', email);
