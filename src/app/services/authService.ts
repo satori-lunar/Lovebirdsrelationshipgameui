@@ -82,13 +82,11 @@ export const authService = {
   },
 
   async signIn({ email, password }: SignInData) {
-    console.log('Auth service signIn called with:', email);
     const { data, error } = await api.supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    console.log('Supabase signIn result:', { data: !!data, error });
     if (error) throw new Error(error.message);
     
     // Ensure user profile exists after sign in

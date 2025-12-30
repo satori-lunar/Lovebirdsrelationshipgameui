@@ -9,6 +9,7 @@ import { Calendar } from './ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { format } from 'date-fns';
 import { useAuth } from '../hooks/useAuth';
+import { authService } from '../services/authService';
 import { onboardingService } from '../services/onboardingService';
 import { toast } from 'sonner';
 import type { OnboardingData, LoveLanguage, WantsNeeds, Preferences } from '../types/onboarding';
@@ -248,6 +249,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         throw new Error('Session expired. Please sign in again.');
       }
 
+      const userId = session.user.id;
+
       const dataToSave: OnboardingData = {
         ...formData,
         birthday: birthday ? format(birthday, 'yyyy-MM-dd') : undefined,
@@ -256,7 +259,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
       console.log('Saving onboarding data:', dataToSave);
 
-      await onboardingService.saveOnboarding(session.user.id, dataToSave);
+      await onboardingService.saveOnboarding(userId, dataToSave);
       toast.success('Onboarding complete!');
       onComplete();
     } catch (error: any) {
