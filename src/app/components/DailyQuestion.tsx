@@ -11,9 +11,10 @@ import { toast } from 'sonner';
 
 interface DailyQuestionProps {
   onComplete: () => void;
+  partnerName: string;
 }
 
-export function DailyQuestion({ onComplete }: DailyQuestionProps) {
+export function DailyQuestion({ onComplete, partnerName }: DailyQuestionProps) {
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
   const {
@@ -147,7 +148,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
         toast.success('Guess saved!');
       } else {
         // Partner hasn't answered yet - go back to home
-        toast.success('Guess saved! Check back later when your partner answers.');
+        toast.success(`Guess saved! Check back later when ${partnerName} answers.`);
         setTimeout(() => {
           onComplete();
         }, 2000); // Give user time to see the toast
@@ -249,12 +250,12 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
                 </div>
               </div>
               <h2 className="text-2xl">Now, Take a Guess!</h2>
-              <p className="text-gray-600">How well do you know your partner?</p>
+              <p className="text-gray-600">How well do you know {partnerName}?</p>
             </div>
 
             <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl">
               <p className="text-xl text-center">{question.question_text}</p>
-              <p className="text-center text-sm text-gray-600 mt-2">What would your partner say?</p>
+              <p className="text-center text-sm text-gray-600 mt-2">What would {partnerName} say?</p>
             </div>
 
             <div className="space-y-3">
@@ -291,7 +292,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
                 </div>
               </div>
               <h2 className="text-2xl">Saving Your Guess</h2>
-              <p className="text-gray-600">Checking if your partner has answered...</p>
+              <p className="text-gray-600">Checking if {partnerName} has answered...</p>
             </div>
             <div className="flex justify-center">
               <div className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
@@ -322,7 +323,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
                 {isCorrect ? (
                   <div>
                     <h2 className="text-2xl">Perfect! 🎉</h2>
-                    <p className="text-gray-600">You know your partner well!</p>
+                    <p className="text-gray-600">You know {partnerName} well!</p>
                   </div>
                 ) : (
                   <div>
@@ -339,7 +340,7 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
                 </div>
 
                 <div className="p-4 bg-pink-50 rounded-xl">
-                  <p className="text-sm text-gray-600 mb-1">Your partner's answer:</p>
+                  <p className="text-sm text-gray-600 mb-1">{partnerName}'s answer:</p>
                   <p className="font-semibold">{partnerAnswer.answer_text}</p>
                 </div>
               </div>
