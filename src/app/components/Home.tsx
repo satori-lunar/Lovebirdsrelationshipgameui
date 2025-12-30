@@ -7,8 +7,10 @@ import { useDailyQuestion } from '../hooks/useDailyQuestion';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { useQuestionStats } from '../hooks/useQuestionStats';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
+import { getUpcomingEvents, formatDaysUntil, formatEventDate } from '../utils/upcomingEvents';
 
 interface HomeProps {
   userName: string;
@@ -21,8 +23,9 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const { relationship } = useRelationship();
   const { hasAnswered, hasGuessed, canSeeFeedback } = useDailyQuestion();
   const { totalCompleted, currentStreak } = useQuestionStats();
+  const { partnerBirthday } = usePartnerOnboarding();
   const hasCompletedDailyQuestion = hasAnswered && hasGuessed;
-  
+
   const { data: onboarding } = useQuery({
     queryKey: ['onboarding', user?.id],
     queryFn: () => onboardingService.getOnboarding(user!.id),
@@ -30,6 +33,9 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   });
 
   const weeklyNotificationsEnabled = true;
+
+  // Get upcoming events
+  const upcomingEvents = relationship ? getUpcomingEvents(partnerName, partnerBirthday) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50">
@@ -270,11 +276,38 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                 <Calendar className="w-5 h-5 text-purple-600" />
                 <h3 className="font-semibold">Coming Up</h3>
               </div>
-              <div className="text-center py-8">
-                <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">No upcoming events yet</p>
-                <p className="text-xs text-gray-400 mt-1">Add important dates to see them here</p>
-              </div>
+              {upcomingEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingEvents.map((event) => (
+                    <div key={event.id} className="flex items-center gap-3 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        event.type === 'birthday' ? 'bg-pink-100' : 'bg-purple-100'
+                      }`}>
+                        {event.type === 'birthday' ? (
+                          <span className="text-2xl">🎂</span>
+                        ) : (
+                          <span className="text-2xl">💝</span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm">{event.title}</h4>
+                        <p className="text-xs text-gray-600">{formatEventDate(event.date)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-semibold text-purple-600">
+                          {formatDaysUntil(event.daysUntil)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm">No upcoming events yet</p>
+                  <p className="text-xs text-gray-400 mt-1">Add important dates to see them here</p>
+                </div>
+              )}
             </Card>
           </motion.div>
         )}
