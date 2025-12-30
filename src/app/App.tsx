@@ -12,12 +12,13 @@ import { GiftGuidance } from './components/GiftGuidance';
 import { RelationshipTracker } from './components/RelationshipTracker';
 import { Memories } from './components/Memories';
 import { Settings } from './components/Settings';
+import { PartnerInsights } from './components/PartnerInsights';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'tracker' | 'memories' | 'settings';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'tracker' | 'memories' | 'settings' | 'insights';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -184,8 +185,15 @@ export default function App() {
         <Memories onBack={handleBack} />
       )}
 
+      {currentView === 'insights' && userData && (
+        <PartnerInsights
+          partnerName={userData.partnerName || 'your partner'}
+          onNavigate={handleNavigate}
+        />
+      )}
+
       {currentView === 'settings' && (
-        <Settings 
+        <Settings
           onBack={handleBack}
           partnerName={userData?.partnerName || 'your partner'}
         />

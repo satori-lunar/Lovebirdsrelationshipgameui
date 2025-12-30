@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Check } from 'lucide-react';
+import { Heart, MessageCircle, Check, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { motion } from 'motion/react';
 import { useDailyQuestion } from '../hooks/useDailyQuestion';
 import { useRelationship } from '../hooks/useRelationship';
+import { usePartner } from '../hooks/usePartner';
+import { usePartnerInsights, useIsInsightSaved } from '../hooks/usePartnerInsights';
 import { toast } from 'sonner';
 
 interface DailyQuestionProps {
@@ -13,6 +15,7 @@ interface DailyQuestionProps {
 
 export function DailyQuestion({ onComplete }: DailyQuestionProps) {
   const { relationship } = useRelationship();
+  const { partnerId } = usePartner(relationship);
   const {
     question,
     isLoading,
@@ -27,6 +30,8 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
     isSavingAnswer,
     isSavingGuess,
   } = useDailyQuestion();
+  const { saveInsight, isSaving: isSavingInsight } = usePartnerInsights();
+  const isSaved = useIsInsightSaved(question?.id);
 
   // Show error if no relationship is established
   if (!relationship) {
@@ -157,6 +162,28 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
     setAnswerText('');
     setGuessText('');
     onComplete();
+  };
+
+  const handleSaveInsight = () => {
+    if (!question || !partnerAnswer || !partnerId) return;
+
+    saveInsight(
+      {
+        questionId: question.id,
+        partnerId: partnerId,
+        questionText: question.question_text,
+        partnerAnswer: partnerAnswer.answer_text,
+        userGuess: guessText,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Saved to your insights!');
+        },
+        onError: (error: any) => {
+          toast.error(error.message || 'Failed to save');
+        },
+      }
+    );
   };
 
   const isCorrect = partnerAnswer && guessText.toLowerCase().includes(partnerAnswer.answer_text.toLowerCase());
@@ -321,12 +348,33 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
                 <p className="text-sm">Now you know 💛</p>
               </div>
 
-              <Button
-                onClick={handleComplete}
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6"
-              >
-                Complete
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  onClick={handleSaveInsight}
+                  disabled={isSavingInsight || isSaved}
+                  variant="outline"
+                  className="w-full py-6 border-2"
+                >
+                  {isSaved ? (
+                    <>
+                      <BookmarkCheck className="w-5 h-5 mr-2" />
+                      Saved to Insights
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="w-5 h-5 mr-2" />
+                      {isSavingInsight ? 'Saving...' : 'Save to Insights'}
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={handleComplete}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6"
+                >
+                  Complete
+                </Button>
+              </div>
             </div>
 
             <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 text-center">
