@@ -1,6 +1,8 @@
 import { ChevronLeft, Gift, Heart, Sparkles, DollarSign, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
+import { getUpcomingEvents, formatDaysUntil, formatEventDate } from '../utils/upcomingEvents';
 
 interface GiftGuidanceProps {
   onBack: () => void;
@@ -107,19 +109,24 @@ const giftCategories = [
 ];
 
 export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
+  const { partnerBirthday } = usePartnerOnboarding();
+
+  // Get upcoming gift-worthy events
+  const upcomingEvents = getUpcomingEvents(partnerName, partnerBirthday);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
       {/* Header */}
       <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6 pb-12">
         <div className="max-w-md mx-auto">
-          <button 
+          <button
             onClick={onBack}
             className="flex items-center gap-2 mb-6 hover:opacity-80"
           >
             <ChevronLeft className="w-5 h-5" />
             <span>Back</span>
           </button>
-          
+
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
               <Gift className="w-6 h-6" />
@@ -139,17 +146,31 @@ export function GiftGuidance({ onBack, partnerName }: GiftGuidanceProps) {
             <Calendar className="w-5 h-5 text-purple-600" />
             <h3 className="font-semibold">Upcoming Occasions</h3>
           </div>
-          <div className="space-y-2">
+          {upcomingEvents.length > 0 ? (
+            <div className="space-y-2">
+              {upcomingEvents.map((event) => (
+                <div key={event.id} className="flex items-center justify-between p-3 bg-pink-50 rounded-lg">
+                  <div>
+                    <p className="font-semibold text-sm">{event.title}</p>
+                    <p className="text-xs text-gray-600">{formatEventDate(event.date)}</p>
+                  </div>
+                  <span className="text-xs px-2 py-1 bg-pink-200 text-pink-700 rounded-full">
+                    {formatDaysUntil(event.daysUntil)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
             <div className="flex items-center justify-between p-3 bg-pink-50 rounded-lg">
               <div>
                 <p className="font-semibold text-sm">{partnerName}'s Birthday</p>
-                <p className="text-xs text-gray-600">March 15, 2025</p>
+                <p className="text-xs text-gray-600">Coming soon</p>
               </div>
               <span className="text-xs px-2 py-1 bg-pink-200 text-pink-700 rounded-full">
-                76 days
+                Soon
               </span>
             </div>
-          </div>
+          )}
         </Card>
 
         {/* Gift Categories */}
