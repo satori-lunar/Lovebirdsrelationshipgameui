@@ -41,8 +41,12 @@ Run all migrations in order via SQL Editor:
 4. `supabase/migrations/004_add_daily_questions.sql`
 5. `supabase/migrations/005_enhance_memories_schema.sql`
 6. `supabase/migrations/006_fix_onboarding_responses_rls.sql`
+7. `supabase/migrations/007_fix_relationship_update_policy.sql` **(Required for partner connection)**
 
-Or use the quick-fix script: `apply-rls-fix.sql`
+### Quick Fix Scripts
+
+- Onboarding RLS: `apply-rls-fix.sql`
+- Partner connection: `apply-relationship-fix.sql`
 
 ## Storage Setup
 
@@ -95,6 +99,43 @@ VITE_SUPABASE_ANON_KEY=your_anon_key_here
 2. Delete the test user from Authentication → Users
 3. Try signup again with a new email
 
+### Partner connection shows "Successfully connected" but still says "Waiting for partner"
+
+**Cause:** Relationship UPDATE policy not applied (migration 007)
+**Fix:**
+
+1. **Apply the migration** in Supabase SQL Editor:
+   ```sql
+   DROP POLICY IF EXISTS "Users can update their relationships" ON public.relationships;
+   
+   CREATE POLICY "Users can update their relationships"
+     ON public.relationships FOR UPDATE
+     USING (
+       auth.uid() = partner_a_id OR 
+       auth.uid() = partner_b_id OR
+       (partner_b_id IS NULL AND auth.role() = 'authenticated')
+     );
+   ```
+
+2. **Verify the policy is updated**:
+   - Run `debug-relationship-policy.sql` in SQL Editor
+   - Check that "Users can update their relationships" policy exists
+   - The `qual` or `with_check` column should include `partner_b_id IS NULL`
+
+3. **Check browser console** when connecting:
+   - Should see: `✅ Successfully connected partner!`
+   - If you see: `❌ Failed to update relationship` → policy not applied
+   - If you see RLS error → run the migration above
+
+4. **Refresh the page** after connecting to update the UI
+
+5. **Clear existing test relationships**:
+   ```sql
+   -- In Supabase SQL Editor
+   DELETE FROM relationships WHERE partner_b_id IS NULL;
+   ```
+   Then try connecting again from scratch
+
 ## Additional Settings (Optional)
 
 ### Auto-confirm users (Alternative)
@@ -116,9 +157,35 @@ Recommended settings in **Authentication** → **Settings**:
 ## Production Checklist
 
 - [ ] Email confirmation is DISABLED
-- [ ] All 6 migrations have been run
+- [ ] All 7 migrations have been run (including 007 for partner connection)
 - [ ] Storage bucket `memories` created
 - [ ] Environment variables set in production
 - [ ] Test signup flow works end-to-end
 - [ ] Test onboarding save completes successfully
-- [ ] Check console logs for session confirmation message
+- [ ] Test partner connection works (shows "Connected" status)
+- [ ] Check console logs for session and connection confirmation messages
+
+## Debugging Partner Connection
+
+If partners can't connect, check these in order:
+
+1. **Console logs** - Open F12 and look for:
+   - `✅ Successfully connected partner!` = Working
+   - `❌ Failed to update relationship` = Policy issue
+   - RLS error code 42501 = Migration 007 not applied
+
+2. **Database state** - Run in SQL Editor:
+   ```sql
+   SELECT id, partner_a_id, partner_b_id, invite_code, connected_at
+   FROM relationships;
+   ```
+   - If `partner_b_id` is NULL after connecting → Policy blocked update
+   - If `partner_b_id` is filled → Connection worked
+
+3. **RLS policies** - Run `debug-relationship-policy.sql` to verify policies
+
+4. **Start fresh**:
+   - Delete test relationships
+   - Create new invite code
+   - Try connecting again
+   - Watch console logs
