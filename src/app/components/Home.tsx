@@ -11,6 +11,8 @@ import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 import { getUpcomingEvents, formatDaysUntil, formatEventDate } from '../utils/upcomingEvents';
+import { useUnreadMessages } from '../hooks/useUnreadMessages';
+import { useUnreadRequests } from '../hooks/useUnreadRequests';
 
 interface HomeProps {
   userName: string;
@@ -24,6 +26,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const { hasAnswered, hasGuessed, canSeeFeedback } = useDailyQuestion();
   const { totalCompleted, currentStreak } = useQuestionStats();
   const { partnerName: partnerNameFromOnboarding, partnerBirthday } = usePartnerOnboarding();
+  const { unreadCount } = useUnreadMessages();
+  const { pendingCount } = useUnreadRequests();
   const hasCompletedDailyQuestion = hasAnswered && hasGuessed;
 
   // Use partner's actual name from their onboarding, fallback to prop
@@ -269,13 +273,20 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               onClick={() => onNavigate('messages')}
               className="group bg-white p-5 rounded-3xl shadow-md hover:shadow-xl transition-all text-left relative overflow-hidden"
             >
+              {unreadCount > 0 && (
+                <div className="absolute top-3 right-3 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold z-10 animate-pulse">
+                  {unreadCount}
+                </div>
+              )}
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-pink-100 to-pink-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity -mr-10 -mt-10"></div>
               <div className="relative">
                 <div className="w-12 h-12 bg-gradient-to-br from-pink-100 to-pink-50 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <Mail className="w-6 h-6 text-pink-600" />
                 </div>
                 <h3 className="font-semibold text-sm mb-1">Love Messages</h3>
-                <p className="text-xs text-gray-600">Send sweet notes</p>
+                <p className="text-xs text-gray-600">
+                  {unreadCount > 0 ? `${unreadCount} new message${unreadCount > 1 ? 's' : ''}!` : 'Send sweet notes'}
+                </p>
               </div>
             </button>
 
@@ -283,13 +294,20 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               onClick={() => onNavigate('requests')}
               className="group bg-white p-5 rounded-3xl shadow-md hover:shadow-xl transition-all text-left relative overflow-hidden"
             >
+              {pendingCount > 0 && (
+                <div className="absolute top-3 right-3 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold z-10 animate-pulse">
+                  {pendingCount}
+                </div>
+              )}
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity -mr-10 -mt-10"></div>
               <div className="relative">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-50 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <HandHeart className="w-6 h-6 text-purple-600" />
                 </div>
                 <h3 className="font-semibold text-sm mb-1">Partner Requests</h3>
-                <p className="text-xs text-gray-600">Ask for what you need</p>
+                <p className="text-xs text-gray-600">
+                  {pendingCount > 0 ? `${pendingCount} pending request${pendingCount > 1 ? 's' : ''}!` : 'Ask for what you need'}
+                </p>
               </div>
             </button>
 
