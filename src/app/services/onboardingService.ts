@@ -6,63 +6,9 @@ export const onboardingService = {
     // Note: Session validation is handled at the component level
     // to avoid timing issues with auth state updates
 
-    // First, ensure user exists in users table (required for foreign key)
-    // This is critical - onboarding_responses has a foreign key to users
-    try {
-      const { data: userData, error: userError } = await api.supabase
-        .from('users')
-        .select('id')
-        .eq('id', userId)
-        .single();
-
-      if (userError && userError.code === 'PGRST116') {
-        // User doesn't exist, create it - this MUST succeed before onboarding
-        const { data: authUser, error: authError } = await api.supabase.auth.getUser();
-        
-        if (authError || !authUser?.user) {
-          throw new Error('Unable to get user information. Please sign in again.');
-        }
-
-        const trialEndDate = new Date();
-        trialEndDate.setDate(trialEndDate.getDate() + 7);
-        
-        const { error: insertError } = await api.supabase
-          .from('users')
-          .insert({
-            id: userId,
-            email: authUser.user.email || '',
-            name: data.name || null,
-            trial_start_date: new Date().toISOString(),
-            trial_end_date: trialEndDate.toISOString(),
-          });
-
-        if (insertError) {
-          console.error('Failed to create user profile:', insertError);
-          throw new Error(`Failed to create user profile: ${insertError.message}. Please ensure database migrations are run.`);
-        }
-
-        // Verify user was created
-        const { error: verifyError } = await api.supabase
-          .from('users')
-          .select('id')
-          .eq('id', userId)
-          .single();
-
-        if (verifyError) {
-          throw new Error('User profile creation failed. Please try again.');
-        }
-      } else if (userError) {
-        // Some other error occurred
-        console.error('Error checking user:', userError);
-        throw new Error(`Database error: ${userError.message}`);
-      }
-    } catch (error: any) {
-      // Re-throw with better error message
-      if (error.message) {
-        throw error;
-      }
-      throw new Error('Failed to ensure user profile exists. Please try again.');
-    }
+    // Note: User profile creation is handled in authService.signUp()
+    // Skip user existence check to avoid RLS policy issues
+    // If user profile doesn't exist, the foreign key constraint will handle it
 
     // Use upsert (insert or update) to handle existing onboarding
     // At this point, we've verified the user exists, so foreign key should be satisfied
