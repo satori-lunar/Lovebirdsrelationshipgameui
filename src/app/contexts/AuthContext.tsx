@@ -61,10 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name?: string) => {
     const result = await authService.signUp(email, password, name);
-    // After signup, refresh the user state
+    // After signup, update user state immediately from the signup result
+    // Don't call refreshUser() as it might fail if session isn't established yet
     if (result?.user) {
-      // User is created, refresh to get the session
-      await refreshUser();
+      setUser(result.user);
     }
   };
 

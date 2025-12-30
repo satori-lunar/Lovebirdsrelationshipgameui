@@ -46,20 +46,26 @@ export const authService = {
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 7);
 
-      const { error: profileError } = await api.supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email,
-          name: name || null,
-          trial_start_date: new Date().toISOString(),
-          trial_end_date: trialEndDate.toISOString(),
-        });
+      try {
+        const { error: profileError } = await api.supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email,
+            name: name || null,
+            trial_start_date: new Date().toISOString(),
+            trial_end_date: trialEndDate.toISOString(),
+          });
 
-      if (profileError) {
-        // Log but don't fail - user can complete profile later
-        console.warn('Failed to create user profile (this is okay if migrations are not run yet):', profileError);
-        // Don't throw - auth was successful, profile can be created later
+        if (profileError) {
+          // Log but don't fail - user can complete profile later
+          console.warn('Failed to create user profile (this is okay if migrations are not run yet):', profileError);
+          // Don't throw - auth was successful, profile can be created later
+        }
+      } catch (insertError) {
+        // If the table doesn't exist or there's a permission issue, log and continue
+        console.warn('User profile creation failed (expected if migrations not run):', insertError);
+        // Don't throw - auth was successful
       }
 
       // Note: Partner connection with invite code is now handled at the component level
