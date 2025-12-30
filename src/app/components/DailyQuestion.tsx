@@ -7,6 +7,8 @@ import { useDailyQuestion } from '../hooks/useDailyQuestion';
 import { useRelationship } from '../hooks/useRelationship';
 import { usePartner } from '../hooks/usePartner';
 import { usePartnerInsights, useIsInsightSaved } from '../hooks/usePartnerInsights';
+import { useAuth } from '../hooks/useAuth';
+import { dragonGameLogic } from '../services/dragonGameLogic';
 import { toast } from 'sonner';
 
 interface DailyQuestionProps {
@@ -15,6 +17,7 @@ interface DailyQuestionProps {
 }
 
 export function DailyQuestion({ onComplete, partnerName }: DailyQuestionProps) {
+  const { user } = useAuth();
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
   const {
@@ -125,6 +128,29 @@ export function DailyQuestion({ onComplete, partnerName }: DailyQuestionProps) {
       await saveAnswer({ answerText: answerText.trim() });
       setStage('guess');
       toast.success('Answer saved!');
+
+      // Award dragon XP for answering
+      if (user?.id && question) {
+        try {
+          const reward = await dragonGameLogic.awardActivityCompletion(
+            user.id,
+            'daily_question_answer',
+            question.id
+          );
+          if (reward.xp > 0) {
+            toast.success(`🐉 +${reward.xp} Dragon XP!`, { duration: 3000 });
+            if (reward.items.length > 0) {
+              const itemNames = reward.items.map(i => i.itemId.replace('_', ' ')).join(', ');
+              toast.success(`🎁 Got: ${itemNames}`, { duration: 3000 });
+            }
+            if (reward.evolved) {
+              toast.success('🎉 Your dragon evolved!', { duration: 5000 });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to award dragon XP:', err);
+        }
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to save answer');
     }
@@ -140,6 +166,29 @@ export function DailyQuestion({ onComplete, partnerName }: DailyQuestionProps) {
 
     try {
       await saveGuess({ guessText: guessText.trim() });
+
+      // Award dragon XP for guessing
+      if (user?.id && question) {
+        try {
+          const reward = await dragonGameLogic.awardActivityCompletion(
+            user.id,
+            'daily_question_guess',
+            `${question.id}_guess`
+          );
+          if (reward.xp > 0) {
+            toast.success(`🐉 +${reward.xp} Dragon XP!`, { duration: 3000 });
+            if (reward.items.length > 0) {
+              const itemNames = reward.items.map(i => i.itemId.replace('_', ' ')).join(', ');
+              toast.success(`🎁 Got: ${itemNames}`, { duration: 3000 });
+            }
+            if (reward.evolved) {
+              toast.success('🎉 Your dragon evolved!', { duration: 5000 });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to award dragon XP:', err);
+        }
+      }
 
       // Check if partner has answered
       if (partnerAnswer) {
