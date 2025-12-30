@@ -18,13 +18,16 @@ interface HomeProps {
   onNavigate: (page: string) => void;
 }
 
-export function Home({ userName, partnerName, onNavigate }: HomeProps) {
+export function Home({ userName, partnerName: partnerNameProp, onNavigate }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { hasAnswered, hasGuessed, canSeeFeedback } = useDailyQuestion();
   const { totalCompleted, currentStreak } = useQuestionStats();
-  const { partnerBirthday } = usePartnerOnboarding();
+  const { partnerName: partnerNameFromOnboarding, partnerBirthday } = usePartnerOnboarding();
   const hasCompletedDailyQuestion = hasAnswered && hasGuessed;
+
+  // Use partner's actual name from their onboarding, fallback to prop
+  const partnerName = partnerNameFromOnboarding || partnerNameProp;
 
   const { data: onboarding } = useQuery({
     queryKey: ['onboarding', user?.id],

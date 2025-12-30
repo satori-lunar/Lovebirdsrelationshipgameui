@@ -1,40 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Heart, Sparkles, ChevronLeft, BookmarkPlus, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
+import { loveLanguageSuggestions } from '../data/loveLanguageSuggestions';
 
 interface LoveLanguageSuggestionsProps {
   onBack: () => void;
   partnerName: string;
 }
-
-const suggestions = [
-  {
-    id: 1,
-    title: "Write a Short Love Letter",
-    description: "Put your feelings into words. Leave it somewhere they'll find it - in their bag, on the mirror, or their pillow.",
-    timeEstimate: "15 minutes",
-    difficulty: "Easy",
-    loveLanguage: "Words of Affirmation"
-  },
-  {
-    id: 2,
-    title: "Create an Affirmation Scavenger Hunt",
-    description: "Hide 5-7 notes around your home or their workspace, each with a specific thing you love about them. Make the last clue lead to a small treat or your waiting arms.",
-    timeEstimate: "30 minutes",
-    difficulty: "Medium",
-    loveLanguage: "Words of Affirmation"
-  },
-  {
-    id: 3,
-    title: "Flowers with a Handwritten Thank-You",
-    description: "Pick up their favorite flowers and attach a handwritten note thanking them for specific things they've done recently.",
-    timeEstimate: "20 minutes",
-    difficulty: "Easy",
-    loveLanguage: "Words of Affirmation"
-  }
-];
 
 export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSuggestionsProps) {
   const [saved, setSaved] = useState<number[]>([]);
@@ -48,6 +22,47 @@ export function LoveLanguageSuggestions({ onBack, partnerName }: LoveLanguageSug
     partnerOnboarding,
     isLoading,
   });
+
+  // Filter suggestions based on partner's love languages
+  const suggestions = useMemo(() => {
+    // Get partner's primary and secondary love languages
+    const primary = partnerLoveLanguages?.primary;
+    const secondary = partnerLoveLanguages?.secondary;
+
+    // If no love languages set, default to showing Words of Affirmation
+    if (!primary && !secondary) {
+      return loveLanguageSuggestions
+        .filter(s => s.loveLanguage === 'Words of Affirmation')
+        .slice(0, 10);
+    }
+
+    // Filter suggestions for primary love language (7 suggestions)
+    const primarySuggestions = primary
+      ? loveLanguageSuggestions
+          .filter(s => s.loveLanguage === primary)
+          .slice(0, 7)
+      : [];
+
+    // Filter suggestions for secondary love language (3 suggestions)
+    const secondarySuggestions = secondary
+      ? loveLanguageSuggestions
+          .filter(s => s.loveLanguage === secondary)
+          .slice(0, 3)
+      : [];
+
+    // Combine primary and secondary suggestions
+    const combined = [...primarySuggestions, ...secondarySuggestions];
+
+    // If we have less than 10 total, fill up with more from primary
+    if (combined.length < 10 && primary) {
+      const additional = loveLanguageSuggestions
+        .filter(s => s.loveLanguage === primary)
+        .slice(7, 10);
+      combined.push(...additional);
+    }
+
+    return combined;
+  }, [partnerLoveLanguages]);
 
   const toggleSave = (id: number) => {
     setSaved(prev =>
