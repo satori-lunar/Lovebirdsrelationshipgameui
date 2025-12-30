@@ -1,10 +1,10 @@
-import { api, handleSupabaseError } from './api';
+import { api, handleSupabaseError, validateSession } from './api';
 import type { OnboardingData, OnboardingResponse } from '../types/onboarding';
 
 export const onboardingService = {
   async saveOnboarding(userId: string, data: OnboardingData): Promise<OnboardingResponse> {
     // Validate session before proceeding
-    const sessionCheck = await api.validateSession();
+    const sessionCheck = await validateSession();
     if (!sessionCheck?.user) {
       throw new Error('Your session has expired. Please sign in again.');
     }
@@ -132,7 +132,7 @@ export const onboardingService = {
 
   async getOnboarding(userId: string): Promise<OnboardingResponse | null> {
     // Validate session before proceeding
-    const sessionCheck = await api.validateSession();
+    const sessionCheck = await validateSession();
     if (!sessionCheck?.user) {
       console.warn('No valid session for onboarding query');
       return null;
