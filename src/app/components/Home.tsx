@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Calendar, Gift, Sparkles, Camera, Bell, Settings } from 'lucide-react';
+import { Heart, MessageCircle, Calendar, Gift, Sparkles, Camera, Bell, Settings, Bookmark } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion } from 'motion/react';
@@ -229,13 +229,27 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             </button>
 
             <button
-              onClick={() => onNavigate('tracker')}
+              onClick={() => onNavigate('insights')}
               className="group bg-white p-5 rounded-3xl shadow-md hover:shadow-xl transition-all text-left relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity -mr-10 -mt-10"></div>
               <div className="relative">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-50 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Calendar className="w-6 h-6 text-purple-600" />
+                  <Bookmark className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-sm mb-1">Partner Insights</h3>
+                <p className="text-xs text-gray-600">Things learned</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('tracker')}
+              className="group bg-white p-5 rounded-3xl shadow-md hover:shadow-xl transition-all text-left relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-pink-100 to-pink-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity -mr-10 -mt-10"></div>
+              <div className="relative">
+                <div className="w-12 h-12 bg-gradient-to-br from-pink-100 to-pink-50 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Calendar className="w-6 h-6 text-pink-600" />
                 </div>
                 <h3 className="font-semibold text-sm mb-1">Important Dates</h3>
                 <p className="text-xs text-gray-600">Never forget</p>
