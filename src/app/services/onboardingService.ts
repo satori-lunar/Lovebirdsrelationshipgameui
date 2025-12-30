@@ -6,21 +6,40 @@ export const onboardingService = {
     // Note: Session validation is handled at the component level
     // to avoid timing issues with auth state updates
 
-    // Debug: Check auth state
+    // Debug: Check auth state with retry
     console.log('Onboarding save - checking auth state...');
-    const { data: authData, error: authError } = await api.supabase.auth.getSession();
-    console.log('Auth session details:', {
-      hasSession: !!authData?.session,
-      hasUser: !!authData?.session?.user,
-      userId: authData?.session?.user?.id,
-      userEmail: authData?.session?.user?.email,
-      sessionExpiry: authData?.session?.expires_at
-    });
+    let authData;
+    let authError;
+
+    // Try up to 3 times with small delay to allow session to establish
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      console.log(`Auth check attempt ${attempt}/3`);
+      const result = await api.supabase.auth.getSession();
+      authData = result.data;
+      authError = result.error;
+
+      console.log('Raw auth data:', authData);
+      console.log('Auth session exists:', !!authData?.session);
+      console.log('Auth user exists:', !!authData?.session?.user);
+
+      if (authData?.session?.user) {
+        console.log('Auth user ID:', authData.session.user.id);
+        console.log('Auth user email:', authData.session.user.email);
+        break; // Success, exit retry loop
+      }
+
+      if (attempt < 3) {
+        console.log('No session found, waiting 1 second before retry...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
     if (authError) console.error('Auth error:', authError);
 
-    // Check if user is actually authenticated
+    // Check if user is actually authenticated after retries
     if (!authData?.session?.user) {
-      console.error('No Supabase session found - user may need to sign in again');
+      console.error('No Supabase session found after retries - user may need to sign in again');
+      console.error('Final auth data:', JSON.stringify(authData, null, 2));
       throw new Error('No active session found. Please sign in again.');
     }
 
