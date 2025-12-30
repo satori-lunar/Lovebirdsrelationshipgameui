@@ -99,16 +99,21 @@ export const suggestionService = {
       // Filter by minimum score (30+)
       const relevantTemplates = filterByMinScore(rankedTemplates, 30);
 
-      // Take top 3 suggestions
-      const topSuggestions = relevantTemplates.slice(0, 3);
+      // Randomly select 3 from top-scored templates to provide variety
+      // Take top 10 (or all if less) and randomly pick 3
+      const candidatePool = relevantTemplates.slice(0, Math.min(10, relevantTemplates.length));
+      const topSuggestions: any[] = [];
+
+      // Shuffle and pick 3 random suggestions from the pool
+      const shuffled = [...candidatePool].sort(() => Math.random() - 0.5);
+      topSuggestions.push(...shuffled.slice(0, 3));
 
       // If less than 3, fill with lower-scored suggestions
       if (topSuggestions.length < 3) {
-        const additional = rankedTemplates.slice(
-          topSuggestions.length,
-          3
-        );
-        topSuggestions.push(...additional);
+        const remaining = rankedTemplates
+          .filter(t => !topSuggestions.find(s => s.id === t.id))
+          .slice(0, 3 - topSuggestions.length);
+        topSuggestions.push(...remaining);
       }
 
       // Interpolate templates with actual data
