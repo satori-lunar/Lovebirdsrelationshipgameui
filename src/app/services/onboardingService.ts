@@ -9,8 +9,26 @@ export const onboardingService = {
     // Debug: Check auth state
     console.log('Onboarding save - checking auth state...');
     const { data: authData, error: authError } = await api.supabase.auth.getSession();
-    console.log('Auth session:', { session: !!authData?.session, user: !!authData?.session?.user, userId: authData?.session?.user?.id });
+    console.log('Auth session details:', {
+      hasSession: !!authData?.session,
+      hasUser: !!authData?.session?.user,
+      userId: authData?.session?.user?.id,
+      userEmail: authData?.session?.user?.email,
+      sessionExpiry: authData?.session?.expires_at
+    });
     if (authError) console.error('Auth error:', authError);
+
+    // Check if user is actually authenticated
+    if (!authData?.session?.user) {
+      console.error('No Supabase session found - user may need to sign in again');
+      throw new Error('No active session found. Please sign in again.');
+    }
+
+    // Verify the userId matches the authenticated user
+    if (authData.session.user.id !== userId) {
+      console.error('User ID mismatch:', { expected: userId, actual: authData.session.user.id });
+      throw new Error('Authentication mismatch. Please sign in again.');
+    }
 
     // Ensure user exists in users table (required for foreign key and RLS)
     // This is critical - onboarding_responses has a foreign key to users
