@@ -153,6 +153,117 @@ export const authService = {
     );
   },
 
+  async deleteUserData(userId: string): Promise<void> {
+    try {
+      // Delete in order to handle foreign key constraints
+
+      // 1. Delete memories (references user_id)
+      await api.supabase
+        .from('memories')
+        .delete()
+        .eq('user_id', userId);
+
+      // 2. Delete subscriptions (references user_id)
+      await api.supabase
+        .from('subscriptions')
+        .delete()
+        .eq('user_id', userId);
+
+      // 3. Delete important dates (references user_id)
+      await api.supabase
+        .from('important_dates')
+        .delete()
+        .eq('user_id', userId);
+
+      // 4. Delete date ideas (references user_id, but can be null)
+      await api.supabase
+        .from('date_ideas')
+        .delete()
+        .eq('user_id', userId);
+
+      // 5. Delete love language suggestions (references user_id)
+      await api.supabase
+        .from('love_language_suggestions')
+        .delete()
+        .eq('user_id', userId);
+
+      // 6. Delete question answers (references user_id)
+      await api.supabase
+        .from('question_answers')
+        .delete()
+        .eq('user_id', userId);
+
+      // 7. Delete question guesses (references user_id)
+      await api.supabase
+        .from('question_guesses')
+        .delete()
+        .eq('user_id', userId);
+
+      // 8. Delete onboarding responses (references user_id)
+      await api.supabase
+        .from('onboarding_responses')
+        .delete()
+        .eq('user_id', userId);
+
+      // 9. Handle relationships - need to be careful here
+      // First, get the relationship for this user
+      const relationship = await api.supabase
+        .from('relationships')
+        .select('*')
+        .or(`partner_a_id.eq.${userId},partner_b_id.eq.${userId}`)
+        .single();
+
+      if (relationship) {
+        // If user is partner A and there's a partner B, just remove partner A
+        // If user is partner B, just remove partner B
+        // If user is the only partner, delete the entire relationship
+        if (relationship.partner_a_id === userId && relationship.partner_b_id) {
+          // User is partner A, partner B exists - just remove partner A
+          await api.supabase
+            .from('relationships')
+            .update({ partner_a_id: null })
+            .eq('id', relationship.id);
+        } else if (relationship.partner_b_id === userId) {
+          // User is partner B - just remove partner B
+          await api.supabase
+            .from('relationships')
+            .update({ partner_b_id: null })
+            .eq('id', relationship.id);
+        } else {
+          // User is the only partner, delete the entire relationship
+          // But first delete related data that references the relationship
+          await api.supabase
+            .from('date_matches')
+            .delete()
+            .eq('relationship_id', relationship.id);
+
+          await api.supabase
+            .from('daily_questions')
+            .delete()
+            .eq('relationship_id', relationship.id);
+
+          await api.supabase
+            .from('relationships')
+            .delete()
+            .eq('id', relationship.id);
+        }
+      }
+
+      // 10. Finally, delete the user profile
+      await api.supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      // Note: Supabase Auth user deletion would need to be handled separately
+      // This only deletes the app data, not the auth user
+
+    } catch (error) {
+      console.error('Error deleting user data:', error);
+      throw error;
+    }
+  },
+
   onAuthStateChange(callback: (user: any) => void) {
     return api.supabase.auth.onAuthStateChange((event, session) => {
       callback(session?.user ?? null);

@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { ChevronLeft, Bell, Users, Link2, Copy, Check, Mail, MessageSquare } from 'lucide-react';
+import { ChevronLeft, Bell, Users, Link2, Copy, Check, Mail, MessageSquare, LogOut, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
+import { useAuth } from '../hooks/useAuth';
+import { authService } from '../services/authService';
+import { toast } from 'sonner';
 
 interface SettingsProps {
   onBack: () => void;
@@ -12,15 +16,21 @@ interface SettingsProps {
 }
 
 export function Settings({ onBack, partnerName }: SettingsProps) {
+  const { user, signOut } = useAuth();
+
   const [notificationSettings, setNotificationSettings] = useState({
     weeklyLoveLanguage: true,
     dailyQuestions: true,
     upcomingDates: true,
     partnerActivity: false,
   });
-  
+
   const [inviteCode] = useState('LOVE-2024-XY7Z');
   const [copied, setCopied] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const isPartnerConnected = true; // Mock state
 
   const handleCopy = () => {
@@ -34,6 +44,45 @@ export function Settings({ onBack, partnerName }: SettingsProps) {
       ...prev,
       [key]: !prev[key]
     }));
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast.success('Logged out successfully');
+      setShowLogoutDialog(false);
+      // The auth context will handle redirecting to login
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Failed to log out');
+    }
+  };
+
+  const handleDeleteData = async () => {
+    if (deleteConfirmation !== 'DELETE') {
+      toast.error('Please type "DELETE" to confirm');
+      return;
+    }
+
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await authService.deleteUserData(user.id);
+      toast.success('Your data has been deleted');
+      // Sign out the user after deleting data
+      await signOut();
+    } catch (error) {
+      console.error('Delete data error:', error);
+      toast.error('Failed to delete data. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setDeleteConfirmation('');
+    }
   };
 
   return (
@@ -218,6 +267,36 @@ export function Settings({ onBack, partnerName }: SettingsProps) {
           </div>
         </Card>
 
+        {/* Account Actions */}
+        <Card className="p-6 border-0 shadow-lg bg-white">
+          <h2 className="font-semibold text-lg mb-4 text-gray-900">Account</h2>
+
+          <div className="space-y-3">
+            <Button
+              onClick={() => setShowLogoutDialog(true)}
+              variant="outline"
+              className="w-full flex items-center justify-start gap-3 h-12"
+            >
+              <LogOut className="w-5 h-5 text-gray-600" />
+              <span>Log Out</span>
+            </Button>
+
+            <div className="border-t pt-3">
+              <Button
+                onClick={() => setShowDeleteDialog(true)}
+                variant="outline"
+                className="w-full flex items-center justify-start gap-3 h-12 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+              >
+                <Trash2 className="w-5 h-5" />
+                <span>Delete My Data</span>
+              </Button>
+              <p className="text-xs text-gray-500 mt-2">
+                This will permanently delete all your data and cannot be undone.
+              </p>
+            </div>
+          </div>
+        </Card>
+
         {/* Privacy Note */}
         <Card className="p-6 border-0 bg-gradient-to-r from-purple-50 to-pink-50">
           <div className="space-y-2">
@@ -228,6 +307,94 @@ export function Settings({ onBack, partnerName }: SettingsProps) {
           </div>
         </Card>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Log Out</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to log out? You'll need to sign in again to access your account.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowLogoutDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleLogout}
+              className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+            >
+              Log Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Data Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-red-600">Delete All Data</DialogTitle>
+              </div>
+            </div>
+            <DialogDescription className="space-y-3">
+              <p>
+                This action <strong>cannot be undone</strong>. This will permanently delete:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>All your memories and photos</li>
+                <li>Your daily questions and answers</li>
+                <li>Your onboarding responses</li>
+                <li>Your love language suggestions</li>
+                <li>Your date ideas and matches</li>
+                <li>Your important dates and reminders</li>
+                <li>Your account and profile information</li>
+              </ul>
+              <div className="bg-red-50 p-3 rounded-lg mt-4">
+                <p className="text-sm font-medium text-red-800 mb-2">
+                  Type "DELETE" to confirm:
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full px-3 py-2 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  disabled={isDeleting}
+                />
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeleteConfirmation('');
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteData}
+              disabled={isDeleting || deleteConfirmation !== 'DELETE'}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Everything'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
