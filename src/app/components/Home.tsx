@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Calendar, Gift, Sparkles, Camera, Bell, Settings, Bookmark } from 'lucide-react';
+import { Heart, MessageCircle, Calendar, Gift, Sparkles, Camera, Bell, Settings, Bookmark, Lock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion } from 'motion/react';
@@ -248,6 +248,20 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                 </div>
                 <h3 className="font-semibold text-sm mb-1">Love Nudges</h3>
                 <p className="text-xs text-gray-600">Daily reminders</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('vault')}
+              className="group bg-gradient-to-br from-gray-800 to-gray-900 p-5 rounded-3xl shadow-md hover:shadow-xl transition-all text-left relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity -mr-10 -mt-10"></div>
+              <div className="relative">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Lock className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold text-sm mb-1 text-white">Surprise Vault</h3>
+                <p className="text-xs text-gray-400">Secret plans</p>
               </div>
             </button>
 
