@@ -54,12 +54,12 @@ export function DailyQuestion({ onComplete }: DailyQuestionProps) {
   const [guessText, setGuessText] = useState('');
 
   useEffect(() => {
-    // Only manage automatic stage transitions, don't override manual ones
-    if (stage === 'answer' || stage === 'guess') {
+    // Prioritize feedback stage when results are available
+    if (canSeeFeedback) {
+      setStage('feedback');
+    } else if (stage === 'answer' || stage === 'guess' || stage === 'submitting-guess') {
       if (hasAnswered && !hasGuessed) {
         setStage('guess');
-      } else if (hasAnswered && hasGuessed && canSeeFeedback) {
-        setStage('feedback');
       } else if (!hasAnswered) {
         setStage('answer');
       }

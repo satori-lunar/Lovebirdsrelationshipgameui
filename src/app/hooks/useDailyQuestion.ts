@@ -43,6 +43,11 @@ export function useDailyQuestion() {
     queryKey: ['partnerAnswer', question?.id, partnerId],
     queryFn: () => questionService.getPartnerAnswer(question!.id, partnerId!),
     enabled: !!question && !!partnerId && !!userAnswer && !!userGuess,
+    refetchInterval: (query) => {
+      // Poll every 10 seconds if user has guessed but partner hasn't answered yet
+      const hasPartnerAnswer = query.state.data !== null && query.state.data !== undefined;
+      return hasPartnerAnswer ? false : 10000; // 10 seconds
+    },
   });
 
   const saveAnswerMutation = useMutation({
