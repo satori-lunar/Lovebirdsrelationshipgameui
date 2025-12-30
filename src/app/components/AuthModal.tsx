@@ -76,7 +76,7 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
     try {
       if (isSignUp) {
         const finalInviteCode = hasInviteCode ? inviteCode.trim().toUpperCase() : null;
-        await signUp(email, password, name);
+        await signUp({ email, password, name });
         toast.success('Account created successfully!');
         if (finalInviteCode) {
           setPendingInviteCode(finalInviteCode);

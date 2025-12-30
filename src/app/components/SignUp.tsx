@@ -46,7 +46,7 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
     setIsLoading(true);
     try {
       const finalInviteCode = hasInviteCode ? inviteCode.trim().toUpperCase() : null;
-      await signUp(email, password, name);
+      await signUp({ email, password, name });
       toast.success('Account created successfully!');
       if (finalInviteCode) {
         setPendingInviteCode(finalInviteCode);

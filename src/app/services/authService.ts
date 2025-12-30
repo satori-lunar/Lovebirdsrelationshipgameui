@@ -14,10 +14,10 @@ export interface SignInData {
 }
 
 export const authService = {
-  async signUp({ email, password, name, inviteCode }: SignUpData) {
+  async signUp({ email, password, name }: SignUpData) {
     try {
       // Log the attempt
-      console.log('Attempting sign up with email:', email, inviteCode ? '(with invite code)' : '');
+      console.log('Attempting sign up with email:', email);
       console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL?.substring(0, 30) || 'NOT SET');
 
       const { data: authData, error: authError } = await api.supabase.auth.signUp({
