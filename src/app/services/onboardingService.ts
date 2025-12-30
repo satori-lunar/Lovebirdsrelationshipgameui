@@ -6,6 +6,12 @@ export const onboardingService = {
     // Note: Session validation is handled at the component level
     // to avoid timing issues with auth state updates
 
+    // Debug: Check auth state
+    console.log('Onboarding save - checking auth state...');
+    const { data: authData, error: authError } = await api.supabase.auth.getSession();
+    console.log('Auth session:', { session: !!authData?.session, user: !!authData?.session?.user, userId: authData?.session?.user?.id });
+    if (authError) console.error('Auth error:', authError);
+
     // Ensure user exists in users table (required for foreign key and RLS)
     // This is critical - onboarding_responses has a foreign key to users
     try {
@@ -14,6 +20,7 @@ export const onboardingService = {
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + 7);
 
+      console.log('Attempting user profile upsert...');
       const { error: upsertError } = await api.supabase
         .from('users')
         .upsert({
@@ -26,6 +33,7 @@ export const onboardingService = {
           onConflict: 'id'
         });
 
+      console.log('User profile upsert result:', { error: upsertError });
       if (upsertError) {
         console.error('Failed to ensure user profile exists:', upsertError);
         // Don't fail onboarding - try to continue anyway
@@ -38,6 +46,7 @@ export const onboardingService = {
 
     // Use upsert (insert or update) to handle existing onboarding
     // At this point, we've verified the user exists, so foreign key should be satisfied
+    console.log('Attempting onboarding upsert...');
     try {
       const upsertData: any = {
         user_id: userId,
