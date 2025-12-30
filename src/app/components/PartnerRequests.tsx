@@ -9,6 +9,7 @@ import { usePartner } from '../hooks/usePartner';
 import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { dragonGameLogic } from '../services/dragonGameLogic';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
@@ -104,11 +105,34 @@ export function PartnerRequests({ onBack }: PartnerRequestsProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (requestData) => {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
       setSelectedType(null);
       setRequestMessage('');
       toast.success('Request sent! 💝');
+
+      // Award dragon XP for sending request
+      if (user?.id && requestData?.id) {
+        try {
+          const reward = await dragonGameLogic.awardActivityCompletion(
+            user.id,
+            'request_sent',
+            requestData.id
+          );
+          if (reward.xp > 0) {
+            toast.success(`🐉 +${reward.xp} Dragon XP!`, { duration: 3000 });
+            if (reward.items.length > 0) {
+              const itemNames = reward.items.map(i => i.itemId.replace('_', ' ')).join(', ');
+              toast.success(`🎁 Got: ${itemNames}`, { duration: 3000 });
+            }
+            if (reward.evolved) {
+              toast.success('🎉 Your dragon evolved!', { duration: 5000 });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to award dragon XP:', err);
+        }
+      }
     },
     onError: (error) => {
       toast.error('Failed to send request');
@@ -128,9 +152,33 @@ export function PartnerRequests({ onBack }: PartnerRequestsProps) {
         .eq('id', requestId);
 
       if (error) throw error;
+      return { requestId, status };
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['requests', 'received'] });
+
+      // Award dragon XP when request is completed
+      if (user?.id && data.status === 'completed' && data.requestId) {
+        try {
+          const reward = await dragonGameLogic.awardActivityCompletion(
+            user.id,
+            'request_completed',
+            data.requestId
+          );
+          if (reward.xp > 0) {
+            toast.success(`🐉 +${reward.xp} Dragon XP!`, { duration: 3000 });
+            if (reward.items.length > 0) {
+              const itemNames = reward.items.map(i => i.itemId.replace('_', ' ')).join(', ');
+              toast.success(`🎁 Got: ${itemNames}`, { duration: 3000 });
+            }
+            if (reward.evolved) {
+              toast.success('🎉 Your dragon evolved!', { duration: 5000 });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to award dragon XP:', err);
+        }
+      }
     },
   });
 

@@ -9,6 +9,7 @@ import { usePartner } from '../hooks/usePartner';
 import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { dragonGameLogic } from '../services/dragonGameLogic';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
@@ -120,12 +121,35 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (messageData) => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       setMessageText('');
       setSelectedType('custom');
       setShowTemplates(false);
       toast.success('Message sent! 💌');
+
+      // Award dragon XP for sending message
+      if (user?.id && messageData?.id) {
+        try {
+          const reward = await dragonGameLogic.awardActivityCompletion(
+            user.id,
+            'message_sent',
+            messageData.id
+          );
+          if (reward.xp > 0) {
+            toast.success(`🐉 +${reward.xp} Dragon XP!`, { duration: 3000 });
+            if (reward.items.length > 0) {
+              const itemNames = reward.items.map(i => i.itemId.replace('_', ' ')).join(', ');
+              toast.success(`🎁 Got: ${itemNames}`, { duration: 3000 });
+            }
+            if (reward.evolved) {
+              toast.success('🎉 Your dragon evolved!', { duration: 5000 });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to award dragon XP:', err);
+        }
+      }
     },
     onError: (error) => {
       toast.error('Failed to send message');
