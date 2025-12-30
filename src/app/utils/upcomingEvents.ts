@@ -32,9 +32,12 @@ export function getUpcomingEvents(partnerName: string, partnerBirthday?: string)
 
   // Add partner's birthday if available
   if (partnerBirthday) {
-    const birthdayDate = new Date(partnerBirthday);
-    // Get this year's birthday
-    const thisYearBirthday = new Date(currentYear, birthdayDate.getMonth(), birthdayDate.getDate());
+    // Parse date string manually to avoid timezone issues
+    // partnerBirthday format is "YYYY-MM-DD" (e.g., "2000-10-29")
+    const [year, month, day] = partnerBirthday.split('-').map(Number);
+
+    // Create date in local timezone (month is 0-indexed in JS)
+    const thisYearBirthday = new Date(currentYear, month - 1, day);
 
     // If birthday has passed this year, show next year's
     if (thisYearBirthday < today) {
