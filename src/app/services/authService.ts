@@ -5,6 +5,7 @@ export interface SignUpData {
   email: string;
   password: string;
   name?: string;
+  inviteCode?: string;
 }
 
 export interface SignInData {
@@ -13,12 +14,12 @@ export interface SignInData {
 }
 
 export const authService = {
-  async signUp({ email, password, name }: SignUpData) {
+  async signUp({ email, password, name, inviteCode }: SignUpData) {
     try {
       // Log the attempt
-      console.log('Attempting sign up with email:', email);
+      console.log('Attempting sign up with email:', email, inviteCode ? '(with invite code)' : '');
       console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL?.substring(0, 30) || 'NOT SET');
-      
+
       const { data: authData, error: authError } = await api.supabase.auth.signUp({
         email,
         password,
@@ -26,7 +27,7 @@ export const authService = {
 
       if (authError) {
         console.error('Sign up error:', authError);
-        
+
         // Better error messages for common issues
         if (authError.message.includes('fetch') || authError.message.includes('network') || authError.message.includes('Failed to fetch')) {
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -37,7 +38,7 @@ export const authService = {
         }
         throw new Error(authError.message);
       }
-      
+
       if (!authData.user) {
         throw new Error('Failed to create user account');
       }
@@ -60,6 +61,18 @@ export const authService = {
         // Log but don't fail - user can complete profile later
         console.warn('Failed to create user profile (this is okay if migrations are not run yet):', profileError);
         // Don't throw - auth was successful, profile can be created later
+      }
+
+      // Handle invite code if provided
+      if (inviteCode) {
+        try {
+          const { relationshipService } = await import('./relationshipService');
+          await relationshipService.connectPartner(inviteCode, authData.user.id);
+          console.log('Successfully connected partner with invite code');
+        } catch (inviteError) {
+          console.warn('Failed to connect with invite code (this is okay, user can try again later):', inviteError);
+          // Don't fail the entire signup - user can connect later
+        }
       }
 
       return authData;

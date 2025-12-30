@@ -5,7 +5,8 @@ export type Subscription = Tables<'subscriptions'>;
 
 export const subscriptionService = {
   async checkPremiumStatus(userId: string): Promise<boolean> {
-    const subscription = await handleSupabaseError(
+    // First check if user has their own subscription
+    const userSubscription = await handleSupabaseError(
       api.supabase
         .from('subscriptions')
         .select('*')
@@ -15,22 +16,63 @@ export const subscriptionService = {
         .single()
     );
 
-    if (!subscription) return false;
-
-    // Check if subscription is still valid
-    if (subscription.end_date) {
-      const endDate = new Date(subscription.end_date);
-      if (endDate < new Date()) {
-        // Update to expired
-        await api.supabase
-          .from('subscriptions')
-          .update({ status: 'expired' })
-          .eq('id', subscription.id);
-        return false;
+    if (userSubscription) {
+      // Check if subscription is still valid
+      if (userSubscription.end_date) {
+        const endDate = new Date(userSubscription.end_date);
+        if (endDate < new Date()) {
+          // Update to expired
+          await api.supabase
+            .from('subscriptions')
+            .update({ status: 'expired' })
+            .eq('id', userSubscription.id);
+          // Continue to check partner subscription
+        } else {
+          return true; // User's subscription is active
+        }
       }
     }
 
-    return true;
+    // Check if user's partner has an active subscription (covers both partners)
+    try {
+      const relationship = await handleSupabaseError(
+        api.supabase
+          .from('relationships')
+          .select('partner_a_id, partner_b_id')
+          .or(`partner_a_id.eq.${userId},partner_b_id.eq.${userId}`)
+          .single()
+      );
+
+      if (relationship) {
+        const partnerId = relationship.partner_a_id === userId
+          ? relationship.partner_b_id
+          : relationship.partner_a_id;
+
+        if (partnerId) {
+          const partnerSubscription = await handleSupabaseError(
+            api.supabase
+              .from('subscriptions')
+              .select('*')
+              .eq('user_id', partnerId)
+              .eq('plan_type', 'premium')
+              .eq('status', 'active')
+              .single()
+          );
+
+          if (partnerSubscription && partnerSubscription.end_date) {
+            const endDate = new Date(partnerSubscription.end_date);
+            if (endDate > new Date()) {
+              return true; // Partner's subscription covers this user
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // If relationship query fails, just continue (user might not be in a relationship yet)
+      console.warn('Failed to check partner subscription:', error);
+    }
+
+    return false;
   },
 
   async checkTrialStatus(userId: string): Promise<{ isTrial: boolean; trialEndDate: Date | null }> {

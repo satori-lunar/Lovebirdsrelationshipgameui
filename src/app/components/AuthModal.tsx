@@ -18,6 +18,8 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [hasInviteCode, setHasInviteCode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { signUp, signIn, user } = useAuth();
 
@@ -29,6 +31,8 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
         setEmail('');
         setPassword('');
         setName('');
+        setInviteCode('');
+        setHasInviteCode(false);
         onOpenChange(false);
         onSuccess();
       }, 1500); // Give user time to see success message
@@ -53,8 +57,12 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
     setIsLoading(true);
     try {
       if (isSignUp) {
-        await signUp(email, password, name);
+        const finalInviteCode = hasInviteCode ? inviteCode.trim().toUpperCase() : undefined;
+        await signUp(email, password, name, finalInviteCode);
         toast.success('Account created successfully!');
+        if (finalInviteCode) {
+          toast.success('Connected with your partner!');
+        }
         // Don't close modal here - let useEffect handle it when user state updates
         // This allows for automatic sign-in if email confirmation is disabled
       } else {
@@ -115,6 +123,39 @@ export function AuthModal({ open, onOpenChange, onSuccess, signInOnly = false }:
               disabled={isLoading}
             />
           </div>
+
+          {/* Partner Invite Code Section - Only for Sign Up */}
+          {isSignUp && (
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-medium">Join your partner?</Label>
+                <button
+                  type="button"
+                  onClick={() => setHasInviteCode(!hasInviteCode)}
+                  className="text-sm text-pink-600 hover:text-pink-700"
+                >
+                  {hasInviteCode ? 'Cancel' : 'I have a code'}
+                </button>
+              </div>
+
+              {hasInviteCode && (
+                <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                  <Label htmlFor="inviteCode" className="text-sm">Partner's Invite Code</Label>
+                  <Input
+                    id="inviteCode"
+                    type="text"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    placeholder="Enter 8-character code"
+                    disabled={isLoading}
+                    className="font-mono text-center"
+                    maxLength={8}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <Button
             type="submit"
             disabled={isLoading}

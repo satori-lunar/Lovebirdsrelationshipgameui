@@ -18,6 +18,8 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [hasInviteCode, setHasInviteCode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
 
@@ -41,8 +43,12 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
 
     setIsLoading(true);
     try {
-      await signUp(email, password, name);
+      const finalInviteCode = hasInviteCode ? inviteCode.trim().toUpperCase() : undefined;
+      await signUp(email, password, name, finalInviteCode);
       toast.success('Account created successfully!');
+      if (finalInviteCode) {
+        toast.success('Connected with your partner!');
+      }
       setSignUpSuccess(true);
       // Don't redirect immediately - wait for user session to be established
       // Keep loading state until user session is ready
@@ -156,6 +162,41 @@ export function SignUp({ onSuccess, onBack }: SignUpProps) {
                   required
                   minLength={6}
                 />
+              </div>
+
+              {/* Partner Invite Code Section */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-medium">Join your partner?</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setHasInviteCode(!hasInviteCode)}
+                    className="text-pink-600 hover:text-pink-700 text-sm"
+                  >
+                    {hasInviteCode ? 'Cancel' : 'I have a code'}
+                  </Button>
+                </div>
+
+                {hasInviteCode && (
+                  <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                    <Label htmlFor="inviteCode">Partner's Invite Code</Label>
+                    <Input
+                      id="inviteCode"
+                      type="text"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      placeholder="Enter 8-character code"
+                      disabled={isLoading}
+                      className="text-base font-mono text-center"
+                      maxLength={8}
+                    />
+                    <p className="text-xs text-gray-500 text-center">
+                      Ask your partner for their invite code to connect your accounts
+                    </p>
+                  </div>
+                )}
               </div>
 
               <Button
