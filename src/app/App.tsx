@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Toaster } from './components/ui/sonner';
 import { EntryChoice } from './components/EntryChoice';
 import { FeatureSlides } from './components/FeatureSlides';
@@ -27,8 +27,11 @@ import { WidgetGallery } from './components/WidgetGallery';
 import { SendWidgetGift } from './components/SendWidgetGift';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './hooks/useAuth';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
+import { widgetGiftService } from './services/widgetGiftService';
+import type { PushNotificationData } from './services/pushNotificationService';
 
 type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'widget-gallery' | 'send-widget-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo';
 
@@ -36,6 +39,20 @@ export default function App() {
   const { user, loading: authLoading } = useAuth();
   const [currentView, setCurrentView] = useState<AppState>('entry');
   const [showSignInModal, setShowSignInModal] = useState(false);
+
+  // Handle push notification taps
+  const handleNotificationTap = useCallback((data: PushNotificationData) => {
+    if (data.type === 'widget_gift') {
+      // Sync gifts and navigate to home to see the gift
+      widgetGiftService.syncGiftsToWidget();
+      setCurrentView('home');
+    }
+  }, []);
+
+  // Initialize push notifications
+  usePushNotifications({
+    onNotificationTap: handleNotificationTap,
+  });
 
   const { data: onboarding, error: onboardingError } = useQuery({
     queryKey: ['onboarding', user?.id],
