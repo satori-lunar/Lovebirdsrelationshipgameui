@@ -62,6 +62,13 @@ export function SurpriseVault({ onBack, partnerName }: SurpriseVaultProps) {
     mutationFn: async (secret: typeof newSurprise) => {
       if (!user?.id) throw new Error('Not authenticated');
 
+      // Get the start of the current week (Monday)
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const weekStart = new Date(today.setDate(diff));
+      weekStart.setHours(0, 0, 0, 0);
+
       const { data, error } = await api.supabase
         .from('suggestions')
         .insert({
@@ -69,6 +76,9 @@ export function SurpriseVault({ onBack, partnerName }: SurpriseVaultProps) {
           category: secret.category,
           suggestion_text: secret.description,
           suggestion_type: secret.title,
+          time_estimate: 'Flexible',
+          difficulty: 'low',
+          week_start_date: weekStart.toISOString().split('T')[0],
           is_secret: true,
           saved: true,
           completed: false,
