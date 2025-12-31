@@ -35,7 +35,7 @@ export function SurpriseVault({ onBack, partnerName }: SurpriseVaultProps) {
   const [newSurprise, setNewSurprise] = useState({
     title: '',
     description: '',
-    category: 'custom' as const,
+    category: 'gift' as const,
   });
 
   // Fetch secret suggestions
@@ -83,7 +83,7 @@ export function SurpriseVault({ onBack, partnerName }: SurpriseVaultProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['secret-suggestions'] });
       setShowAddForm(false);
-      setNewSurprise({ title: '', description: '', category: 'custom' });
+      setNewSurprise({ title: '', description: '', category: 'gift' });
       toast.success('Secret surprise added to your vault! 🤫');
     },
     onError: (error) => {
@@ -265,19 +265,19 @@ export function SurpriseVault({ onBack, partnerName }: SurpriseVaultProps) {
 
                   <div>
                     <Label className="text-white">Category</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {['gift', 'date', 'love_language', 'custom'].map((cat) => (
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['gift', 'date', 'love_language'] as const).map((cat) => (
                         <button
                           key={cat}
                           type="button"
-                          onClick={() => setNewSurprise({ ...newSurprise, category: cat as any })}
+                          onClick={() => setNewSurprise({ ...newSurprise, category: cat })}
                           className={`p-2 rounded-lg border text-xs capitalize ${
                             newSurprise.category === cat
                               ? 'bg-gray-700 border-gray-600 text-white'
                               : 'bg-gray-900 border-gray-700 text-gray-400'
                           }`}
                         >
-                          {cat}
+                          {cat.replace('_', ' ')}
                         </button>
                       ))}
                     </div>
