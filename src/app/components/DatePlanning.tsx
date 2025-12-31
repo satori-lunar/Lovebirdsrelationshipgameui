@@ -776,36 +776,36 @@ function SwipeableDateCard({
         >
           <Card className="border-0 shadow-2xl h-full flex flex-col overflow-hidden relative">
             {/* Gradient Background */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${date.color || 'from-pink-400 to-purple-500'} opacity-10`} />
-            
+            <div className={`absolute inset-0 bg-gradient-to-br ${date.color || 'from-pink-400 to-purple-500'}`} />
+
             {/* Content */}
             <div className="relative z-10 p-8 flex flex-col h-full">
               {/* Emoji Icon */}
               <div className="text-8xl mb-6 text-center drop-shadow-lg">
                 {date.image}
               </div>
-              
+
               {/* Title */}
-              <h2 className="text-3xl font-bold text-center mb-4 text-gray-900">
+              <h2 className="text-3xl font-bold text-center mb-4 text-white drop-shadow-lg">
                 {date.title}
               </h2>
 
               {/* Description */}
-              <p className="text-base text-gray-900 text-center mb-8 flex-1 leading-relaxed">
+              <p className="text-base text-white text-center mb-8 flex-1 leading-relaxed drop-shadow-md">
                 {date.description}
               </p>
-              
+
               {/* Info Cards */}
               <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="text-center p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="text-center p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
                   <Clock className="w-6 h-6 mx-auto mb-2 text-purple-600" />
                   <p className="text-xs font-semibold text-gray-900">{date.duration}</p>
                 </div>
-                <div className="text-center p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="text-center p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
                   <DollarSign className="w-6 h-6 mx-auto mb-2 text-pink-600" />
                   <p className="text-xs font-semibold text-gray-900">{date.budget}</p>
                 </div>
-                <div className="text-center p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="text-center p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
                   <MapPin className="w-6 h-6 mx-auto mb-2 text-blue-600" />
                   <p className="text-xs font-semibold text-gray-900">{date.location}</p>
                 </div>
@@ -813,7 +813,7 @@ function SwipeableDateCard({
 
               {/* Category Badge */}
               <div className="mb-6 text-center">
-                <span className="inline-block px-4 py-2 bg-white rounded-full text-xs font-semibold text-gray-900 shadow-sm border border-gray-200">
+                <span className="inline-block px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-900 shadow-lg">
                   {date.category}
                 </span>
               </div>
@@ -1055,12 +1055,12 @@ function FinalDateScreen({
         >
           <Card className="p-8 border-0 shadow-2xl overflow-hidden relative">
             {/* Gradient Background */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${date.color || 'from-pink-400 to-purple-500'} opacity-10`} />
+            <div className={`absolute inset-0 bg-gradient-to-br ${date.color || 'from-pink-400 to-purple-500'}`} />
 
             {/* Content */}
             <div className="relative z-10">
               <div className="text-center mb-6">
-                <div className="w-20 h-20 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <Sparkles className="w-10 h-10 text-white" />
                 </div>
               </div>
@@ -1069,30 +1069,30 @@ function FinalDateScreen({
                 {date.image}
               </div>
 
-              <h2 className="text-3xl font-bold text-center mb-4 text-gray-900">
+              <h2 className="text-3xl font-bold text-center mb-4 text-white drop-shadow-lg">
                 {date.title}
               </h2>
 
-              <p className="text-base text-gray-900 text-center mb-8 leading-relaxed">
+              <p className="text-base text-white text-center mb-8 leading-relaxed drop-shadow-md">
                 {date.description}
               </p>
 
               <div className="space-y-3 mb-8">
-                <div className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="flex items-center gap-3 p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
                   <Clock className="w-6 h-6 text-purple-600" />
                   <div>
                     <p className="text-xs text-gray-700">Duration</p>
                     <p className="font-semibold text-gray-900">{date.duration}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="flex items-center gap-3 p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
                   <MapPin className="w-6 h-6 text-pink-600" />
                   <div>
                     <p className="text-xs text-gray-700">Location</p>
                     <p className="font-semibold text-gray-900">{date.location}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="flex items-center gap-3 p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
                   <DollarSign className="w-6 h-6 text-blue-600" />
                   <div>
                     <p className="text-xs text-gray-700">Budget</p>
