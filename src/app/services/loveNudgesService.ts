@@ -7,7 +7,7 @@
 
 import { api } from './api';
 import { onboardingService } from './onboardingService';
-import { addDays, differenceInDays, format, startOfDay } from 'date-fns';
+import { addDays, differenceInDays, format, startOfDay, startOfWeek } from 'date-fns';
 
 export interface LoveNudge {
   id: string;
@@ -28,15 +28,25 @@ export const loveNudgesService = {
    */
   async getTodaysNudges(userId: string, partnerId: string): Promise<LoveNudge[]> {
     try {
-      const [partnerOnboarding, savedSuggestions, completedSuggestions] = await Promise.all([
+      const [partnerOnboarding, savedSuggestions, completedSuggestions, partnerWish] = await Promise.all([
         onboardingService.getOnboarding(partnerId),
         this.getSavedButNotCompleted(userId),
         this.getRecentlyCompleted(userId),
+        this.getPartnerCurrentWeekWish(partnerId),
       ]);
 
       const nudges: LoveNudge[] = [];
 
-      // 1. Love Language Nudges
+      // 1. Partner's Wish (Highest Priority!)
+      if (partnerWish) {
+        const wishNudge = this.generateWishBasedNudge(
+          partnerWish,
+          partnerOnboarding?.name || 'your partner'
+        );
+        if (wishNudge) nudges.push(wishNudge);
+      }
+
+      // 2. Love Language Nudges
       if (partnerOnboarding?.love_language_primary) {
         const loveLanguageNudge = this.generateLoveLanguageNudge(
           partnerOnboarding.love_language_primary,
@@ -45,7 +55,7 @@ export const loveNudgesService = {
         if (loveLanguageNudge) nudges.push(loveLanguageNudge);
       }
 
-      // 2. Saved Items Reminder
+      // 3. Saved Items Reminder
       if (savedSuggestions.length > 0) {
         const savedItemNudge = this.generateSavedItemNudge(
           savedSuggestions,
@@ -54,7 +64,7 @@ export const loveNudgesService = {
         if (savedItemNudge) nudges.push(savedItemNudge);
       }
 
-      // 3. Upcoming Events
+      // 4. Upcoming Events
       if (partnerOnboarding?.birthday) {
         const birthdayNudge = this.generateBirthdayNudge(
           partnerOnboarding.birthday,
@@ -63,7 +73,7 @@ export const loveNudgesService = {
         if (birthdayNudge) nudges.push(birthdayNudge);
       }
 
-      // 4. Encouragement (if completed something recently)
+      // 5. Encouragement (if completed something recently)
       if (completedSuggestions.length > 0) {
         const encouragementNudge = this.generateEncouragementNudge(
           completedSuggestions.length,
@@ -72,7 +82,7 @@ export const loveNudgesService = {
         if (encouragementNudge) nudges.push(encouragementNudge);
       }
 
-      // 5. General Relationship Nudges
+      // 6. General Relationship Nudges
       const generalNudge = this.generateGeneralNudge(
         partnerOnboarding?.name || 'your partner',
         partnerOnboarding?.wants_needs
@@ -339,5 +349,77 @@ export const loveNudgesService = {
       console.error('Error getting completed suggestions:', error);
       return [];
     }
+  },
+
+  /**
+   * Get partner's wish for the current week
+   */
+  async getPartnerCurrentWeekWish(partnerId: string): Promise<string | null> {
+    try {
+      const currentWeekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+      const { data, error } = await api.supabase
+        .from('weekly_wishes')
+        .select('wish_text')
+        .eq('user_id', partnerId)
+        .eq('week_start_date', currentWeekStart)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+      return data?.wish_text || null;
+    } catch (error) {
+      console.error('Error getting partner wish:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Generate a nudge based on partner's wish
+   * (without revealing it came from their wishlist)
+   */
+  generateWishBasedNudge(wishText: string, partnerName: string): LoveNudge | null {
+    if (!wishText || wishText.trim().length === 0) return null;
+
+    // Extract the action from the wish text
+    // Common patterns: "I wish...", "write a love note", "plan dates", etc.
+    const wish = wishText.toLowerCase().trim();
+
+    // Generate a subtle nudge that encourages the action without revealing the source
+    let message = '';
+    let title = '';
+
+    // Pattern matching for common wishes
+    if (wish.includes('love note') || wish.includes('love letter') || wish.includes('write') && wish.includes('note')) {
+      title = 'Express Your Love';
+      message = `Consider writing ${partnerName} a heartfelt note today. Sometimes the simplest gestures mean the most. 💌`;
+    } else if (wish.includes('date') || wish.includes('plan') || wish.includes('surprise')) {
+      title = 'Plan Something Special';
+      message = `${partnerName} might appreciate a thoughtful surprise or planned activity. What could you organize for them? 💝`;
+    } else if (wish.includes('cook') || wish.includes('meal') || wish.includes('dinner')) {
+      title = 'Quality Time Together';
+      message = `How about cooking a meal together with ${partnerName}? It's a great way to connect and show you care. 🍳`;
+    } else if (wish.includes('massage') || wish.includes('backrub') || wish.includes('touch')) {
+      title = 'Physical Affection';
+      message = `${partnerName} might appreciate some physical affection today. A massage or gentle touch can mean so much. 💆`;
+    } else if (wish.includes('listen') || wish.includes('talk') || wish.includes('day')) {
+      title = 'Quality Conversation';
+      message = `Take time to really listen to ${partnerName} today. Ask about their day and give them your full attention. 💬`;
+    } else if (wish.includes('help') || wish.includes('chore') || wish.includes('clean')) {
+      title = 'Acts of Service';
+      message = `Look for ways to lighten ${partnerName}'s load today. Small acts of service can make a big difference. 🤝`;
+    } else {
+      // Generic nudge based on the wish
+      title = 'Make Their Day';
+      message = `Think about what would make ${partnerName} feel truly loved today. Sometimes it's the little things that matter most. 💕`;
+    }
+
+    return {
+      id: `wish-${Date.now()}`,
+      type: 'suggestion',
+      category: 'general',
+      title,
+      message,
+      priority: 'high', // Wishes are high priority!
+    };
   },
 };
