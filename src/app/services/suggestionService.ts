@@ -96,12 +96,12 @@ export const suggestionService = {
       // Rank templates by relevance
       const rankedTemplates = rankTemplates(categoryTemplates as any, context);
 
-      // Filter by minimum score (30+)
-      const relevantTemplates = filterByMinScore(rankedTemplates, 30);
+      // Filter by minimum score (20+ for more variety)
+      const relevantTemplates = filterByMinScore(rankedTemplates, 20);
 
       // Randomly select 3 from top-scored templates to provide variety
-      // Take top 10 (or all if less) and randomly pick 3
-      const candidatePool = relevantTemplates.slice(0, Math.min(10, relevantTemplates.length));
+      // Take top 30 (or all if less) and randomly pick 3
+      const candidatePool = relevantTemplates.slice(0, Math.min(30, relevantTemplates.length));
       const topSuggestions: any[] = [];
 
       // Shuffle and pick 3 random suggestions from the pool

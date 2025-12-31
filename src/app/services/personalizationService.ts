@@ -124,6 +124,10 @@ export const personalizationService = {
             favorite_activities: partnerOnboarding?.wants_needs?.favorite_activities || [],
             favorite_cuisines: partnerOnboarding?.wants_needs?.favorite_cuisines || [],
             wishes: partnerOnboarding?.wants_needs?.wishes,
+            shared_hobbies: partnerOnboarding?.wants_needs?.shared_hobbies || [],
+            growth_areas: partnerOnboarding?.wants_needs?.growth_areas || [],
+            travel_aspirations: partnerOnboarding?.wants_needs?.travel_aspirations || [],
+            inside_jokes: partnerOnboarding?.wants_needs?.inside_jokes || [],
           },
         },
         insights: {
