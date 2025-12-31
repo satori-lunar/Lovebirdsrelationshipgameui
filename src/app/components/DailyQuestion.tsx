@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Check, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Heart, MessageCircle, Check, Bookmark, BookmarkCheck, ChevronLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { motion } from 'motion/react';
@@ -241,6 +241,15 @@ export function DailyQuestion({ onComplete, partnerName }: DailyQuestionProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6">
       <div className="max-w-md mx-auto py-8">
+        {/* Back Button */}
+        <button
+          onClick={onComplete}
+          className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span>Back</span>
+        </button>
+
         {stage === 'answer' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
