@@ -786,34 +786,34 @@ function SwipeableDateCard({
               </div>
               
               {/* Title */}
-              <h2 className="text-3xl font-bold text-center mb-4 text-gray-800">
+              <h2 className="text-3xl font-bold text-center mb-4 text-gray-900">
                 {date.title}
               </h2>
-              
+
               {/* Description */}
-              <p className="text-base text-gray-700 text-center mb-8 flex-1 leading-relaxed">
+              <p className="text-base text-gray-900 text-center mb-8 flex-1 leading-relaxed">
                 {date.description}
               </p>
               
               {/* Info Cards */}
               <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/50">
+                <div className="text-center p-4 bg-white rounded-xl shadow-sm border border-gray-200">
                   <Clock className="w-6 h-6 mx-auto mb-2 text-purple-600" />
-                  <p className="text-xs font-semibold text-gray-700">{date.duration}</p>
+                  <p className="text-xs font-semibold text-gray-900">{date.duration}</p>
                 </div>
-                <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/50">
+                <div className="text-center p-4 bg-white rounded-xl shadow-sm border border-gray-200">
                   <DollarSign className="w-6 h-6 mx-auto mb-2 text-pink-600" />
-                  <p className="text-xs font-semibold text-gray-700">{date.budget}</p>
+                  <p className="text-xs font-semibold text-gray-900">{date.budget}</p>
                 </div>
-                <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-white/50">
+                <div className="text-center p-4 bg-white rounded-xl shadow-sm border border-gray-200">
                   <MapPin className="w-6 h-6 mx-auto mb-2 text-blue-600" />
-                  <p className="text-xs font-semibold text-gray-700">{date.location}</p>
+                  <p className="text-xs font-semibold text-gray-900">{date.location}</p>
                 </div>
               </div>
 
               {/* Category Badge */}
               <div className="mb-6 text-center">
-                <span className="inline-block px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700 shadow-sm">
+                <span className="inline-block px-4 py-2 bg-white rounded-full text-xs font-semibold text-gray-900 shadow-sm border border-gray-200">
                   {date.category}
                 </span>
               </div>
@@ -1069,34 +1069,34 @@ function FinalDateScreen({
                 {date.image}
               </div>
 
-              <h2 className="text-3xl font-bold text-center mb-4 text-gray-800">
+              <h2 className="text-3xl font-bold text-center mb-4 text-gray-900">
                 {date.title}
               </h2>
 
-              <p className="text-base text-gray-700 text-center mb-8 leading-relaxed">
+              <p className="text-base text-gray-900 text-center mb-8 leading-relaxed">
                 {date.description}
               </p>
 
               <div className="space-y-3 mb-8">
-                <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm">
+                <div className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
                   <Clock className="w-6 h-6 text-purple-600" />
                   <div>
-                    <p className="text-xs text-gray-600">Duration</p>
-                    <p className="font-semibold text-gray-800">{date.duration}</p>
+                    <p className="text-xs text-gray-700">Duration</p>
+                    <p className="font-semibold text-gray-900">{date.duration}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm">
+                <div className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
                   <MapPin className="w-6 h-6 text-pink-600" />
                   <div>
-                    <p className="text-xs text-gray-600">Location</p>
-                    <p className="font-semibold text-gray-800">{date.location}</p>
+                    <p className="text-xs text-gray-700">Location</p>
+                    <p className="font-semibold text-gray-900">{date.location}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm">
+                <div className="flex items-center gap-3 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
                   <DollarSign className="w-6 h-6 text-blue-600" />
                   <div>
-                    <p className="text-xs text-gray-600">Budget</p>
-                    <p className="font-semibold text-gray-800">{date.budget}</p>
+                    <p className="text-xs text-gray-700">Budget</p>
+                    <p className="font-semibold text-gray-900">{date.budget}</p>
                   </div>
                 </div>
               </div>
