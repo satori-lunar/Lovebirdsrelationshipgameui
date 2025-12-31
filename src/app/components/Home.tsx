@@ -41,20 +41,20 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const nextEvent = upcomingEvents[0];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Clean Header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-6">
+    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-24">
+      {/* Header with gradient */}
+      <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-6 py-8">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-sm text-gray-500 mb-0.5">Good day,</p>
-              <h1 className="text-2xl font-bold text-gray-900">{userName}</h1>
+              <p className="text-sm text-white/80 mb-1">Welcome back,</p>
+              <h1 className="text-2xl font-bold">{userName}</h1>
             </div>
             <button
               onClick={() => onNavigate('settings')}
-              className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+              className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors backdrop-blur-sm"
             >
-              <Settings className="w-5 h-5 text-gray-600" />
+              <Settings className="w-5 h-5" />
             </button>
           </div>
 
@@ -64,7 +64,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
       </div>
 
       <div className="max-w-md mx-auto px-6 pt-6 space-y-6">
-        {/* Today's Question - Clean Card */}
+        {/* Today's Question */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -72,24 +72,18 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
         >
           <button
             onClick={() => onNavigate('daily-question')}
-            className="w-full bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-all text-left border border-gray-100"
+            className="w-full bg-white rounded-2xl p-6 shadow-md hover:shadow-lg transition-all text-left"
             disabled={!relationship}
           >
             <div className="flex items-start gap-4">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                 canSeeFeedback
-                  ? 'bg-emerald-50'
+                  ? 'bg-gradient-to-br from-emerald-400 to-teal-500'
                   : hasCompletedDailyQuestion
-                  ? 'bg-amber-50'
-                  : 'bg-purple-50'
+                  ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+                  : 'bg-gradient-to-br from-pink-500 to-purple-500'
               }`}>
-                <MessageCircle className={`w-6 h-6 ${
-                  canSeeFeedback
-                    ? 'text-emerald-600'
-                    : hasCompletedDailyQuestion
-                    ? 'text-amber-600'
-                    : 'text-purple-600'
-                }`} />
+                <MessageCircle className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 mb-1">Today's Question</h3>
@@ -98,7 +92,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                 ) : hasCompletedDailyQuestion ? (
                   <p className="text-sm text-gray-600">Waiting for {partnerName} to answer</p>
                 ) : (
-                  <p className="text-sm text-gray-600">Answer together and guess each other's responses</p>
+                  <p className="text-sm text-gray-600">Answer together and guess responses</p>
                 )}
               </div>
               <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 mt-1" />
@@ -106,28 +100,26 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           </button>
         </motion.div>
 
-        {/* Stats - Minimal */}
+        {/* Stats */}
         {relationship && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.15 }}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            className="grid grid-cols-3 gap-3"
           >
-            <div className="grid grid-cols-3 divide-x divide-gray-100">
-              <div className="text-center pr-4">
-                <div className="text-2xl font-bold text-gray-900 mb-1">{currentStreak}</div>
-                <div className="text-xs text-gray-500">Day Streak</div>
-              </div>
-              <div className="text-center px-4">
-                <div className="text-2xl font-bold text-gray-900 mb-1">{totalCompleted}</div>
-                <div className="text-xs text-gray-500">Questions</div>
-              </div>
-              <div className="text-center pl-4">
-                <div className="text-2xl font-bold text-gray-900 mb-1">{nextEvent ? formatDaysUntil(nextEvent.daysUntil) : '—'}</div>
-                <div className="text-xs text-gray-500">Next Event</div>
-              </div>
-            </div>
+            <Card className="p-4 text-center bg-gradient-to-br from-pink-500 to-purple-500 text-white border-0 shadow-md">
+              <div className="text-2xl font-bold mb-1">{currentStreak}</div>
+              <div className="text-xs text-white/90">Day Streak</div>
+            </Card>
+            <Card className="p-4 text-center bg-white border-0 shadow-md">
+              <div className="text-2xl font-bold text-purple-600 mb-1">{totalCompleted}</div>
+              <div className="text-xs text-gray-600">Questions</div>
+            </Card>
+            <Card className="p-4 text-center bg-white border-0 shadow-md">
+              <div className="text-2xl font-bold text-pink-600 mb-1">{nextEvent ? formatDaysUntil(nextEvent.daysUntil) : '—'}</div>
+              <div className="text-xs text-gray-600">Next Event</div>
+            </Card>
           </motion.div>
         )}
 
@@ -142,7 +134,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
           <button
             onClick={() => onNavigate('messages')}
-            className="w-full bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all text-left border border-gray-100 relative"
+            className="w-full bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-left relative"
           >
             {unreadCount > 0 && (
               <div className="absolute top-4 right-4 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
@@ -150,8 +142,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               </div>
             )}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-                <Mail className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-xl flex items-center justify-center">
+                <Mail className="w-5 h-5 text-pink-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 text-sm">Love Messages</h3>
@@ -165,7 +157,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
           <button
             onClick={() => onNavigate('requests')}
-            className="w-full bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all text-left border border-gray-100 relative"
+            className="w-full bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-left relative"
           >
             {pendingCount > 0 && (
               <div className="absolute top-4 right-4 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
@@ -173,7 +165,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               </div>
             )}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-xl flex items-center justify-center">
                 <HandHeart className="w-5 h-5 text-purple-600" />
               </div>
               <div className="flex-1 min-w-0">
@@ -187,7 +179,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           </button>
         </motion.div>
 
-        {/* Main Features - Grid */}
+        {/* Main Features */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -199,9 +191,9 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => onNavigate('dates')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all text-left border border-gray-100"
+              className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all text-left"
             >
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center mb-3">
                 <Sparkles className="w-5 h-5 text-purple-600" />
               </div>
               <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Date Ideas</h3>
@@ -210,10 +202,10 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
             <button
               onClick={() => onNavigate('love-language')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all text-left border border-gray-100"
+              className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all text-left"
             >
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-3">
-                <Heart className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-xl flex items-center justify-center mb-3">
+                <Heart className="w-5 h-5 text-pink-600" />
               </div>
               <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Love Ideas</h3>
               <p className="text-xs text-gray-500">Weekly tips</p>
@@ -221,10 +213,10 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
             <button
               onClick={() => onNavigate('gifts')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all text-left border border-gray-100"
+              className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all text-left"
             >
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-3">
-                <Gift className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-xl flex items-center justify-center mb-3">
+                <Gift className="w-5 h-5 text-pink-600" />
               </div>
               <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Gift Ideas</h3>
               <p className="text-xs text-gray-500">Thoughtful</p>
@@ -232,9 +224,9 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
             <button
               onClick={() => onNavigate('memories')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all text-left border border-gray-100"
+              className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all text-left"
             >
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center mb-3">
                 <Camera className="w-5 h-5 text-purple-600" />
               </div>
               <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Memories</h3>
@@ -243,10 +235,10 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
             <button
               onClick={() => onNavigate('tracker')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all text-left border border-gray-100"
+              className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all text-left"
             >
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-3">
-                <Calendar className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-xl flex items-center justify-center mb-3">
+                <Calendar className="w-5 h-5 text-pink-600" />
               </div>
               <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Calendar</h3>
               <p className="text-xs text-gray-500">Key dates</p>
@@ -254,9 +246,9 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
             <button
               onClick={() => onNavigate('insights')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all text-left border border-gray-100"
+              className="bg-white rounded-2xl p-5 shadow-md hover:shadow-lg transition-all text-left"
             >
-              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center mb-3">
                 <TrendingUp className="w-5 h-5 text-purple-600" />
               </div>
               <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Insights</h3>
@@ -265,7 +257,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           </div>
         </motion.div>
 
-        {/* More - Simple List */}
+        {/* More */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -274,13 +266,13 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
         >
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">More</h2>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+          <div className="bg-white rounded-2xl shadow-md divide-y divide-gray-100">
             <button
               onClick={() => onNavigate('vault')}
               className="w-full p-4 hover:bg-gray-50 transition-colors text-left first:rounded-t-2xl"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center">
                   <Lock className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -296,7 +288,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               className="w-full p-4 hover:bg-gray-50 transition-colors text-left"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
                   <Star className="w-5 h-5 text-purple-600" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -312,8 +304,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               className="w-full p-4 hover:bg-gray-50 transition-colors text-left last:rounded-b-2xl"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-                  <Bookmark className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-purple-100 rounded-xl flex items-center justify-center">
+                  <Bookmark className="w-5 h-5 text-pink-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 text-sm">Love Nudges</h3>
@@ -326,12 +318,12 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
         </motion.div>
       </div>
 
-      {/* Bottom Navigation - Clean */}
+      {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 safe-area-bottom">
         <div className="max-w-md mx-auto flex items-center justify-around">
           <button className="flex flex-col items-center gap-1 py-2">
-            <Heart className="w-6 h-6 text-purple-600 fill-purple-600" />
-            <span className="text-xs font-medium text-purple-600">Home</span>
+            <Heart className="w-6 h-6 text-pink-500 fill-pink-500" />
+            <span className="text-xs font-medium text-pink-500">Home</span>
           </button>
           <button
             onClick={() => onNavigate('dates')}
