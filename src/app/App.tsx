@@ -23,12 +23,13 @@ import { Settings } from './components/Settings';
 import { PartnerInsights } from './components/PartnerInsights';
 import { DragonPet } from './components/DragonPet';
 import { DragonEvolutionDemo } from './components/DragonEvolutionDemo';
+import { WidgetGallery } from './components/WidgetGallery';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'settings' | 'insights' | 'dragon' | 'dragon-demo';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'widget-gallery' | 'settings' | 'insights' | 'dragon' | 'dragon-demo';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -228,6 +229,10 @@ export default function App() {
         <Memories onBack={handleBack} />
       )}
 
+      {currentView === 'widget-gallery' && (
+        <WidgetGallery onBack={handleBack} />
+      )}
+
       {currentView === 'insights' && userData && (
         <PartnerInsights
           partnerName={userData.partnerName || 'your partner'}
@@ -247,6 +252,7 @@ export default function App() {
         <Settings
           onBack={handleBack}
           partnerName={userData?.partnerName || 'your partner'}
+          onNavigate={handleNavigate}
         />
       )}
     </div>
