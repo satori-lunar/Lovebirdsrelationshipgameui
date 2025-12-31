@@ -41,7 +41,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const nextEvent = upcomingEvents[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100 pb-32">
       {/* Header with decorative elements */}
       <div className="relative bg-gradient-to-r from-pink-500 via-purple-500 to-pink-600 text-white px-6 py-8 overflow-hidden">
         {/* Decorative circles */}
