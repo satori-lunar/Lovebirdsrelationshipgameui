@@ -2362,7 +2362,7 @@ export const dateSuggestionTemplates: DateTemplate[] = [
   {
     id: 'date_fun_bowling_night',
     title: 'Bowling Alley Bash',
-    description: 'Hit the bowling alley with {partner_name} for strikes, spares, and gutter balls. Keep score creatively and celebrate each other's style.',
+    description: "Hit the bowling alley with {partner_name} for strikes, spares, and gutter balls. Keep score creatively and celebrate each other's style.",
     category: 'date',
     dateStyle: ['fun', 'adventurous'],
     dateType: 'game_night',
@@ -2903,7 +2903,7 @@ export const dateSuggestionTemplates: DateTemplate[] = [
   {
     id: 'date_travel_food_trail',
     title: 'Regional Food Trail',
-    description: 'Explore a region's culinary specialties with {partner_name}. Visit local producers, try regional dishes, and learn food history.',
+    description: "Explore a region's culinary specialties with {partner_name}. Visit local producers, try regional dishes, and learn food history.",
     category: 'date',
     dateStyle: ['foodie', 'cultural'],
     dateType: 'dinner',
@@ -2925,7 +2925,7 @@ export const dateSuggestionTemplates: DateTemplate[] = [
   {
     id: 'date_travel_architecture_tour',
     title: 'Architectural Walking Tour',
-    description: 'Explore a city's architectural gems with {partner_name}. Learn about building styles, historical significance, and design principles.',
+    description: "Explore a city's architectural gems with {partner_name}. Learn about building styles, historical significance, and design principles.",
     category: 'date',
     dateStyle: ['cultural', 'relaxed'],
     dateType: 'museum',
