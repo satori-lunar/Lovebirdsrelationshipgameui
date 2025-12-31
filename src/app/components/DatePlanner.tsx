@@ -90,17 +90,17 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           </div>
 
           {isLoading ? (
-            <Card className="p-8 text-center border-0 shadow-md">
+            <Card className="p-8 text-center border-0 shadow-md bg-white/90 backdrop-blur-sm">
               <div className="flex items-center justify-center gap-2">
                 <RefreshCw className="w-5 h-5 animate-spin text-purple-600" />
-                <p className="text-gray-600">Creating personalized date ideas...</p>
+                <p className="text-gray-700">Creating personalized date ideas...</p>
               </div>
             </Card>
           ) : suggestions.length === 0 ? (
-            <Card className="p-8 text-center border-0 shadow-md">
+            <Card className="p-8 text-center border-0 shadow-md bg-white/90 backdrop-blur-sm">
               <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">No date suggestions yet</p>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-gray-700 mb-2">No date suggestions yet</p>
+              <p className="text-sm text-gray-600 mb-4">
                 Complete your partner's onboarding or answer more daily questions to get personalized date ideas!
               </p>
               <Button
@@ -115,13 +115,13 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           ) : (
             <div className="space-y-4">
               {suggestions.map((suggestion) => (
-                <Card key={suggestion.id} className="p-5 border-0 shadow-md hover:shadow-lg transition-shadow">
+                <Card key={suggestion.id} className="p-5 border-0 shadow-md hover:shadow-lg transition-shadow bg-white/90 backdrop-blur-sm">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-semibold mb-1">
+                      <h3 className="font-semibold mb-1 text-gray-900">
                         {suggestion.metadata?.title || suggestion.suggestion_type}
                       </h3>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
                         {suggestion.metadata?.budget && (
                           <span>{suggestion.metadata.budget}</span>
                         )}
@@ -141,11 +141,11 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                     )}
                   </div>
 
-                  <p className="text-sm text-gray-700 mb-4">{suggestion.suggestion_text}</p>
+                  <p className="text-sm text-gray-800 mb-4">{suggestion.suggestion_text}</p>
 
                   {/* Why this suggestion */}
                   {suggestion.data_sources?.reason && (
-                    <div className="bg-purple-50 border-l-4 border-purple-400 p-3 mb-4">
+                    <div className="bg-purple-100/80 backdrop-blur-sm border-l-4 border-purple-500 p-3 mb-4">
                       <p className="text-xs text-purple-900">
                         💡 <strong>Why this?</strong> {suggestion.data_sources.reason}
                       </p>
@@ -214,42 +214,42 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         </div>
 
         {/* Date Style Guide */}
-        <Card className="p-5 mt-6 bg-gradient-to-r from-purple-50 to-pink-50 border-0">
-          <h3 className="font-semibold mb-3">Date Styles</h3>
+        <Card className="p-5 mt-6 bg-gradient-to-r from-purple-100/70 to-pink-100/70 backdrop-blur-sm border-0 shadow-md">
+          <h3 className="font-semibold mb-3 text-gray-900">Date Styles</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-start gap-2">
               <Sparkles className="w-4 h-4 text-purple-600 mt-0.5" />
               <div>
-                <span className="font-medium">Adventurous:</span>{' '}
-                <span className="text-gray-600">Outdoor activities, exploring, trying new things</span>
+                <span className="font-medium text-gray-900">Adventurous:</span>{' '}
+                <span className="text-gray-700">Outdoor activities, exploring, trying new things</span>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <Heart className="w-4 h-4 text-pink-600 mt-0.5" />
               <div>
-                <span className="font-medium">Relaxed:</span>{' '}
-                <span className="text-gray-600">Cozy, low-key, comfortable settings</span>
+                <span className="font-medium text-gray-900">Relaxed:</span>{' '}
+                <span className="text-gray-700">Cozy, low-key, comfortable settings</span>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <MapPin className="w-4 h-4 text-purple-600 mt-0.5" />
               <div>
-                <span className="font-medium">Cultural:</span>{' '}
-                <span className="text-gray-600">Museums, shows, art experiences</span>
+                <span className="font-medium text-gray-900">Cultural:</span>{' '}
+                <span className="text-gray-700">Museums, shows, art experiences</span>
               </div>
             </div>
           </div>
         </Card>
 
         {/* Personalization Info */}
-        <Card className="p-5 mt-4 border-0 bg-white/50 backdrop-blur-sm">
+        <Card className="p-5 mt-4 border-0 bg-white/90 backdrop-blur-sm shadow-md">
           <div className="flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-gray-700 mb-2">
+              <p className="text-sm text-gray-900 mb-2">
                 <strong>Personalization Tier {personalizationTier}</strong>
               </p>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-700">
                 {personalizationTier === 1 &&
                   "Basic suggestions. Complete your partner's onboarding to unlock more personalized date ideas!"}
                 {personalizationTier === 2 &&
