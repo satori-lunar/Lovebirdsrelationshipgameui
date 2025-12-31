@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Lovebirds</string>
+    <string name="title_activity_main">Lovebirds</string>
+    <string name="package_name">com.lovebirds.app</string>
+    <string name="custom_url_scheme">com.lovebirds.app</string>
+    <string name="widget_description">See your favorite memories with your partner</string>
+    <string name="widget_name">Lovebirds Memories</string>
+</resources>
