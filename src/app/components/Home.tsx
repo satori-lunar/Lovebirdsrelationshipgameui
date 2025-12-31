@@ -38,10 +38,9 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   });
 
   const upcomingEvents = relationship ? getUpcomingEvents(partnerName, partnerBirthday) : [];
-  const nextEvent = upcomingEvents[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100 pb-32">
       {/* Header with decorative elements */}
       <div className="relative bg-gradient-to-r from-pink-500 via-purple-500 to-pink-600 text-white px-6 py-8 overflow-hidden">
         {/* Decorative circles */}
@@ -128,37 +127,41 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               <div className="text-xs text-gray-600 font-medium">Questions</div>
             </Card>
             <Card className="p-4 text-center bg-white border-0 shadow-xl hover:shadow-2xl transition-all hover:scale-105">
-              <div className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-1">{nextEvent ? formatDaysUntil(nextEvent.daysUntil) : '—'}</div>
+              <div className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-1">{upcomingEvents[0] ? formatDaysUntil(upcomingEvents[0].daysUntil) : '—'}</div>
               <div className="text-xs text-gray-600 font-medium">Next Event</div>
             </Card>
           </motion.div>
         )}
 
-        {/* Upcoming Event Preview */}
-        {relationship && nextEvent && (
+        {/* Upcoming Events */}
+        {relationship && upcomingEvents.length > 0 && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.18 }}
+            className="space-y-3"
           >
-            <button
-              onClick={() => onNavigate('tracker')}
-              className="w-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all text-left relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-2xl">
-                  {nextEvent.type === 'birthday' ? '🎂' : '💝'}
+            {upcomingEvents.map((event, index) => (
+              <button
+                key={event.id}
+                onClick={() => onNavigate('tracker')}
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all text-left relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="relative flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-2xl">
+                    {event.type === 'birthday' ? '🎂' : '💝'}
+                  </div>
+                  <div className="flex-1 text-white">
+                    <h3 className="font-bold text-sm mb-0.5">{event.title}</h3>
+                    <p className="text-xs text-white/90">{formatEventDate(event.date)}</p>
+                  </div>
+                  <div className="text-sm font-bold text-white/90 bg-white/20 px-3 py-1 rounded-full">
+                    {formatDaysUntil(event.daysUntil)}
+                  </div>
                 </div>
-                <div className="flex-1 text-white">
-                  <h3 className="font-bold text-sm mb-0.5">{nextEvent.title}</h3>
-                  <p className="text-xs text-white/90">{formatEventDate(nextEvent.date)}</p>
-                </div>
-                <div className="text-sm font-bold text-white/90 bg-white/20 px-3 py-1 rounded-full">
-                  {formatDaysUntil(nextEvent.daysUntil)}
-                </div>
-              </div>
-            </button>
+              </button>
+            ))}
           </motion.div>
         )}
 
