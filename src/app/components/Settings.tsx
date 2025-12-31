@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Bell, Users, Link2, Copy, Check, Mail, MessageSquare, LogOut, Trash2, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, Bell, Users, Link2, Copy, Check, Mail, MessageSquare, LogOut, Trash2, AlertTriangle, Smartphone, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Switch } from './ui/switch';
@@ -13,9 +13,10 @@ import { toast } from 'sonner';
 interface SettingsProps {
   onBack: () => void;
   partnerName: string;
+  onNavigate?: (page: string) => void;
 }
 
-export function Settings({ onBack, partnerName }: SettingsProps) {
+export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
   const { user, signOut } = useAuth();
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -266,6 +267,34 @@ export function Settings({ onBack, partnerName }: SettingsProps) {
             </p>
           </div>
         </Card>
+
+        {/* Widget Gallery */}
+        {onNavigate && (
+          <Card className="p-6 border-0 shadow-lg bg-white">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                <Smartphone className="w-5 h-5 text-purple-600" />
+              </div>
+              <h2 className="font-semibold text-lg">Home Screen Widget</h2>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              Display your favorite memories on your phone's home screen
+            </p>
+
+            <Button
+              onClick={() => onNavigate('widget-gallery')}
+              variant="outline"
+              className="w-full flex items-center justify-between h-12"
+            >
+              <span className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4" />
+                Configure Widget
+              </span>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </Card>
+        )}
 
         {/* Account Actions */}
         <Card className="p-6 border-0 shadow-lg bg-white">
