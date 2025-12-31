@@ -35,4 +35,63 @@ export interface WidgetBundle {
   memories: MemoryWidgetData[];   // Array of selected memories
   config: WidgetConfiguration;
   lastUpdated: string;
+  activeGift?: WidgetGiftData;    // Partner-sent gift takes priority
+}
+
+/**
+ * Gift types that can be sent to partner's widget
+ */
+export type WidgetGiftType = 'photo' | 'memory' | 'note';
+
+/**
+ * Status of a widget gift
+ */
+export type WidgetGiftStatus = 'pending' | 'delivered' | 'seen' | 'dismissed' | 'expired';
+
+/**
+ * Data for a gift sent to partner's widget
+ */
+export interface WidgetGiftData {
+  id: string;
+  senderId: string;
+  senderName: string;
+  giftType: WidgetGiftType;
+  photoUrl: string | null;        // For 'photo' type or memory photo
+  memoryId: string | null;        // For 'memory' type
+  memoryTitle: string | null;     // Title if memory type
+  message: string | null;         // Sweet note (max 150 chars)
+  createdAt: string;
+  expiresAt: string;
+}
+
+/**
+ * Database row for widget_gifts table
+ */
+export interface WidgetGiftRow {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  relationship_id: string;
+  gift_type: WidgetGiftType;
+  photo_url: string | null;
+  memory_id: string | null;
+  message: string | null;
+  status: WidgetGiftStatus;
+  delivered_at: string | null;
+  seen_at: string | null;
+  dismissed_at: string | null;
+  created_at: string;
+  expires_at: string;
+}
+
+/**
+ * Payload for creating a new widget gift
+ */
+export interface CreateWidgetGiftPayload {
+  receiverId: string;
+  relationshipId: string;
+  giftType: WidgetGiftType;
+  photoUrl?: string;
+  memoryId?: string;
+  message?: string;
 }

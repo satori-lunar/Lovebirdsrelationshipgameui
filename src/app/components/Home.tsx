@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, Calendar, Gift, Sparkles, Camera, Settings, Mail, HandHeart, Star, Lock, TrendingUp, Bell, ChevronDown } from 'lucide-react';
+import { Heart, MessageCircle, Calendar, Gift, Sparkles, Camera, Settings, Mail, HandHeart, Star, Lock, TrendingUp, Bell, ChevronDown, Smartphone } from 'lucide-react';
 import { Card } from './ui/card';
 import { motion } from 'motion/react';
 import { PartnerConnection } from './PartnerConnection';
@@ -353,6 +353,27 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           </details>
         </motion.div>
       </div>
+
+      {/* Floating Action Button - Send to Widget */}
+      {relationship?.partner_b_id && (
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.5, type: 'spring' }}
+          onClick={() => onNavigate('send-widget-gift')}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full shadow-xl flex items-center justify-center hover:shadow-2xl hover:scale-110 transition-all z-50 group"
+          aria-label="Send to partner's widget"
+        >
+          <Smartphone className="w-6 h-6 text-white" />
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+            <Heart className="w-3 h-3 text-white fill-white" />
+          </div>
+          {/* Tooltip */}
+          <div className="absolute right-full mr-3 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            Send to their widget
+          </div>
+        </motion.button>
+      )}
 
       {/* Bottom Navigation - Enhanced */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 px-6 py-3 safe-area-bottom shadow-2xl">
