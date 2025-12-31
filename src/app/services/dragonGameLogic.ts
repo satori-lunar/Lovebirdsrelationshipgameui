@@ -390,6 +390,16 @@ export const dragonGameLogic = {
     activityType: string,
     activityId: string
   ): Promise<ActivityReward> {
+    // 🔒 DRAGON GAMIFICATION FROZEN - No XP or rewards awarded
+    // Return empty reward for all activities
+    return {
+      xp: 0,
+      items: [],
+      leveledUp: false,
+      evolved: false,
+    };
+
+    /* ORIGINAL CODE COMMENTED OUT FOR FREEZING
     // Check if already logged
     const alreadyLogged = await dragonService.hasLoggedActivity(userId, activityType, activityId);
     if (alreadyLogged) {
@@ -427,6 +437,7 @@ export const dragonGameLogic = {
       evolved: xpResult.evolved,
       newStage: xpResult.newStage,
     };
+    */
   },
 
   // Get all item definitions for UI display
