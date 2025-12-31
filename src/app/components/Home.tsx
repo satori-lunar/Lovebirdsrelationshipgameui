@@ -377,7 +377,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             className="flex flex-col items-center gap-1 py-2 hover:scale-105 transition-transform"
           >
             <div className="w-11 h-11 bg-gray-100 rounded-2xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <Gift className="w-5 h-5 text-gray-600" />
+              <Heart className="w-5 h-5 text-gray-600" />
             </div>
             <span className="text-xs text-gray-600">Ideas</span>
           </button>
