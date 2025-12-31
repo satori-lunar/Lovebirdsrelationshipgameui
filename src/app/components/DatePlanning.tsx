@@ -691,39 +691,7 @@ function SwipeableDateCard({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
-      <div className={`bg-gradient-to-r ${isPartner1 ? 'from-purple-500 to-pink-500' : 'from-pink-500 to-purple-500'} text-white p-6 pb-8`}>
-        <div className="max-w-md mx-auto">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 mb-6 hover:opacity-80"
-          >
-            <ChevronLeft className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5" />
-            </div>
-            <h1 className="text-2xl">{partnerName === 'You' ? 'Your Turn' : `${partnerName}'s Turn`}</h1>
-          </div>
-          <p className="text-white/90 text-sm mb-4">
-            Swipe right ❤️ for yes, left ✕ for no
-          </p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-white/20 rounded-full h-2">
-              <div
-                className="bg-white h-2 rounded-full transition-all"
-                style={{ width: `${((currentIndex + 1) / totalCount) * 100}%` }}
-              />
-            </div>
-            <span className="text-sm">{currentIndex + 1}/{totalCount}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-md mx-auto px-6 -mt-2 relative" style={{ height: '600px' }}>
+    <div className="max-w-md mx-auto px-6 pt-4 relative" style={{ height: '600px' }}>
         {/* Like overlay */}
         <motion.div
           style={{
@@ -876,7 +844,6 @@ function SwipeableDateCard({
           </Card>
         </motion.div>
       </div>
-    </div>
   );
 }
 
