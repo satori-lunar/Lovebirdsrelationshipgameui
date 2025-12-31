@@ -96,12 +96,12 @@ export const suggestionService = {
       // Rank templates by relevance
       const rankedTemplates = rankTemplates(categoryTemplates as any, context);
 
-      // Filter by minimum score (20+ for more variety)
-      const relevantTemplates = filterByMinScore(rankedTemplates, 20);
+      // Filter by minimum score (10+ for maximum variety)
+      const relevantTemplates = filterByMinScore(rankedTemplates, 10);
 
       // Randomly select 3 from top-scored templates to provide variety
-      // Take top 30 (or all if less) and randomly pick 3
-      const candidatePool = relevantTemplates.slice(0, Math.min(30, relevantTemplates.length));
+      // Take top 50 (or all if less) and randomly pick 3
+      const candidatePool = relevantTemplates.slice(0, Math.min(50, relevantTemplates.length));
       const topSuggestions: any[] = [];
 
       // Shuffle and pick 3 random suggestions from the pool
@@ -254,12 +254,20 @@ export const suggestionService = {
     const weekStart = getWeekStartDate();
 
     // Delete existing suggestions for this week
-    await api.supabase
+    const deleteResult = await api.supabase
       .from('suggestions')
       .delete()
       .eq('user_id', userId)
       .eq('category', category)
       .eq('week_start_date', weekStart);
+
+    if (deleteResult.error) {
+      console.error('Error deleting suggestions:', deleteResult.error);
+      throw deleteResult.error;
+    }
+
+    // Small delay to ensure deletion is processed
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Generate new suggestions
     return this.generateSuggestions(userId, partnerId, category);
