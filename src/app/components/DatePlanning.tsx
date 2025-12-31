@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 interface DatePlanningProps {
   onBack: () => void;
   partnerName: string;
+  initialMode?: DateMode;
 }
 
 type DateMode = 'select' | 'plan-for-partner' | 'swipe-together';
@@ -19,12 +20,12 @@ type SwipeStage = 'welcome' | 'swiping' | 'matches' | 'decision' | 'final';
 
 // Import types that are needed for the component
 import { User, Users, Clock, DollarSign, MapPin } from 'lucide-react';
-export function DatePlanning({ onBack, partnerName }: DatePlanningProps) {
+export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: DatePlanningProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const queryClient = useQueryClient();
 
-  const [mode, setMode] = useState<DateMode>('select');
+  const [mode, setMode] = useState<DateMode>(initialMode);
   const [swipeStage, setSwipeStage] = useState<SwipeStage>('welcome');
   const [currentSwipeIndex, setCurrentSwipeIndex] = useState(0);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);

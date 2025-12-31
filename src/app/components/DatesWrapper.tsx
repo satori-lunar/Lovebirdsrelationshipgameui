@@ -46,6 +46,7 @@ export function DatesWrapper({ onBack, partnerName }: DatesWrapperProps) {
       <DatePlanning
         onBack={handleBackToHub}
         partnerName={partnerName}
+        initialMode="swipe-together"
       />
     );
   }
