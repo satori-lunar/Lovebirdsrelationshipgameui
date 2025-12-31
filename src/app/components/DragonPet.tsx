@@ -80,6 +80,21 @@ export function DragonPet({ onBack }: DragonPetProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-100 to-purple-100 relative">
+      {/* Coming Soon Overlay */}
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl p-8 max-w-sm mx-4 text-center shadow-2xl">
+          <div className="text-6xl mb-4">🐉</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Coming Soon!</h2>
+          <p className="text-gray-600 mb-4">
+            We're working on making your dragon pet experience even more amazing. Check back soon for updates!
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+            <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
+        </div>
+      </div>
       {/* Top navigation bar */}
       <div className="absolute top-0 left-0 right-0 z-40 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 shadow-lg">
         <div className="max-w-md mx-auto flex items-center justify-between">
