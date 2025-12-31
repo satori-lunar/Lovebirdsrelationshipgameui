@@ -69,6 +69,20 @@ export function useQuestionStats() {
         // Check consecutive days from today backwards
         // BOTH partners must have answered on the same day for it to count
         let checkDate = new Date(today);
+        let startedCounting = false;
+
+        // First, check if both answered today
+        const todayKey = checkDate.toISOString().split('T')[0];
+        if (userAnswersByDate.has(todayKey) && partnerAnswersByDate.has(todayKey)) {
+          currentStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+          startedCounting = true;
+        } else {
+          // If not both answered today, start counting from yesterday
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+
+        // Continue counting backwards for consecutive days
         while (true) {
           const dateKey = checkDate.toISOString().split('T')[0];
           const userAnswered = userAnswersByDate.has(dateKey);
@@ -77,7 +91,10 @@ export function useQuestionStats() {
           if (userAnswered && partnerAnswered) {
             currentStreak++;
             checkDate.setDate(checkDate.getDate() - 1);
+            startedCounting = true;
           } else {
+            // Only break if we've started counting (found at least one valid day)
+            // or if we've checked yesterday and found nothing
             break;
           }
         }
