@@ -357,6 +357,205 @@ struct LovebirdsMemoryWidget: Widget {
     }
 }
 
+// MARK: - Lock Screen Widget (iOS 16+)
+
+@available(iOSApplicationExtension 16.0, *)
+struct LovebirdsLockScreenWidget: Widget {
+    let kind: String = "LovebirdsLockScreenWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: LovebirdsMemoryProvider()) { entry in
+            LockScreenWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Lovebirds")
+        .description("Partner gifts & memories on your lock screen")
+        .supportedFamilies([
+            .accessoryCircular,
+            .accessoryRectangular,
+            .accessoryInline
+        ])
+    }
+}
+
+// MARK: - Lock Screen Views
+
+@available(iOSApplicationExtension 16.0, *)
+struct LockScreenWidgetView: View {
+    var entry: LovebirdsMemoryProvider.Entry
+    @Environment(\.widgetFamily) var family
+
+    var body: some View {
+        switch family {
+        case .accessoryCircular:
+            LockScreenCircularView(entry: entry)
+        case .accessoryRectangular:
+            LockScreenRectangularView(entry: entry)
+        case .accessoryInline:
+            LockScreenInlineView(entry: entry)
+        default:
+            LockScreenCircularView(entry: entry)
+        }
+    }
+}
+
+@available(iOSApplicationExtension 16.0, *)
+struct LockScreenCircularView: View {
+    var entry: LovebirdsMemoryProvider.Entry
+
+    var body: some View {
+        ZStack {
+            if entry.hasGift {
+                // Gift from partner - show heart with notification dot
+                AccessoryWidgetBackground()
+                VStack(spacing: 2) {
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.pink)
+                    Text("Gift!")
+                        .font(.system(size: 8, weight: .medium))
+                }
+            } else if let memory = entry.memory {
+                // Show memory photo in circular frame
+                if let url = URL(string: memory.photoUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .clipShape(Circle())
+                        default:
+                            AccessoryWidgetBackground()
+                            Image(systemName: "heart.fill")
+                                .font(.title2)
+                        }
+                    }
+                } else {
+                    AccessoryWidgetBackground()
+                    Image(systemName: "heart.fill")
+                        .font(.title2)
+                }
+            } else {
+                // Empty state
+                AccessoryWidgetBackground()
+                Image(systemName: "heart")
+                    .font(.title2)
+            }
+        }
+        .widgetAccentable()
+    }
+}
+
+@available(iOSApplicationExtension 16.0, *)
+struct LockScreenRectangularView: View {
+    var entry: LovebirdsMemoryProvider.Entry
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Left side - icon or photo
+            if entry.hasGift {
+                ZStack {
+                    Circle()
+                        .fill(.pink.opacity(0.3))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.pink)
+                }
+            } else if let memory = entry.memory, let url = URL(string: memory.photoUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    default:
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.secondary.opacity(0.3))
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .foregroundColor(.secondary)
+                            )
+                    }
+                }
+            } else {
+                ZStack {
+                    Circle()
+                        .fill(.secondary.opacity(0.3))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "heart")
+                        .font(.system(size: 16))
+                }
+            }
+
+            // Right side - text content
+            VStack(alignment: .leading, spacing: 2) {
+                if let gift = entry.gift {
+                    Text("From \(gift.senderName)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                    if let message = gift.message, !message.isEmpty {
+                        Text(message)
+                            .font(.system(size: 11))
+                            .lineLimit(2)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Sent you love!")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                } else if let memory = entry.memory {
+                    Text(memory.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                    Text(memory.date)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("Lovebirds")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Add memories in app")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+        }
+        .widgetAccentable()
+    }
+}
+
+@available(iOSApplicationExtension 16.0, *)
+struct LockScreenInlineView: View {
+    var entry: LovebirdsMemoryProvider.Entry
+
+    var body: some View {
+        if let gift = entry.gift {
+            Label {
+                if let message = gift.message, !message.isEmpty {
+                    Text("\(gift.senderName): \(message)")
+                } else {
+                    Text("\(gift.senderName) sent you love!")
+                }
+            } icon: {
+                Image(systemName: "heart.fill")
+            }
+        } else if let memory = entry.memory {
+            Label {
+                Text("\(memory.title) - \(memory.date)")
+            } icon: {
+                Image(systemName: "heart")
+            }
+        } else {
+            Label("Lovebirds", systemImage: "heart")
+        }
+    }
+}
+
 // MARK: - Preview
 
 #Preview(as: .systemMedium) {

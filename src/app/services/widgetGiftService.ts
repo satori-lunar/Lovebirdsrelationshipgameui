@@ -18,6 +18,7 @@ import type {
 import { widgetService } from './widgetService';
 
 const WIDGET_GIFT_KEY = 'lovebirds_widget_gift';
+const LOCK_SCREEN_GIFT_KEY = 'lovebirds_lock_screen_gift';
 
 export const widgetGiftService = {
   /**
@@ -208,6 +209,7 @@ export const widgetGiftService = {
   /**
    * Sync active gifts to native widget storage
    * Gift takes priority over memory rotation
+   * Also syncs to lock screen widget storage
    */
   async syncGiftsToWidget(): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -218,7 +220,7 @@ export const widgetGiftService = {
     // Get the current (first in queue) gift
     const activeGift = gifts.length > 0 ? gifts[0] : null;
 
-    // Store gift data for widget
+    // Store gift data for home screen widget
     await Preferences.set({
       key: WIDGET_GIFT_KEY,
       value: JSON.stringify({
@@ -228,12 +230,80 @@ export const widgetGiftService = {
       }),
     });
 
+    // Also sync to lock screen storage (same data, different key for clarity)
+    await this.syncToLockScreen(activeGift);
+
     // If there's an active gift, mark it as delivered
     if (activeGift) {
       await this.markGiftDelivered(activeGift.id);
     }
 
-    // Trigger widget refresh
+    // Trigger widget refresh (includes lock screen widgets)
+    await widgetService.notifyWidgetRefresh();
+  },
+
+  /**
+   * Sync gift data to lock screen widget storage
+   * Used by iOS lock screen widgets and Android lock screen notifications
+   */
+  async syncToLockScreen(activeGift: WidgetGiftData | null): Promise<void> {
+    const lockScreenData = {
+      hasActiveGift: activeGift !== null,
+      gift: activeGift ? {
+        id: activeGift.id,
+        senderName: activeGift.senderName,
+        photoUrl: activeGift.photoUrl,
+        message: activeGift.message,
+        expiresAt: activeGift.expiresAt,
+        // Shortened message for lock screen display
+        shortMessage: activeGift.message
+          ? activeGift.message.substring(0, 50) + (activeGift.message.length > 50 ? '...' : '')
+          : null,
+      } : null,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    await Preferences.set({
+      key: LOCK_SCREEN_GIFT_KEY,
+      value: JSON.stringify(lockScreenData),
+    });
+  },
+
+  /**
+   * Get lock screen gift data
+   */
+  async getLockScreenGiftData(): Promise<{
+    hasActiveGift: boolean;
+    gift: {
+      id: string;
+      senderName: string;
+      photoUrl: string | null;
+      message: string | null;
+      shortMessage: string | null;
+      expiresAt: string;
+    } | null;
+    lastUpdated: string;
+  } | null> {
+    const { value } = await Preferences.get({ key: LOCK_SCREEN_GIFT_KEY });
+    return value ? JSON.parse(value) : null;
+  },
+
+  /**
+   * Dismiss lock screen notification (Android)
+   * Clears the persistent notification
+   */
+  async dismissLockScreenNotification(): Promise<void> {
+    // Clear local storage
+    await Preferences.set({
+      key: LOCK_SCREEN_GIFT_KEY,
+      value: JSON.stringify({
+        hasActiveGift: false,
+        gift: null,
+        lastUpdated: new Date().toISOString(),
+      }),
+    });
+
+    // Native dismissal will be triggered by widget refresh
     await widgetService.notifyWidgetRefresh();
   },
 

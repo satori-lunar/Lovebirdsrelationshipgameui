@@ -42,6 +42,10 @@ class LovebirdsWidgetProvider : AppWidgetProvider() {
         for (appWidgetId in appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId)
         }
+
+        // Also update lock screen notification
+        val lockScreenManager = LockScreenNotificationManager(context)
+        lockScreenManager.checkAndShowNotification()
     }
 
     override fun onEnabled(context: Context) {
