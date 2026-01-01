@@ -13,6 +13,8 @@ import { dragonGameLogic } from '../services/dragonGameLogic';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
+import { AISuggestions } from './AISuggestions';
+import type { AISuggestion } from '../services/aiSuggestionService';
 
 interface LoveMessagesProps {
   onBack: () => void;
@@ -284,6 +286,16 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
         {/* Send Tab */}
         {activeTab === 'send' && (
           <div className="space-y-4">
+            {/* AI Suggestions */}
+            <AISuggestions
+              type="message"
+              title="AI Message Ideas"
+              onSelect={(suggestion: AISuggestion) => {
+                setMessageText(suggestion.text);
+              }}
+              compact
+            />
+
             <Card className="p-5 border-0 shadow-lg">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-pink-500" />

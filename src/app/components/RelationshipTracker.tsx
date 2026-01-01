@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { ChevronLeft, Calendar, Plus, Heart, Gift, Cake, PartyPopper } from 'lucide-react';
+import { ChevronLeft, Calendar, Plus, Heart, Gift, Cake, PartyPopper, Target } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { AISuggestions } from './AISuggestions';
+import { useAuth } from '../hooks/useAuth';
+import { useRelationship } from '../hooks/useRelationship';
+import { usePartner } from '../hooks/usePartner';
+import type { AISuggestion } from '../services/aiSuggestionService';
 
 interface RelationshipTrackerProps {
   onBack: () => void;
@@ -19,8 +24,21 @@ interface ImportantDate {
   recurring: boolean;
 }
 
+interface Goal {
+  id: number;
+  title: string;
+  category?: string;
+  completed: boolean;
+}
+
 export function RelationshipTracker({ onBack, partnerName }: RelationshipTrackerProps) {
+  const { user } = useAuth();
+  const { relationship } = useRelationship();
+  const { partnerId } = usePartner(relationship);
+
   const [dates, setDates] = useState<ImportantDate[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [activeTab, setActiveTab] = useState<'dates' | 'goals'>('dates');
 
   const [isAddingDate, setIsAddingDate] = useState(false);
   const [newDate, setNewDate] = useState({
@@ -28,6 +46,26 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     date: '',
     type: 'custom' as const
   });
+
+  const handleGoalSelect = (suggestion: AISuggestion) => {
+    const newGoal: Goal = {
+      id: Date.now(),
+      title: suggestion.text,
+      category: suggestion.category,
+      completed: false,
+    };
+    setGoals([...goals, newGoal]);
+  };
+
+  const toggleGoalComplete = (goalId: number) => {
+    setGoals(goals.map(g =>
+      g.id === goalId ? { ...g, completed: !g.completed } : g
+    ));
+  };
+
+  const removeGoal = (goalId: number) => {
+    setGoals(goals.filter(g => g.id !== goalId));
+  };
 
   const getDaysUntil = (dateStr: string) => {
     const target = new Date(dateStr);
@@ -94,11 +132,13 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <Calendar className="w-6 h-6" />
+                {activeTab === 'dates' ? <Calendar className="w-6 h-6" /> : <Target className="w-6 h-6" />}
               </div>
               <div>
-                <h1 className="text-2xl">Important Dates</h1>
-                <p className="text-white/90 text-sm">Never forget a special moment</p>
+                <h1 className="text-2xl">{activeTab === 'dates' ? 'Important Dates' : 'Couple Goals'}</h1>
+                <p className="text-white/90 text-sm">
+                  {activeTab === 'dates' ? 'Never forget a special moment' : 'Grow together with shared goals'}
+                </p>
               </div>
             </div>
           </div>
@@ -106,8 +146,37 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
       </div>
 
       <div className="max-w-md mx-auto px-6 -mt-6">
-        {/* Add Date Button */}
-        <Dialog open={isAddingDate} onOpenChange={setIsAddingDate}>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setActiveTab('dates')}
+            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'dates'
+                ? 'bg-white text-purple-600 shadow-lg'
+                : 'bg-white/50 text-gray-600'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            Dates
+          </button>
+          <button
+            onClick={() => setActiveTab('goals')}
+            className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'goals'
+                ? 'bg-white text-purple-600 shadow-lg'
+                : 'bg-white/50 text-gray-600'
+            }`}
+          >
+            <Target className="w-4 h-4" />
+            Goals
+          </button>
+        </div>
+
+        {/* Dates Tab Content */}
+        {activeTab === 'dates' && (
+          <>
+            {/* Add Date Button */}
+            <Dialog open={isAddingDate} onOpenChange={setIsAddingDate}>
           <DialogTrigger asChild>
             <Button className="w-full mb-6 bg-white text-purple-600 hover:bg-white/90 shadow-lg border-0 py-6">
               <Plus className="w-5 h-5 mr-2" />
@@ -283,6 +352,103 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
             </div>
           </div>
         </Card>
+          </>
+        )}
+
+        {/* Goals Tab Content */}
+        {activeTab === 'goals' && (
+          <div className="space-y-6">
+            {/* AI Suggestions */}
+            <AISuggestions
+              type="goal"
+              title="AI Goal Ideas"
+              onSelect={handleGoalSelect}
+            />
+
+            {/* Current Goals */}
+            <div className="space-y-4">
+              <h2 className="font-semibold">Your Goals</h2>
+
+              {goals.length === 0 ? (
+                <Card className="p-8 text-center border-0 shadow-lg">
+                  <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 mb-2">No goals yet</p>
+                  <p className="text-sm text-gray-400">
+                    Use the AI suggestions above to add your first goal!
+                  </p>
+                </Card>
+              ) : (
+                goals.map((goal) => (
+                  <Card
+                    key={goal.id}
+                    className={`p-4 border-0 shadow-md transition-all ${
+                      goal.completed ? 'bg-green-50' : 'bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <button
+                        onClick={() => toggleGoalComplete(goal.id)}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                          goal.completed
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'border-gray-300 hover:border-purple-400'
+                        }`}
+                      >
+                        {goal.completed && (
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${goal.completed ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
+                          {goal.title}
+                        </p>
+                        {goal.category && (
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 text-purple-600 text-xs rounded-full">
+                            {goal.category.replace('_', ' ')}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removeGoal(goal.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </Card>
+                ))
+              )}
+            </div>
+
+            {/* Stats */}
+            {goals.length > 0 && (
+              <Card className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-0">
+                <div className="flex justify-around text-center">
+                  <div>
+                    <p className="text-2xl font-bold text-purple-600">{goals.length}</p>
+                    <p className="text-xs text-gray-600">Total Goals</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-green-600">
+                      {goals.filter(g => g.completed).length}
+                    </p>
+                    <p className="text-xs text-gray-600">Completed</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-orange-600">
+                      {goals.filter(g => !g.completed).length}
+                    </p>
+                    <p className="text-xs text-gray-600">In Progress</p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

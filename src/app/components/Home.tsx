@@ -16,6 +16,7 @@ import {
   Gift,
   BookHeart,
   ChevronRight,
+  ChevronDown,
   Flame,
   TrendingUp,
   Target,
@@ -66,6 +67,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const [showCelebration, setShowCelebration] = useState(false);
   const [showCarousel, setShowCarousel] = useState(false);
   const [celebrationGift, setCelebrationGift] = useState<WidgetGiftData | null>(null);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
 
   // Load pending widget gifts
   useEffect(() => {
@@ -508,72 +510,98 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             </motion.div>
           </div>
 
-          {/* More Features */}
+          {/* More Options - Collapsible */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
-            className="grid grid-cols-3 gap-3"
           >
             <button
-              onClick={() => onNavigate('vault')}
-              className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+              onClick={() => setShowMoreOptions(!showMoreOptions)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-md border border-gray-100 hover:bg-white transition-colors"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-md">
-                <Lock className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="font-medium text-gray-900 text-xs">Vault</h3>
+              <span className="font-medium text-gray-700">More Options</span>
+              <motion.div
+                animate={{ rotate: showMoreOptions ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown className="w-5 h-5 text-gray-500" />
+              </motion.div>
             </button>
 
-            <button
-              onClick={() => onNavigate('insights')}
-              className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-5 h-5 text-emerald-600" />
-              </div>
-              <h3 className="font-medium text-gray-900 text-xs">Insights</h3>
-            </button>
+            <AnimatePresence>
+              {showMoreOptions && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-3 gap-3 pt-4">
+                    <button
+                      onClick={() => onNavigate('vault')}
+                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-md">
+                        <Lock className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="font-medium text-gray-900 text-xs">Vault</h3>
+                    </button>
 
-            <button
-              onClick={() => onNavigate('nudges')}
-              className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-rose-100 to-pink-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                <Bell className="w-5 h-5 text-rose-500" />
-              </div>
-              <h3 className="font-medium text-gray-900 text-xs">Nudges</h3>
-            </button>
+                    <button
+                      onClick={() => onNavigate('insights')}
+                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                        <TrendingUp className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <h3 className="font-medium text-gray-900 text-xs">Insights</h3>
+                    </button>
 
-            <button
-              onClick={() => onNavigate('love-language')}
-              className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                <Heart className="w-5 h-5 text-pink-500" />
-              </div>
-              <h3 className="font-medium text-gray-900 text-xs">Love Ideas</h3>
-            </button>
+                    <button
+                      onClick={() => onNavigate('nudges')}
+                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-rose-100 to-pink-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                        <Bell className="w-5 h-5 text-rose-500" />
+                      </div>
+                      <h3 className="font-medium text-gray-900 text-xs">Nudges</h3>
+                    </button>
 
-            <button
-              onClick={() => onNavigate('tracker')}
-              className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                <Target className="w-5 h-5 text-indigo-500" />
-              </div>
-              <h3 className="font-medium text-gray-900 text-xs">Goals</h3>
-            </button>
+                    <button
+                      onClick={() => onNavigate('love-language')}
+                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                        <Heart className="w-5 h-5 text-pink-500" />
+                      </div>
+                      <h3 className="font-medium text-gray-900 text-xs">Love Ideas</h3>
+                    </button>
 
-            <button
-              onClick={() => onNavigate('dragon')}
-              className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                <span className="text-xl">🐉</span>
-              </div>
-              <h3 className="font-medium text-gray-900 text-xs">Dragon</h3>
-            </button>
+                    <button
+                      onClick={() => onNavigate('tracker')}
+                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                        <Target className="w-5 h-5 text-indigo-500" />
+                      </div>
+                      <h3 className="font-medium text-gray-900 text-xs">Goals</h3>
+                    </button>
+
+                    <button
+                      onClick={() => onNavigate('dragon')}
+                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                        <span className="text-xl">🐉</span>
+                      </div>
+                      <h3 className="font-medium text-gray-900 text-xs">Dragon</h3>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* Stats Row */}
