@@ -6,10 +6,14 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { useAuth } from '../hooks/useAuth';
+import { useRelationship } from '../hooks/useRelationship';
+import { usePartner } from '../hooks/usePartner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
+import { AISuggestions } from './AISuggestions';
+import type { AISuggestion } from '../services/aiSuggestionService';
 
 interface SurpriseVaultProps {
   onBack: () => void;
@@ -30,6 +34,8 @@ interface SecretSuggestion {
 
 export function SurpriseVault({ onBack, partnerName }: SurpriseVaultProps) {
   const { user } = useAuth();
+  const { relationship } = useRelationship();
+  const { partnerId } = usePartner(relationship);
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSurprise, setNewSurprise] = useState({
@@ -37,6 +43,16 @@ export function SurpriseVault({ onBack, partnerName }: SurpriseVaultProps) {
     description: '',
     category: 'gift' as const,
   });
+
+  // Handle AI suggestion selection
+  const handleAISuggestionSelect = (suggestion: AISuggestion) => {
+    setNewSurprise({
+      title: suggestion.text,
+      description: '',
+      category: (suggestion.category as 'gift' | 'date' | 'love_language') || 'gift',
+    });
+    setShowAddForm(true);
+  };
 
   // Fetch secret suggestions
   const { data: secrets = [], isLoading } = useQuery({
@@ -316,6 +332,17 @@ export function SurpriseVault({ onBack, partnerName }: SurpriseVaultProps) {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* AI Suggestions */}
+        <div className="mb-6">
+          <AISuggestions
+            type="secret"
+            title="AI Surprise Ideas"
+            onSelect={handleAISuggestionSelect}
+            compact
+            className="[&>button]:from-gray-700 [&>button]:to-gray-800 [&>button]:hover:from-gray-600 [&>button]:hover:to-gray-700 [&>div]:bg-gray-800 [&>div]:border-gray-700"
+          />
+        </div>
 
         {/* Secrets List */}
         <div className="space-y-4">
