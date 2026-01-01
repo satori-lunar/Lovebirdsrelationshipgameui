@@ -1,8 +1,8 @@
 /**
- * Weekly Suggestions Component - Amora Style
+ * Weekly Suggestions Component
  *
- * Personalized weekly suggestions for dates, gifts, and love language
- * actions based on user preferences and relationship data.
+ * Personalized weekly suggestions for love language actions, gifts, and dates.
+ * Uses the suggestionService to generate and manage AI-powered suggestions.
  */
 
 import { useState, useEffect } from 'react';
@@ -13,13 +13,14 @@ import {
   Sparkles,
   Gift,
   Calendar,
-  MessageCircleHeart,
   RefreshCw,
   Check,
-  Bookmark,
   Clock,
+  DollarSign,
   Star,
-  Flame
+  ThumbsUp,
+  ThumbsDown,
+  Meh
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -57,9 +58,23 @@ const TAB_CONFIG: Record<TabType, { label: string; icon: any; gradient: string; 
   },
 };
 
+const COST_LABELS: Record<string, { label: string; color: string }> = {
+  free: { label: 'Free', color: 'text-green-600 bg-green-100' },
+  low: { label: '$', color: 'text-emerald-600 bg-emerald-100' },
+  medium: { label: '$$', color: 'text-amber-600 bg-amber-100' },
+  high: { label: '$$$', color: 'text-orange-600 bg-orange-100' },
+};
+
+const REACTION_OPTIONS = [
+  { value: 'loved_it', icon: ThumbsUp, label: 'Loved it!', color: 'text-green-500' },
+  { value: 'liked_it', icon: Star, label: 'Liked it', color: 'text-blue-500' },
+  { value: 'neutral', icon: Meh, label: 'Neutral', color: 'text-gray-500' },
+  { value: 'not_for_me', icon: ThumbsDown, label: 'Not for me', color: 'text-red-500' },
+];
+
 export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
   const { user } = useAuth();
-  const { relationship } = useRelationship();
+  const { relationship, isLoading: relationshipLoading } = useRelationship();
   const { partnerId } = usePartner(relationship);
   const { partnerName } = usePartnerOnboarding();
 
@@ -71,17 +86,24 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.id && partnerId) {
       loadAllSuggestions();
+    } else if (user?.id && !relationshipLoading && !partnerId) {
+      // User has no partner connected
+      setIsLoading(false);
+      setError('Connect with your partner to get personalized suggestions!');
     }
-  }, [user?.id, partnerId]);
+  }, [user?.id, partnerId, relationshipLoading]);
 
   const loadAllSuggestions = async () => {
     if (!user?.id || !partnerId) return;
 
     setIsLoading(true);
+    setError(null);
+
     try {
       const [loveLanguage, gifts, dates] = await Promise.all([
         suggestionService.generateSuggestions(user.id, partnerId, 'love_language'),
@@ -94,8 +116,9 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
         gift: gifts,
         date: dates,
       });
-    } catch (error) {
-      console.error('Error loading suggestions:', error);
+    } catch (err) {
+      console.error('Error loading suggestions:', err);
+      setError('Failed to load suggestions. Please try again.');
       toast.error('Failed to load suggestions');
     } finally {
       setIsLoading(false);
@@ -113,26 +136,11 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
         [activeTab]: newSuggestions,
       }));
       toast.success('New suggestions generated! ✨');
-    } catch (error) {
-      console.error('Error refreshing suggestions:', error);
+    } catch (err) {
+      console.error('Error refreshing suggestions:', err);
       toast.error('Failed to refresh suggestions');
     } finally {
       setIsRefreshing(false);
-    }
-  };
-
-  const handleToggleSaved = async (suggestion: Suggestion) => {
-    try {
-      const updated = await suggestionService.updateSuggestion(suggestion.id, {
-        saved: !suggestion.saved,
-      });
-      setSuggestions(prev => ({
-        ...prev,
-        [activeTab]: prev[activeTab].map(s => (s.id === suggestion.id ? updated : s)),
-      }));
-      toast.success(updated.saved ? 'Saved! 💕' : 'Removed from saved');
-    } catch (error) {
-      console.error('Error updating suggestion:', error);
     }
   };
 
@@ -148,14 +156,31 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
       if (updated.completed) {
         toast.success('Amazing! Keep spreading the love! 🎉');
       }
-    } catch (error) {
-      console.error('Error updating suggestion:', error);
+    } catch (err) {
+      console.error('Error updating suggestion:', err);
+      toast.error('Failed to update suggestion');
     }
   };
 
   const currentSuggestions = suggestions[activeTab];
   const tabConfig = TAB_CONFIG[activeTab];
   const TabIcon = tabConfig.icon;
+
+  // Show loading state while checking relationship
+  if (relationshipLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-12 h-12 border-4 border-rose-200 border-t-rose-500 rounded-full mx-auto mb-4"
+          />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 pb-8">
@@ -191,7 +216,9 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
               </motion.div>
               <div>
                 <h1 className="text-2xl font-bold">Weekly Suggestions</h1>
-                <p className="text-white/80 text-sm">Personalized for you & {partnerName || 'your partner'}</p>
+                <p className="text-white/80 text-sm">
+                  Personalized for you & {partnerName || 'your partner'}
+                </p>
               </div>
             </div>
           </div>
@@ -223,20 +250,30 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
           })}
         </div>
 
+        {/* Error State */}
+        {error && (
+          <Card className="p-6 text-center border-0 shadow-lg mb-6 bg-amber-50 border-amber-200">
+            <Heart className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+            <p className="text-amber-800 font-medium">{error}</p>
+          </Card>
+        )}
+
         {/* Refresh Button */}
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-sm text-gray-500">
-            {currentSuggestions.length} suggestions this week
-          </p>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 text-sm text-rose-600 hover:text-rose-700 disabled:opacity-50 transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>New Ideas</span>
-          </button>
-        </div>
+        {!error && (
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-gray-500">
+              {currentSuggestions.length} suggestions this week
+            </p>
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing || isLoading}
+              className="flex items-center gap-1.5 text-sm text-rose-600 hover:text-rose-700 disabled:opacity-50 transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>New Ideas</span>
+            </button>
+          </div>
+        )}
 
         {/* Suggestions List */}
         <div className="space-y-4">
@@ -249,7 +286,7 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
               />
               <p className="text-gray-500">Generating personalized suggestions...</p>
             </Card>
-          ) : currentSuggestions.length === 0 ? (
+          ) : !error && currentSuggestions.length === 0 ? (
             <Card className="p-8 text-center border-0 shadow-lg">
               <TabIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 mb-2">No suggestions yet</p>
@@ -258,9 +295,20 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
               </p>
               <Button
                 onClick={handleRefresh}
+                disabled={isRefreshing}
                 className={`bg-gradient-to-r ${tabConfig.gradient}`}
               >
-                Generate Suggestions
+                {isRefreshing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Suggestions
+                  </>
+                )}
               </Button>
             </Card>
           ) : (
@@ -294,52 +342,48 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
+                        {/* Title from metadata if available */}
+                        {suggestion.metadata?.title && (
+                          <h3
+                            className={`font-semibold text-lg mb-1 ${
+                              suggestion.completed ? 'text-gray-500 line-through' : 'text-gray-900'
+                            }`}
+                          >
+                            {suggestion.metadata.title}
+                          </h3>
+                        )}
+
+                        {/* Description */}
                         <p
-                          className={`font-medium mb-2 ${
-                            suggestion.completed ? 'text-gray-500 line-through' : 'text-gray-900'
+                          className={`mb-3 ${
+                            suggestion.completed ? 'text-gray-400 line-through' : 'text-gray-700'
                           }`}
                         >
                           {suggestion.suggestion_text}
                         </p>
 
-                        {/* Metadata */}
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        {/* Metadata Tags */}
+                        <div className="flex flex-wrap gap-2">
                           {suggestion.time_estimate && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
                               <Clock className="w-3 h-3" />
                               {suggestion.time_estimate}
                             </span>
                           )}
-                          {suggestion.difficulty && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-rose-100 text-rose-600 text-xs rounded-full">
-                              <Flame className="w-3 h-3" />
-                              {suggestion.difficulty}
+
+                          {suggestion.metadata?.budget && COST_LABELS[suggestion.metadata.budget] && (
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full ${COST_LABELS[suggestion.metadata.budget].color}`}>
+                              <DollarSign className="w-3 h-3" />
+                              {COST_LABELS[suggestion.metadata.budget].label}
                             </span>
                           )}
+
                           {suggestion.suggestion_type && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full">
                               <Star className="w-3 h-3" />
-                              {suggestion.suggestion_type}
+                              {suggestion.suggestion_type.replace(/_/g, ' ')}
                             </span>
                           )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleToggleSaved(suggestion)}
-                            className={`flex items-center gap-1 text-sm transition-colors ${
-                              suggestion.saved
-                                ? 'text-rose-500'
-                                : 'text-gray-400 hover:text-rose-500'
-                            }`}
-                          >
-                            <Bookmark
-                              className="w-4 h-4"
-                              fill={suggestion.saved ? 'currentColor' : 'none'}
-                            />
-                            <span>{suggestion.saved ? 'Saved' : 'Save'}</span>
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -350,27 +394,29 @@ export function WeeklySuggestions({ onBack }: WeeklySuggestionsProps) {
           )}
         </div>
 
-        {/* Tip Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6"
-        >
-          <Card className="p-4 bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <MessageCircleHeart className="w-5 h-5 text-rose-500" />
+        {/* Pro Tip Card */}
+        {!error && !isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6"
+          >
+            <Card className="p-4 bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Heart className="w-5 h-5 text-rose-500" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">Pro Tip</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Complete suggestions together for bonus relationship XP! Small gestures make the biggest difference. 💕
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-gray-900 text-sm">Pro Tip</p>
-                <p className="text-xs text-gray-600 mt-1">
-                  Complete suggestions together for bonus relationship XP! Small gestures make the biggest difference. 💕
-                </p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
+            </Card>
+          </motion.div>
+        )}
       </div>
     </div>
   );

@@ -25,6 +25,7 @@ import { DragonPet } from './components/DragonPet';
 import { DragonEvolutionDemo } from './components/DragonEvolutionDemo';
 import { WidgetGallery } from './components/WidgetGallery';
 import { SendWidgetGift } from './components/SendWidgetGift';
+import { WeeklySuggestions } from './components/WeeklySuggestions';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './hooks/useAuth';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -33,7 +34,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'widget-gallery' | 'send-widget-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'widget-gallery' | 'send-widget-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -186,10 +187,14 @@ export default function App() {
       )}
 
       {currentView === 'love-language' && userData && (
-        <LoveLanguageSuggestions 
+        <LoveLanguageSuggestions
           onBack={handleBack}
           partnerName={userData.partnerName || 'your partner'}
         />
+      )}
+
+      {currentView === 'weekly-suggestions' && (
+        <WeeklySuggestions onBack={handleBack} />
       )}
 
       {currentView === 'dates' && userData && (
