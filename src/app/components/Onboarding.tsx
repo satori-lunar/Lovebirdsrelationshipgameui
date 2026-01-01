@@ -1,993 +1,215 @@
-import { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Heart, Edit } from 'lucide-react';
+/**
+ * Onboarding Component - Amora Style
+ *
+ * Beautiful onboarding flow with rose/pink gradients,
+ * animated hearts, and smooth transitions.
+ */
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Heart, ChevronRight, Sparkles, Users, MessageCircleHeart, Gift } from 'lucide-react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import { Progress } from './ui/progress';
-import { Calendar } from './ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { format } from 'date-fns';
-import { useAuth } from '../hooks/useAuth';
-import { authService } from '../services/authService';
-import { onboardingService } from '../services/onboardingService';
-import { toast } from 'sonner';
-import type { OnboardingData, LoveLanguage, WantsNeeds, Preferences } from '../types/onboarding';
 
 interface OnboardingProps {
   onComplete: () => void;
 }
 
-const TOTAL_STEPS = 6;
-
-const LOVE_LANGUAGES = [
-  'Words of Affirmation',
-  'Quality Time',
-  'Acts of Service',
-  'Receiving Gifts',
-  'Physical Touch'
-] as const;
-
-const PRONOUNS_OPTIONS = [
-  'She/Her',
-  'He/Him',
-  'They/Them',
-  'Use my name',
-  'Other (type)'
-];
-
-const GESTURES_OPTIONS = [
-  'A surprise coffee',
-  'Help with chores',
-  'A thoughtful note',
-  'Holding hands',
-  'Random hugs',
-  'A planned date'
-];
-
-const SURPRISE_FREQUENCY_OPTIONS = [
-  'Daily small ones',
-  'Weekly',
-  'Monthly',
-  'Not a fan'
-];
-
-const DATE_STYLE_OPTIONS = [
-  'Relaxed & cozy',
-  'Adventurous & active',
-  'Cultural (museums/theater)',
-  'Food-first (restaurants/foodie)',
-  'At-home, sentimental'
-];
-
-const GIFT_TYPES_OPTIONS = [
-  'Experiences (tickets, trips)',
-  'Practical items',
-  'Handmade/personal',
-  'Jewelry/keepsakes',
-  'Books',
-  'Something consumable (treats)'
-];
-
-const PLANNING_STYLE_OPTIONS = [
-  'Spontaneously',
-  'Planned in advance',
-  'A mix'
-];
-
-const AVOID_OPTIONS = [
-  'Public attention',
-  'Overly physical surprises',
-  "Big expensive gifts I'd feel awkward about",
-  'None / tell below'
-];
-
-const DATE_TYPES_OPTIONS = [
-  'Picnic/Outdoors',
-  'Dinner out',
-  'Movie / Concert',
-  'Hiking / Active',
-  'Museum / Gallery',
-  'Cooking together',
-  'Game night',
-  'At-home spa'
-];
-
-const GIFT_BUDGET_OPTIONS = [
-  'Under $25',
-  '$25–$75',
-  '$75–$200',
-  'No limit / special occasions'
-];
-
-const NUDGE_FREQUENCY_OPTIONS = [
-  'Daily',
-  'Weekly',
-  'Monthly',
-  'Only for milestones'
-];
-
-// NEW: Enhanced personalization options
-const CUISINE_OPTIONS = [
-  'Italian',
-  'Mexican',
-  'Japanese/Sushi',
-  'Chinese',
-  'Thai',
-  'Indian',
-  'American comfort food',
-  'Mediterranean',
-  'French',
-  'Other/varies'
-];
-
-const ACTIVITY_OPTIONS = [
-  'Reading',
-  'Cooking/Baking',
-  'Hiking/Nature',
-  'Gaming',
-  'Sports/Fitness',
-  'Art/Crafts',
-  'Music/Concerts',
-  'Movies/TV',
-  'Photography',
-  'Traveling'
+const SLIDES = [
+  {
+    icon: Heart,
+    title: 'Welcome to Lovebirds',
+    subtitle: 'Your relationship companion',
+    description: 'Strengthen your bond with daily questions, thoughtful suggestions, and meaningful moments together.',
+    gradient: 'from-rose-500 to-pink-500',
+  },
+  {
+    icon: MessageCircleHeart,
+    title: 'Daily Questions',
+    subtitle: 'Know each other deeper',
+    description: 'Answer fun questions daily and discover how well you really know your partner.',
+    gradient: 'from-pink-500 to-purple-500',
+  },
+  {
+    icon: Gift,
+    title: 'Thoughtful Surprises',
+    subtitle: 'Never run out of ideas',
+    description: 'Get personalized date ideas, gift suggestions, and sweet gestures tailored to your relationship.',
+    gradient: 'from-purple-500 to-violet-500',
+  },
+  {
+    icon: Users,
+    title: 'Grow Together',
+    subtitle: 'Build lasting memories',
+    description: 'Set goals, track milestones, and celebrate your journey as a couple.',
+    gradient: 'from-violet-500 to-rose-500',
+  },
 ];
 
 export function Onboarding({ onComplete }: OnboardingProps) {
-  const { user, loading: authLoading } = useAuth();
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Show loading while auth is initializing
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-lg text-center">
-          <Heart className="w-16 h-16 text-pink-500 fill-pink-500 mx-auto mb-4 animate-pulse" />
-          <h2 className="text-2xl font-bold mb-4">Setting up your account...</h2>
-          <p className="text-gray-600">Please wait while we get everything ready for you.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Redirect if not authenticated
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-lg text-center">
-          <Heart className="w-16 h-16 text-pink-500 fill-pink-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-4">Please sign in</h2>
-          <p className="text-gray-600">You need to be signed in to complete onboarding.</p>
-        </div>
-      </div>
-    );
-  }
-  const [step, setStep] = useState(1);
-  const [isSaving, setIsSaving] = useState(false);
-  const [birthday, setBirthday] = useState<Date | undefined>(undefined);
-  const [pronounsOther, setPronounsOther] = useState('');
-  const [formData, setFormData] = useState<OnboardingData>({
-    name: '',
-    birthday: undefined,
-    pronouns: undefined,
-    love_language: {
-      primary: 'Words of Affirmation',
-      secondary: undefined
-    },
-    wants_needs: {},
-    preferences: {},
-    consent: {
-      share_with_partner: false,
-      email_opt_in: true
-    }
-  });
-
-  // Pre-fill name from user metadata if available
-  useEffect(() => {
-    if (user?.user_metadata?.name && !formData.name) {
-      updateField('name', user.user_metadata.name);
-    }
-  }, [user]);
-
-  // Redirect to landing if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      // User is not authenticated, redirect will be handled by App.tsx
-      // This component shouldn't render if user is not authenticated
-    }
-  }, [user, authLoading]);
-
-  const updateField = (field: keyof OnboardingData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const updateWantsNeeds = (field: keyof WantsNeeds, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      wants_needs: { ...prev.wants_needs, [field]: value }
-    }));
-  };
-
-  const updatePreferences = (field: keyof Preferences, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      preferences: { ...prev.preferences, [field]: value }
-    }));
-  };
-
-  const toggleArrayField = (field: 'gestures' | 'gift_types' | 'date_types', value: string) => {
-    const currentArray = formData.wants_needs?.[field] || formData.preferences?.[field] || [];
-    const newArray = (currentArray as string[]).includes(value)
-      ? (currentArray as string[]).filter(v => v !== value)
-      : [...(currentArray as string[]), value];
-    
-    if (field === 'date_types') {
-      // Limit date_types to 3
-      if (newArray.length > 3) {
-        toast.error('Please select up to 3 date types');
-        return;
-      }
-      updatePreferences(field, newArray);
+  const handleNext = () => {
+    if (currentSlide < SLIDES.length - 1) {
+      setCurrentSlide(currentSlide + 1);
     } else {
-      updateWantsNeeds(field, newArray);
-    }
-  };
-
-  const nextStep = async () => {
-    // Validation
-    if (step === 1) {
-      if (!formData.name) {
-        toast.error('Please enter your name');
-        return;
-      }
-    }
-    
-    if (step === 2) {
-      if (!formData.love_language?.primary) {
-        toast.error('Please select your primary love language');
-        return;
-      }
-    }
-
-    if (step < TOTAL_STEPS) {
-      setStep(step + 1);
-    } else {
-      await handleComplete();
-    }
-  };
-
-  const handleComplete = async () => {
-    if (!user || !user.id) {
-      toast.error('Please sign in to continue');
-      return;
-    }
-
-    // Double-check auth session is still valid
-    if (authLoading) {
-      toast.error('Authenticating... Please wait.');
-      return;
-    }
-
-    console.log('🎯 Onboarding handleComplete called');
-    console.log('👤 User from context:', { id: user?.id, email: user?.email, name: user?.user_metadata?.name });
-
-    setIsSaving(true);
-    try {
-      // User is authenticated since they reached onboarding
-      if (!user?.id) {
-        throw new Error('Authentication required. Please sign in again.');
-      }
-      const userId = user.id;
-      console.log('🔄 Starting onboarding save for userId:', userId);
-
-      const dataToSave: OnboardingData = {
-        ...formData,
-        birthday: birthday ? format(birthday, 'yyyy-MM-dd') : undefined,
-        pronouns: formData.pronouns === 'Other (type)' ? pronounsOther : formData.pronouns
-      };
-
-      console.log('Saving onboarding data:', dataToSave);
-
-      await onboardingService.saveOnboarding(userId, dataToSave);
-      toast.success('Onboarding complete!');
       onComplete();
-    } catch (error: any) {
-      console.error('Onboarding save error:', error);
-      if (error.message?.includes('Auth session missing') || error.message?.includes('Session expired')) {
-        toast.error('Your session expired. Please sign in again.');
-        // Could redirect to sign in here
-      } else {
-        toast.error(error.message || 'Failed to save onboarding data');
-      }
-    } finally {
-      setIsSaving(false);
     }
   };
 
-  const prevStep = () => {
-    if (step > 1) setStep(step - 1);
+  const handleSkip = () => {
+    onComplete();
   };
 
-  const goToStep = (targetStep: number) => {
-    setStep(targetStep);
-  };
-
-  const progress = (step / TOTAL_STEPS) * 100;
-
-  // Summary data for confirm screen
-  const summaryData = {
-    name: formData.name,
-    pronouns: formData.pronouns === 'Other (type)' ? pronounsOther : formData.pronouns,
-    loveLanguage: formData.love_language?.primary,
-    dateTypes: formData.preferences?.date_types || [],
-    giftTypes: formData.wants_needs?.gift_types || []
-  };
+  const slide = SLIDES[currentSlide];
+  const Icon = slide.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 p-6">
-      <div className="max-w-md mx-auto">
-        {/* Header */}
-        <div className="mb-8 space-y-4">
-          <div className="flex items-center justify-between">
-            <Heart className="w-8 h-8 text-pink-500 fill-pink-500" />
-            <span className="text-sm text-gray-600">Step {step} of {TOTAL_STEPS}</span>
-          </div>
-          <Progress value={progress} className="h-2" />
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 relative overflow-hidden">
+      {/* Custom Styles */}
+      <style>{`
+        @keyframes heartbeat {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+        .heartbeat { animation: heartbeat 1.5s ease-in-out infinite; }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(5deg); }
+        }
+        .float { animation: float 4s ease-in-out infinite; }
+      `}</style>
+
+      {/* Animated Background Hearts */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(8)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            initial={{ opacity: 0.1, scale: 0.5 }}
+            animate={{
+              y: [-30, 30, -30],
+              x: [0, 10, 0],
+              rotate: [0, 10, -10, 0],
+            }}
+            transition={{
+              duration: 5 + i,
+              repeat: Infinity,
+              delay: i * 0.7,
+            }}
+            style={{
+              left: `${5 + i * 12}%`,
+              top: `${10 + (i % 4) * 20}%`,
+            }}
+          >
+            <Heart
+              className={`w-${6 + (i % 3) * 2} h-${6 + (i % 3) * 2} text-rose-200`}
+              fill="currentColor"
+              style={{ width: `${24 + (i % 3) * 8}px`, height: `${24 + (i % 3) * 8}px` }}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Skip Button */}
+        <div className="p-6 flex justify-end">
+          <button
+            onClick={handleSkip}
+            className="text-gray-500 hover:text-gray-700 font-medium transition-colors"
+          >
+            Skip
+          </button>
         </div>
 
-        {/* Step Content */}
-        <div className="bg-white rounded-3xl p-8 shadow-lg min-h-[500px] flex flex-col">
-          <div className="flex-1">
-            {/* Screen 1: Welcome */}
-            {step === 1 && (
-              <div className="space-y-6 flex flex-col items-center justify-center min-h-[400px] text-center">
-                <div className="space-y-4">
-                  <h2 className="text-4xl font-bold">Welcome to Lovebirds 💕</h2>
-                  <p className="text-gray-600 text-lg">
-                    We'll ask a few quick questions so we can help plan dates, gift ideas, and sweet nudges for your partner.
-                  </p>
-                </div>
-
-                <div className="space-y-4 w-full max-w-xs">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">What should we call you?</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      placeholder="Your name"
-                      className="text-base text-center"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Screen 2: Basic Info */}
-            {step === 2 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold">Tell us about you</h2>
-                  <p className="text-gray-600">We'll use this to personalize your experience</p>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">What should we call you?</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      placeholder="Your name"
-                      className="text-base"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="partnerName">What's your partner's name?</Label>
-                    <Input
-                      id="partnerName"
-                      value={formData.partnerName || ''}
-                      onChange={(e) => updateField('partnerName', e.target.value)}
-                      placeholder="Partner's name"
-                      className="text-base"
-                    />
-                    <p className="text-xs text-gray-500">
-                      We'll use this to personalize the app for both of you.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Birthday</Label>
-                    <input
-                      type="date"
-                      value={birthday ? format(birthday, 'yyyy-MM-dd') : ''}
-                      onChange={(e) => {
-                        const date = e.target.value ? new Date(e.target.value) : undefined;
-                        console.log('Birthday input changed:', date);
-                        setBirthday(date);
-                      }}
-                      max={format(new Date(), 'yyyy-MM-dd')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                    />
-                    <p className="text-xs text-gray-500">
-                      Helps suggest age-appropriate ideas (only you see this).
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label>Pronouns</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {PRONOUNS_OPTIONS.map(pronoun => (
-                        <button
-                          key={pronoun}
-                          onClick={() => {
-                            updateField('pronouns', pronoun);
-                            if (pronoun !== 'Other (type)') {
-                              setPronounsOther('');
-                            }
-                          }}
-                          className={`p-3 border rounded-lg transition-all text-sm ${
-                            formData.pronouns === pronoun
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pronoun}
-                        </button>
-                      ))}
-                      </div>
-                    {formData.pronouns === 'Other (type)' && (
-                    <Input
-                        value={pronounsOther}
-                        onChange={(e) => setPronounsOther(e.target.value)}
-                        placeholder="Type your pronouns"
-                      className="text-base"
-                    />
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Screen 3: Love Language */}
-            {step === 3 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold">Which of these best describes how you feel loved?</h2>
-                  <p className="text-gray-600">Pick the one that resonates most. You can also add a second preference.</p>
-                </div>
-                
-                <div className="space-y-3">
-                  {LOVE_LANGUAGES.map(lang => (
-                    <button
-                      key={lang}
-                      onClick={() => {
-                        const currentPrimary = formData.love_language?.primary;
-                        const currentSecondary = formData.love_language?.secondary;
-                        
-                        if (currentPrimary === lang) {
-                          // Already primary, do nothing
-                          return;
-                        } else if (currentSecondary === lang) {
-                          // It's secondary, make it primary
-                          updateField('love_language', {
-                            primary: lang,
-                            secondary: currentPrimary
-                          });
-                        } else {
-                          // New selection, make it primary
-                          updateField('love_language', {
-                            primary: lang,
-                            secondary: currentSecondary
-                          });
-                        }
-                      }}
-                      className={`w-full text-left p-4 border rounded-xl transition-all ${
-                        formData.love_language?.primary === lang
-                          ? 'border-pink-500 bg-pink-50 shadow-md'
-                          : formData.love_language?.secondary === lang
-                          ? 'border-purple-300 bg-purple-50'
-                          : 'border-gray-200 hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-semibold text-lg">{lang}</p>
-                        </div>
-                        {formData.love_language?.primary === lang && (
-                          <Heart className="w-5 h-5 text-pink-500 fill-pink-500 flex-shrink-0 ml-2" />
-                        )}
-                        {formData.love_language?.secondary === lang && (
-                          <span className="text-xs text-purple-600 ml-2">Secondary</span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                  
-                  {formData.love_language?.primary && (
-                    <div className="mt-4 pt-4 border-t">
-                      <p className="text-sm text-gray-600 mb-2">Select a second preference (optional):</p>
-                      <div className="grid grid-cols-2 gap-2">
-                        {LOVE_LANGUAGES.filter(lang => lang !== formData.love_language?.primary).map(lang => (
-                          <button
-                            key={lang}
-                            onClick={() => {
-                              updateField('love_language', {
-                                ...formData.love_language!,
-                                secondary: formData.love_language?.secondary === lang ? undefined : lang
-                              });
-                            }}
-                            className={`p-2 border rounded-lg transition-all text-sm ${
-                              formData.love_language?.secondary === lang
-                                ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                : 'border-gray-200 hover:bg-gray-50'
-                            }`}
-                          >
-                            {lang}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Screen 4: Wants & Needs */}
-            {step === 4 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold">Wants & Needs</h2>
-                  <p className="text-gray-600">Quick choices — pick what makes you feel loved</p>
-                </div>
-                
-                <div className="space-y-6 max-h-[500px] overflow-y-auto">
-                  {/* Gestures */}
-                  <div className="space-y-2">
-                    <Label>Which small gestures make you feel cared for? (select all that apply)</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {GESTURES_OPTIONS.map(gesture => (
-                    <button
-                          key={gesture}
-                          onClick={() => toggleArrayField('gestures', gesture)}
-                      className={`p-3 border rounded-lg transition-all text-sm ${
-                            formData.wants_needs?.gestures?.includes(gesture)
-                          ? 'border-pink-500 bg-pink-50 text-pink-700'
-                          : 'border-gray-200 hover:bg-gray-50'
-                      }`}
-                    >
-                          {gesture}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-                  {/* Surprise Frequency */}
-                  <div className="space-y-2">
-                    <Label>How often do you like surprises?</Label>
-                <div className="space-y-2">
-                      {SURPRISE_FREQUENCY_OPTIONS.map(option => (
-                        <button
-                          key={option}
-                          onClick={() => updateWantsNeeds('surprise_frequency', option)}
-                          className={`w-full p-3 border rounded-lg transition-all text-left ${
-                            formData.wants_needs?.surprise_frequency === option
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Date Style */}
-                  <div className="space-y-2">
-                    <Label>When planning a date, I prefer:</Label>
-                    <div className="space-y-2">
-                      {DATE_STYLE_OPTIONS.map(option => (
-                        <button
-                          key={option}
-                          onClick={() => updateWantsNeeds('date_style', option)}
-                          className={`w-full p-3 border rounded-lg transition-all text-left ${
-                            formData.wants_needs?.date_style === option
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Gift Types */}
-                  <div className="space-y-2">
-                    <Label>Gifts I love (select all that apply)</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {GIFT_TYPES_OPTIONS.map(gift => (
-                        <button
-                          key={gift}
-                          onClick={() => toggleArrayField('gift_types', gift)}
-                          className={`p-3 border rounded-lg transition-all text-sm ${
-                            formData.wants_needs?.gift_types?.includes(gift)
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {gift}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* NEW: Favorite Activities */}
-                  <div className="space-y-2">
-                    <Label>My favorite activities/hobbies (select up to 3)</Label>
-                    <p className="text-xs text-gray-500">This helps us suggest dates and gifts you'll love</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {ACTIVITY_OPTIONS.map(activity => (
-                        <button
-                          key={activity}
-                          onClick={() => {
-                            const currentActivities = formData.wants_needs?.favorite_activities || [];
-                            const isSelected = currentActivities.includes(activity);
-
-                            if (isSelected) {
-                              updateWantsNeeds('favorite_activities', currentActivities.filter(a => a !== activity));
-                            } else if (currentActivities.length < 3) {
-                              updateWantsNeeds('favorite_activities', [...currentActivities, activity]);
-                            } else {
-                              toast.error('Please select up to 3 activities');
-                            }
-                          }}
-                          className={`p-3 border rounded-lg transition-all text-sm ${
-                            formData.wants_needs?.favorite_activities?.includes(activity)
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {activity}
-                        </button>
-                      ))}
-                    </div>
-                    {formData.wants_needs?.favorite_activities && formData.wants_needs.favorite_activities.length > 0 && (
-                      <p className="text-xs text-gray-500">
-                        {formData.wants_needs.favorite_activities.length} of 3 selected
-                      </p>
-                    )}
-                  </div>
-
-                  {/* NEW: Favorite Cuisines */}
-                  <div className="space-y-2">
-                    <Label>Favorite cuisines (select up to 3)</Label>
-                    <p className="text-xs text-gray-500">For restaurant and cooking date ideas</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {CUISINE_OPTIONS.map(cuisine => (
-                        <button
-                          key={cuisine}
-                          onClick={() => {
-                            const currentCuisines = formData.wants_needs?.favorite_cuisines || [];
-                            const isSelected = currentCuisines.includes(cuisine);
-
-                            if (isSelected) {
-                              updateWantsNeeds('favorite_cuisines', currentCuisines.filter(c => c !== cuisine));
-                            } else if (currentCuisines.length < 3) {
-                              updateWantsNeeds('favorite_cuisines', [...currentCuisines, cuisine]);
-                            } else {
-                              toast.error('Please select up to 3 cuisines');
-                            }
-                          }}
-                          className={`p-3 border rounded-lg transition-all text-sm ${
-                            formData.wants_needs?.favorite_cuisines?.includes(cuisine)
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {cuisine}
-                        </button>
-                      ))}
-                    </div>
-                    {formData.wants_needs?.favorite_cuisines && formData.wants_needs.favorite_cuisines.length > 0 && (
-                      <p className="text-xs text-gray-500">
-                        {formData.wants_needs.favorite_cuisines.length} of 3 selected
-                      </p>
-                    )}
-                  </div>
-
-                  {/* NEW: Things I wish my partner would do */}
-                  <div className="space-y-2">
-                    <Label>Things I wish my partner would do more often (optional)</Label>
-                    <p className="text-xs text-gray-500">We'll use this to suggest meaningful actions they can take</p>
-                    <Textarea
-                      value={formData.wants_needs?.wishes || ''}
-                      onChange={(e) => updateWantsNeeds('wishes', e.target.value)}
-                      placeholder="e.g., Plan surprise dates, leave me notes, cook together, give me backrubs..."
-                      rows={3}
-                    />
-                  </div>
-
-                  {/* Planning Style */}
-                  <div className="space-y-2">
-                    <Label>I prefer planning/doing things:</Label>
-                <div className="space-y-2">
-                      {PLANNING_STYLE_OPTIONS.map(option => (
-                        <button
-                          key={option}
-                          onClick={() => updateWantsNeeds('planning_style', option)}
-                          className={`w-full p-3 border rounded-lg transition-all text-left ${
-                            formData.wants_needs?.planning_style === option
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                </div>
-                
-                  {/* Avoid */}
-                  <div className="space-y-2">
-                    <Label>Is there anything your partner should never do?</Label>
-                    <div className="space-y-2">
-                      {AVOID_OPTIONS.map(option => {
-                        const isSelected = option === 'None / tell below' 
-                          ? (!formData.wants_needs?.avoid || formData.wants_needs.avoid === '')
-                          : formData.wants_needs?.avoid === option;
-                        
-                        return (
-                          <button
-                            key={option}
-                            onClick={() => {
-                              if (option === 'None / tell below') {
-                                updateWantsNeeds('avoid', '');
-                              } else {
-                                updateWantsNeeds('avoid', option);
-                              }
-                            }}
-                            className={`w-full p-3 border rounded-lg transition-all text-left ${
-                              isSelected
-                                ? 'border-pink-500 bg-pink-50 text-pink-700'
-                                : 'border-gray-200 hover:bg-gray-50'
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {formData.wants_needs?.avoid && formData.wants_needs.avoid !== '' && (
-                    <Textarea
-                        value={formData.wants_needs.avoid}
-                        onChange={(e) => updateWantsNeeds('avoid', e.target.value)}
-                        placeholder="Tell us more..."
-                        rows={2}
-                      />
-                    )}
-                  </div>
-                  
-                  {/* Notes */}
-                  <div className="space-y-2">
-                    <Label>Anything else we should know? (optional)</Label>
-                    <Textarea
-                      value={formData.wants_needs?.notes || ''}
-                      onChange={(e) => updateWantsNeeds('notes', e.target.value)}
-                      placeholder="I love small homemade notes…"
-                      rows={3}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Screen 5: Preferences for Dates & Gifts */}
-            {step === 5 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold">Preferences for Dates & Gifts</h2>
-                  <p className="text-gray-600">Help us tailor suggestions just for you</p>
-                </div>
-                
-                <div className="space-y-6">
-                  {/* Date Types */}
-                  <div className="space-y-2">
-                    <Label>Pick a few date types you'd enjoy (choose up to 3)</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {DATE_TYPES_OPTIONS.map(dateType => (
-                        <button
-                          key={dateType}
-                          onClick={() => toggleArrayField('date_types', dateType)}
-                          disabled={!formData.preferences?.date_types?.includes(dateType) && (formData.preferences?.date_types?.length || 0) >= 3}
-                          className={`p-3 border rounded-lg transition-all text-sm ${
-                            formData.preferences?.date_types?.includes(dateType)
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed'
-                          }`}
-                        >
-                          {dateType}
-                        </button>
-                      ))}
-                    </div>
-                    {formData.preferences?.date_types && formData.preferences.date_types.length > 0 && (
-                      <p className="text-xs text-gray-500">
-                        {formData.preferences.date_types.length} of 3 selected
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Gift Budget */}
-                  <div className="space-y-2">
-                    <Label>Pick gift budgets you're comfortable with</Label>
-                    <div className="space-y-2">
-                      {GIFT_BUDGET_OPTIONS.map(option => (
-                        <button
-                          key={option}
-                          onClick={() => updatePreferences('gift_budget', option)}
-                          className={`w-full p-3 border rounded-lg transition-all text-left ${
-                            formData.preferences?.gift_budget === option
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Nudge Frequency */}
-                  <div className="space-y-2">
-                    <Label>How often would you like small nudges or date suggestions from us?</Label>
-                    <div className="space-y-2">
-                      {NUDGE_FREQUENCY_OPTIONS.map(option => (
-                        <button
-                          key={option}
-                          onClick={() => updatePreferences('nudge_frequency', option)}
-                          className={`w-full p-3 border rounded-lg transition-all text-left ${
-                            formData.preferences?.nudge_frequency === option
-                              ? 'border-pink-500 bg-pink-50 text-pink-700'
-                              : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Screen 6: Confirm */}
-            {step === 6 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold">Confirm & Finish</h2>
-                  <p className="text-gray-600">Review your answers. You can change any answer later in Settings.</p>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* Name */}
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">Name</h3>
-                      <Button variant="ghost" size="sm" onClick={() => goToStep(2)}>
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                    <p className="text-gray-600">{summaryData.name}</p>
-                  </div>
-
-                  {/* Pronouns */}
-                  {summaryData.pronouns && (
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">Pronouns</h3>
-                        <Button variant="ghost" size="sm" onClick={() => goToStep(2)}>
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                      </div>
-                      <p className="text-gray-600">{summaryData.pronouns}</p>
-                    </div>
-                  )}
-
-                  {/* Love Language */}
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">Love Language</h3>
-                      <Button variant="ghost" size="sm" onClick={() => goToStep(3)}>
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                    </div>
-                    <p className="text-gray-600">
-                      {summaryData.loveLanguage}
-                      {formData.love_language?.secondary && `, ${formData.love_language.secondary}`}
-                    </p>
-                  </div>
-
-                  {/* Date Types */}
-                  {summaryData.dateTypes.length > 0 && (
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">Date Types</h3>
-                        <Button variant="ghost" size="sm" onClick={() => goToStep(5)}>
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                      </div>
-                      <p className="text-gray-600">{summaryData.dateTypes.join(', ')}</p>
-                    </div>
-                  )}
-
-                  {/* Gift Types */}
-                  {summaryData.giftTypes.length > 0 && (
-                    <div className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">Gift Preferences</h3>
-                        <Button variant="ghost" size="sm" onClick={() => goToStep(4)}>
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                      </div>
-                      <p className="text-gray-600">{summaryData.giftTypes.join(', ')}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                  <p className="text-sm text-purple-900">
-                    You can change any answer later in Settings.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Navigation */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t">
-            <Button
-              variant="ghost"
-              onClick={prevStep}
-              disabled={step === 1}
-              className="flex items-center gap-2"
+        {/* Content */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-12">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentSlide}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+              className="text-center max-w-md"
             >
-              <ChevronLeft className="w-4 h-4" />
-              Back
-            </Button>
-            
-            {step === TOTAL_STEPS ? (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleComplete}
-                  disabled={isSaving}
-                >
-                  Skip & finish later
-                </Button>
-            <Button
-                  onClick={handleComplete}
-              disabled={isSaving}
-              className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white flex items-center gap-2 px-6"
-            >
-                  {isSaving ? 'Saving...' : 'Save & Start'}
-                </Button>
-              </div>
-            ) : (
-              <Button
-                onClick={nextStep}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white flex items-center gap-2 px-6"
+              {/* Icon */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', delay: 0.2 }}
+                className={`w-24 h-24 bg-gradient-to-br ${slide.gradient} rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-rose-200`}
               >
-                Continue
-                <ChevronRight className="w-4 h-4" />
-            </Button>
-            )}
+                <Icon className="w-12 h-12 text-white heartbeat" />
+              </motion.div>
+
+              {/* Title */}
+              <motion.h1
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-4xl font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent mb-2"
+              >
+                {slide.title}
+              </motion.h1>
+
+              {/* Subtitle */}
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-lg text-rose-500 font-medium mb-4"
+              >
+                {slide.subtitle}
+              </motion.p>
+
+              {/* Description */}
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="text-gray-600 text-lg leading-relaxed"
+              >
+                {slide.description}
+              </motion.p>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="p-6 space-y-6">
+          {/* Dots */}
+          <div className="flex justify-center gap-2">
+            {SLIDES.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                  index === currentSlide
+                    ? 'w-8 bg-gradient-to-r from-rose-500 to-pink-500'
+                    : 'bg-rose-200 hover:bg-rose-300'
+                }`}
+              />
+            ))}
           </div>
+
+          {/* Button */}
+          <Button
+            onClick={handleNext}
+            className="w-full py-6 text-lg font-semibold bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white rounded-2xl shadow-lg shadow-rose-200 transition-all hover:shadow-xl"
+          >
+            {currentSlide === SLIDES.length - 1 ? (
+              <>
+                Get Started
+                <Sparkles className="w-5 h-5 ml-2" />
+              </>
+            ) : (
+              <>
+                Continue
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>

@@ -76,46 +76,76 @@ const SECRET_SUGGESTIONS = {
   ],
 };
 
-// Message suggestions based on context
+// Message suggestions based on context - Amora style romantic messages
 const MESSAGE_SUGGESTIONS = {
   morning: [
-    { text: "Good morning, beautiful! Can't wait to see you later 💕", emoji: "☀️" },
-    { text: "Woke up thinking about you. Have an amazing day!", emoji: "🌅" },
-    { text: "Hope your day is as wonderful as you are!", emoji: "✨" },
-    { text: "Sending you all my love this morning 💗", emoji: "💌" },
+    { text: "Good morning, my love! 🌅 Waking up knowing you're in my life makes every day brighter", emoji: "☀️" },
+    { text: "Rise and shine, beautiful! Can't wait to see your smile today 💕", emoji: "🌸" },
+    { text: "Every morning I'm grateful you're mine. Have the most amazing day!", emoji: "✨" },
+    { text: "Sending you the biggest virtual hug to start your day 🤗💕", emoji: "💌" },
+    { text: "You're the first thing on my mind when I wake up. I love you!", emoji: "💗" },
+    { text: "Good morning, gorgeous! Remember: you're capable of amazing things today", emoji: "🌟" },
   ],
   afternoon: [
-    { text: "Just checking in - hope your day is going well!", emoji: "💭" },
-    { text: "Taking a break to think about you 💕", emoji: "☕" },
-    { text: "Counting down the hours until I see you!", emoji: "⏰" },
-    { text: "You've been on my mind all day", emoji: "💝" },
+    { text: "Just taking a moment to tell you I love you 💕 Hope your day is going well!", emoji: "💭" },
+    { text: "Random thought: I'm so lucky to be with you. That's all. 🥰", emoji: "☕" },
+    { text: "Counting down the minutes until I can see your beautiful face again!", emoji: "⏰" },
+    { text: "You've been on my mind all day. Sending you love and good vibes ✨", emoji: "💝" },
+    { text: "Quick break to remind you that you're absolutely wonderful 💕", emoji: "🌸" },
+    { text: "Thinking about all the reasons I love you... might take a while! 😊", emoji: "💖" },
   ],
   evening: [
-    { text: "Can't wait to be home with you soon!", emoji: "🏠" },
-    { text: "Thinking about cuddling up with you tonight", emoji: "🥰" },
-    { text: "You're my favorite part of every day", emoji: "💕" },
-    { text: "Miss you! See you soon, love", emoji: "💗" },
+    { text: "Can't wait to be in your arms tonight 🥰 Heading home to you!", emoji: "🏠" },
+    { text: "The best part of my day is coming home to you 💕", emoji: "🌙" },
+    { text: "Looking forward to our evening together. You make everything better", emoji: "💗" },
+    { text: "Almost there, my love! Get ready for all the cuddles 🤗", emoji: "✨" },
+    { text: "You're my favorite person to come home to. See you soon! 💕", emoji: "💝" },
   ],
   appreciation: [
-    { text: "I'm so grateful to have you in my life", emoji: "🙏" },
-    { text: "Thank you for always being there for me", emoji: "💖" },
-    { text: "You make everything better just by being you", emoji: "🌟" },
-    { text: "I don't say it enough, but I appreciate you so much", emoji: "💕" },
-    { text: "You're the best thing that's ever happened to me", emoji: "❤️" },
+    { text: "I just want you to know how much I appreciate everything you do 💖", emoji: "🙏" },
+    { text: "Thank you for being you. You make my life so much more beautiful", emoji: "💖" },
+    { text: "I notice all the little things you do for us. You're amazing 💕", emoji: "🌟" },
+    { text: "Feeling so grateful for you today. Thank you for loving me 💗", emoji: "💕" },
+    { text: "You're the best thing that's ever happened to me. I mean it.", emoji: "❤️" },
+    { text: "I fall more in love with you every single day. Thank you for being mine 💕", emoji: "💖" },
   ],
   encouragement: [
-    { text: "I believe in you! You've got this 💪", emoji: "🌟" },
-    { text: "Just wanted you to know I'm proud of you", emoji: "👏" },
-    { text: "Whatever happens, I'm here for you", emoji: "🤗" },
-    { text: "You're stronger than you know!", emoji: "💪" },
-    { text: "Remember how amazing you are!", emoji: "✨" },
+    { text: "Hey love, just wanted to remind you that you've got this! 💪 I believe in you", emoji: "🌟" },
+    { text: "Whatever you're facing today, remember I'm always cheering for you 💕", emoji: "👏" },
+    { text: "You're so much stronger than you realize. I'm proud of you!", emoji: "🤗" },
+    { text: "No matter what happens, I'm here for you. Always. 💗", emoji: "💪" },
+    { text: "Remember how amazing you are! You inspire me every day ✨", emoji: "✨" },
+    { text: "Tough day? Remember: you've overcome so much. You'll get through this too 💕", emoji: "🌈" },
   ],
   playful: [
-    { text: "Guess who loves you? 😏", emoji: "💕" },
-    { text: "On a scale of 1-10, I miss you 100", emoji: "😄" },
-    { text: "If you were a vegetable, you'd be a cute-cumber!", emoji: "🥒" },
-    { text: "Quick reminder that you're adorable!", emoji: "🥰" },
-    { text: "I love you more than pizza... and that's saying a lot!", emoji: "🍕" },
+    { text: "Hey you! 😏 Just wanted to say... I kinda sorta REALLY love you", emoji: "💕" },
+    { text: "On a scale of 1-10, I miss you about a million 😄💕", emoji: "😄" },
+    { text: "Do you have a map? Because I just got lost in thoughts of you! 🗺️", emoji: "🥰" },
+    { text: "Quick reminder that you're absolutely adorable and I'm obsessed 😍", emoji: "🥰" },
+    { text: "I love you more than coffee... and you know that's a BIG deal! ☕💕", emoji: "☕" },
+    { text: "Is it weird that I miss you even when we're texting? Asking for a friend 😏", emoji: "💕" },
+  ],
+  romantic: [
+    { text: "I still get butterflies when I think about you 🦋💕", emoji: "🦋" },
+    { text: "You're not just my partner, you're my favorite person in the world 💗", emoji: "💗" },
+    { text: "Every love song makes sense now that I have you ❤️", emoji: "🎵" },
+    { text: "I love the way you love me. You make me feel so special 💕", emoji: "💖" },
+    { text: "Being with you is my favorite adventure 🌟", emoji: "✨" },
+    { text: "You're my today, my tomorrow, and all my days after 💕", emoji: "💝" },
+  ],
+  miss_you: [
+    { text: "Missing you like crazy right now 💕 Wish you were here", emoji: "💭" },
+    { text: "The distance only makes me love you more. Can't wait to see you! 💗", emoji: "💕" },
+    { text: "Every moment away from you feels too long. Missing your face 🥺", emoji: "💝" },
+    { text: "Counting down until I can hold you again 💕", emoji: "⏰" },
+    { text: "You're my favorite hello and my hardest goodbye. Miss you! 💗", emoji: "💖" },
+  ],
+  goodnight: [
+    { text: "Goodnight, my love 🌙 Dream of us and all our adventures to come 💕", emoji: "🌙" },
+    { text: "Sweet dreams, beautiful! Can't wait to see you tomorrow ✨", emoji: "💫" },
+    { text: "Wishing I could fall asleep in your arms. Sleep tight, my love 💗", emoji: "😴" },
+    { text: "Last thought before I sleep: I'm so grateful for you. Goodnight! 💕", emoji: "🌟" },
+    { text: "Sending you the coziest goodnight hug through this text 🤗💕", emoji: "💝" },
   ],
 };
 
@@ -226,12 +256,13 @@ export const aiSuggestionService = {
     messageType?: string
   ): Promise<AISuggestion[]> {
     try {
-      // Determine time of day
+      // Determine time of day for smart suggestions
       const hour = new Date().getHours();
-      let timeContext: 'morning' | 'afternoon' | 'evening' = 'afternoon';
+      let timeContext: 'morning' | 'afternoon' | 'evening' | 'goodnight' = 'afternoon';
       if (hour >= 5 && hour < 12) timeContext = 'morning';
       else if (hour >= 12 && hour < 17) timeContext = 'afternoon';
-      else timeContext = 'evening';
+      else if (hour >= 17 && hour < 21) timeContext = 'evening';
+      else timeContext = 'goodnight';
 
       // Get suggestions based on message type or time
       let suggestions: { text: string; emoji: string }[] = [];
@@ -239,24 +270,29 @@ export const aiSuggestionService = {
       if (messageType && messageType in MESSAGE_SUGGESTIONS) {
         suggestions = MESSAGE_SUGGESTIONS[messageType as keyof typeof MESSAGE_SUGGESTIONS];
       } else {
-        // Mix time-based and other suggestions
+        // Smart mix based on time of day
+        const timeSuggestions = MESSAGE_SUGGESTIONS[timeContext] || MESSAGE_SUGGESTIONS.afternoon;
+
+        // Create a varied mix with time-appropriate and general romantic messages
         suggestions = [
-          ...MESSAGE_SUGGESTIONS[timeContext].slice(0, 2),
-          ...MESSAGE_SUGGESTIONS.appreciation.slice(0, 2),
+          ...timeSuggestions.slice(0, 2),
+          ...MESSAGE_SUGGESTIONS.romantic.slice(0, 1),
+          ...MESSAGE_SUGGESTIONS.appreciation.slice(0, 1),
           ...MESSAGE_SUGGESTIONS.playful.slice(0, 1),
+          ...MESSAGE_SUGGESTIONS.miss_you.slice(0, 1),
         ];
       }
 
-      // Shuffle a bit for variety
+      // Shuffle for variety
       suggestions = [...suggestions].sort(() => Math.random() - 0.5);
 
-      return suggestions.slice(0, 5).map((s, i) => ({
+      return suggestions.slice(0, 6).map((s, i) => ({
         id: `msg-${i}-${Date.now()}`,
         ...s,
       }));
     } catch (error) {
       console.error('Error getting message suggestions:', error);
-      return MESSAGE_SUGGESTIONS.appreciation.slice(0, 5).map((s, i) => ({
+      return MESSAGE_SUGGESTIONS.romantic.slice(0, 5).map((s, i) => ({
         id: `msg-${i}-${Date.now()}`,
         ...s,
       }));
