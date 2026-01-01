@@ -494,16 +494,16 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               transition={{ delay: 0.3 }}
             >
               <button
-                onClick={() => onNavigate('gifts')}
+                onClick={() => onNavigate('weekly-suggestions')}
                 className="w-full"
               >
                 <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
                   <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-violet-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Gift className="w-7 h-7 text-purple-500" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-pink-100 to-rose-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Sparkles className="w-7 h-7 text-pink-500" />
                     </div>
-                    <h3 className="font-semibold text-gray-900">Gift Ideas</h3>
-                    <p className="text-xs text-gray-500 mt-1">Perfect presents</p>
+                    <h3 className="font-semibold text-gray-900">Weekly</h3>
+                    <p className="text-xs text-gray-500 mt-1">AI suggestions</p>
                   </CardContent>
                 </Card>
               </button>
@@ -570,13 +570,13 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                     </button>
 
                     <button
-                      onClick={() => onNavigate('weekly-suggestions')}
+                      onClick={() => onNavigate('gifts')}
                       className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
                     >
-                      <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <Sparkles className="w-5 h-5 text-pink-500" />
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                        <Gift className="w-5 h-5 text-purple-500" />
                       </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Weekly</h3>
+                      <h3 className="font-medium text-gray-900 text-xs">Gifts</h3>
                     </button>
 
                     <button
