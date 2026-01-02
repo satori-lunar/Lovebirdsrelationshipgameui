@@ -29,6 +29,7 @@ import { WeeklySuggestions } from './components/WeeklySuggestions';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './hooks/useAuth';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
@@ -54,6 +55,12 @@ export default function App() {
   usePushNotifications({
     onNotificationTap: handleNotificationTap,
   });
+
+  // Automatically refresh widget when app goes to background
+  useWidgetRefresh();
+
+  // Sync widget gifts when app becomes active
+  useWidgetGiftSync(user?.id || null);
 
   const { data: onboarding, error: onboardingError } = useQuery({
     queryKey: ['onboarding', user?.id],

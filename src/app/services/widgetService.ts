@@ -8,8 +8,10 @@
  */
 
 import { Preferences } from '@capacitor/preferences';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '../lib/supabase';
 import type { MemoryWidgetData, WidgetBundle, WidgetConfiguration } from '../types/widget';
+import LovebirdsWidget from '../plugins/LovebirdsWidgetPlugin';
 
 const WIDGET_DATA_KEY = 'lovebirds_widget_data';
 const WIDGET_CONFIG_KEY = 'lovebirds_widget_config';
@@ -85,10 +87,18 @@ export const widgetService = {
       lastUpdated: new Date().toISOString()
     };
 
-    await Preferences.set({
-      key: WIDGET_DATA_KEY,
-      value: JSON.stringify(bundle)
-    });
+    // Use App Groups for iOS, Preferences for other platforms
+    if (Capacitor.getPlatform() === 'ios') {
+      await LovebirdsWidget.saveToAppGroup({
+        key: WIDGET_DATA_KEY,
+        value: JSON.stringify(bundle)
+      });
+    } else {
+      await Preferences.set({
+        key: WIDGET_DATA_KEY,
+        value: JSON.stringify(bundle)
+      });
+    }
 
     // Trigger native widget refresh
     await this.notifyWidgetRefresh();
@@ -96,13 +106,19 @@ export const widgetService = {
 
   /**
    * Trigger platform-specific widget refresh
-   * This will be implemented with a Capacitor plugin for native widgets
+   * Calls native WidgetCenter.shared.reloadAllTimelines() on iOS
    */
   async notifyWidgetRefresh(): Promise<void> {
-    // TODO: Implement with Capacitor plugin when native platforms are added
-    // iOS: WidgetCenter.shared.reloadAllTimelines()
-    // Android: AppWidgetManager.notifyAppWidgetViewDataChanged()
-    console.log('[Widget] Refresh triggered - native implementation pending');
+    try {
+      if (Capacitor.getPlatform() === 'ios') {
+        const result = await LovebirdsWidget.reloadWidgets();
+        console.log('[Widget] Refresh triggered:', result.message);
+      } else {
+        console.log('[Widget] Refresh triggered - iOS only feature');
+      }
+    } catch (error) {
+      console.error('[Widget] Failed to refresh:', error);
+    }
   },
 
   /**

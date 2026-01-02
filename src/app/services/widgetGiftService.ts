@@ -7,6 +7,7 @@
  */
 
 import { Preferences } from '@capacitor/preferences';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '../lib/supabase';
 import type {
   WidgetGiftData,
@@ -16,6 +17,7 @@ import type {
   MemoryWidgetData
 } from '../types/widget';
 import { widgetService } from './widgetService';
+import LovebirdsWidget from '../plugins/LovebirdsWidgetPlugin';
 
 const WIDGET_GIFT_KEY = 'lovebirds_widget_gift';
 const LOCK_SCREEN_GIFT_KEY = 'lovebirds_lock_screen_gift';
@@ -220,15 +222,24 @@ export const widgetGiftService = {
     // Get the current (first in queue) gift
     const activeGift = gifts.length > 0 ? gifts[0] : null;
 
-    // Store gift data for home screen widget
-    await Preferences.set({
-      key: WIDGET_GIFT_KEY,
-      value: JSON.stringify({
-        gifts,
-        activeGift,
-        lastChecked: new Date().toISOString(),
-      }),
+    const giftData = JSON.stringify({
+      gifts,
+      activeGift,
+      lastChecked: new Date().toISOString(),
     });
+
+    // Store gift data for home screen widget - use App Groups on iOS
+    if (Capacitor.getPlatform() === 'ios') {
+      await LovebirdsWidget.saveToAppGroup({
+        key: WIDGET_GIFT_KEY,
+        value: giftData
+      });
+    } else {
+      await Preferences.set({
+        key: WIDGET_GIFT_KEY,
+        value: giftData,
+      });
+    }
 
     // Also sync to lock screen storage (same data, different key for clarity)
     await this.syncToLockScreen(activeGift);
@@ -247,7 +258,7 @@ export const widgetGiftService = {
    * Used by iOS lock screen widgets and Android lock screen notifications
    */
   async syncToLockScreen(activeGift: WidgetGiftData | null): Promise<void> {
-    const lockScreenData = {
+    const lockScreenData = JSON.stringify({
       hasActiveGift: activeGift !== null,
       gift: activeGift ? {
         id: activeGift.id,
@@ -261,12 +272,20 @@ export const widgetGiftService = {
           : null,
       } : null,
       lastUpdated: new Date().toISOString(),
-    };
-
-    await Preferences.set({
-      key: LOCK_SCREEN_GIFT_KEY,
-      value: JSON.stringify(lockScreenData),
     });
+
+    // Use App Groups on iOS for lock screen widgets
+    if (Capacitor.getPlatform() === 'ios') {
+      await LovebirdsWidget.saveToAppGroup({
+        key: LOCK_SCREEN_GIFT_KEY,
+        value: lockScreenData
+      });
+    } else {
+      await Preferences.set({
+        key: LOCK_SCREEN_GIFT_KEY,
+        value: lockScreenData,
+      });
+    }
   },
 
   /**
