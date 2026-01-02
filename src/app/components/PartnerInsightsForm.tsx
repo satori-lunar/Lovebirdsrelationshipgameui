@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Heart, Sparkles, Coffee, Music, Gift, MessageCircle, Check } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { base44 } from '@/api/base44Client';
 
 export default function PartnerInsightsForm() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
-  const coupleId = searchParams.get('couple');
+  // Get token and couple ID from URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  const coupleId = urlParams.get('couple');
 
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
