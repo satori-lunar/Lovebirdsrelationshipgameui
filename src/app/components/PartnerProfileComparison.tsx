@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Heart, CheckCircle, XCircle, TrendingUp, Sparkles, Award } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
-import { api } from '../api';
+import { api } from '../services/api';
 
 interface PartnerGuess {
   guesser_name: string;
