@@ -404,10 +404,65 @@ export function PartnerProfileOnboarding({
 
     setSaving(true);
     try {
-      // TEMPORARY FIX: Save to onboarding_responses table instead of partner_profiles
-      // TODO: Once migrations 021-023 are run, switch to partnerProfileService.createProfile()
-
+      // Save directly to partner_profiles table using direct Supabase insert
+      // (bypassing service to avoid mapping issues)
       const profileData = {
+        user_id: userId,
+        couple_id: null, // Will be set when they join/create a couple
+        love_language_primary: loveLanguagePrimary,
+        love_language_secondary: loveLanguageSecondary || null,
+        communication_style: communicationStyle,
+        stress_needs: stressNeeds,
+        frequency_preference: frequencyPreference,
+        daily_checkins_enabled: true,
+        preferred_checkin_times: checkinTimes,
+        custom_preferences: [
+          { key: 'display_name', value: displayName },
+          { key: 'birthday', value: birthday },
+          { key: 'personality_type', value: personalityType },
+          { key: 'hobbies', value: JSON.stringify(hobbies) },
+          { key: 'favorite_activities', value: JSON.stringify(favoriteActivities) },
+          { key: 'favorite_foods', value: JSON.stringify(favoriteFoods) },
+          { key: 'music_preferences', value: JSON.stringify(musicPreferences) },
+          { key: 'likes', value: JSON.stringify(likes) },
+          { key: 'dislikes', value: JSON.stringify(dislikes) }
+        ],
+        learned_patterns: {},
+        engagement_score: 50
+      };
+
+      // Check if profile already exists
+      const { data: existing } = await api.supabase
+        .from('partner_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing profile
+        const { error } = await api.supabase
+          .from('partner_profiles')
+          .update(profileData)
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('Failed to update profile:', error);
+          throw error;
+        }
+      } else {
+        // Insert new profile
+        const { error } = await api.supabase
+          .from('partner_profiles')
+          .insert(profileData);
+
+        if (error) {
+          console.error('Failed to insert profile:', error);
+          throw error;
+        }
+      }
+
+      // Also save to onboarding_responses for compatibility
+      const onboardingData = {
         user_id: userId,
         name: displayName,
         birthday: birthday || null,
@@ -428,28 +483,21 @@ export function PartnerProfileOnboarding({
         }
       };
 
-      // Check if onboarding response exists
-      const { data: existing } = await api.supabase
+      const { data: existingOnboarding } = await api.supabase
         .from('onboarding_responses')
         .select('id')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (existing) {
-        // Update existing
-        const { error } = await api.supabase
+      if (existingOnboarding) {
+        await api.supabase
           .from('onboarding_responses')
-          .update(profileData)
+          .update(onboardingData)
           .eq('user_id', userId);
-
-        if (error) throw error;
       } else {
-        // Insert new
-        const { error } = await api.supabase
+        await api.supabase
           .from('onboarding_responses')
-          .insert(profileData);
-
-        if (error) throw error;
+          .insert(onboardingData);
       }
 
       setStep('complete');
