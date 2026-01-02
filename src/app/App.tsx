@@ -23,8 +23,8 @@ import { Settings } from './components/Settings';
 import { PartnerInsights } from './components/PartnerInsights';
 import { DragonPet } from './components/DragonPet';
 import { DragonEvolutionDemo } from './components/DragonEvolutionDemo';
-import { LockscreenWallpaper } from './components/LockscreenWallpaper';
-import { SendLockscreenMessage } from './components/SendLockscreenMessage';
+import { CreateLockscreenGift } from './components/CreateLockscreenGift';
+import { ViewLockscreenGift } from './components/ViewLockscreenGift';
 import { WeeklySuggestions } from './components/WeeklySuggestions';
 import { AuthModal } from './components/AuthModal';
 import RelationshipModeSetup from './components/RelationshipModeSetup';
@@ -39,7 +39,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'lockscreen-wallpaper' | 'send-lockscreen-message' | 'settings' | 'insights' | 'dragon' | 'dragon-demo' | 'capacity-checkin';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo' | 'capacity-checkin';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -282,12 +282,12 @@ export default function App() {
         <Memories onBack={handleBack} />
       )}
 
-      {currentView === 'lockscreen-wallpaper' && (
-        <LockscreenWallpaper onBack={handleBack} />
+      {currentView === 'create-lockscreen-gift' && (
+        <CreateLockscreenGift onBack={handleBack} />
       )}
 
-      {currentView === 'send-lockscreen-message' && (
-        <SendLockscreenMessage onBack={handleBack} />
+      {currentView === 'view-lockscreen-gift' && (
+        <ViewLockscreenGift onBack={handleBack} />
       )}
 
       {currentView === 'insights' && userData && (
