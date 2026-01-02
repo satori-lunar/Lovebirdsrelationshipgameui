@@ -167,7 +167,59 @@ CREATE INDEX IF NOT EXISTS idx_partner_messages_created ON partner_messages(crea
 CREATE INDEX IF NOT EXISTS idx_partner_messages_read ON partner_messages(read);
 
 -- =============================================================================
--- 6. CREATE TRIGGERS
+-- 6. CREATE CAPACITY CHECK-INS TABLE (My Capacity Today)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS capacity_checkins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  couple_id UUID NOT NULL REFERENCES couples(id) ON DELETE CASCADE,
+
+  -- Mood tracking
+  mood VARCHAR(20) NOT NULL,
+
+  -- Needs/preferences (array of selected needs)
+  needs TEXT[],
+
+  -- Optional context (limited to 140 chars in UI)
+  context TEXT,
+
+  -- Visibility for partner
+  visible_to_partner BOOLEAN DEFAULT true,
+  partner_viewed BOOLEAN DEFAULT false,
+  partner_viewed_at TIMESTAMP,
+
+  created_at TIMESTAMP DEFAULT NOW(),
+
+  CONSTRAINT check_mood CHECK (mood IN (
+    'good',
+    'okay',
+    'low',
+    'overwhelmed',
+    'sad',
+    'numb'
+  ))
+);
+
+-- Create indexes for capacity_checkins
+CREATE INDEX IF NOT EXISTS idx_capacity_checkins_user ON capacity_checkins(user_id);
+CREATE INDEX IF NOT EXISTS idx_capacity_checkins_couple ON capacity_checkins(couple_id);
+CREATE INDEX IF NOT EXISTS idx_capacity_checkins_date ON capacity_checkins(created_at);
+
+-- =============================================================================
+-- 7. ADD EMOTIONAL PREFERENCES TO PARTNER_PROFILES
+-- =============================================================================
+
+-- Add emotional support preferences columns
+ALTER TABLE partner_profiles
+  ADD COLUMN IF NOT EXISTS when_low_helps JSONB,
+  ADD COLUMN IF NOT EXISTS when_low_avoid JSONB;
+
+-- when_low_helps example: ["physical_closeness", "quiet_presence", "distraction"]
+-- when_low_avoid example: ["too_many_questions", "being_told_cheer_up", "silence"]
+
+-- =============================================================================
+-- 8. CREATE TRIGGERS
 -- =============================================================================
 
 -- Function to update couple record when partner form is submitted
@@ -223,10 +275,11 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE 'Tables created:';
   RAISE NOTICE '  - couples (with relationship_mode, is_long_distance, etc.)';
-  RAISE NOTICE '  - partner_profiles (with is_app_user, notes)';
+  RAISE NOTICE '  - partner_profiles (with emotional preferences)';
   RAISE NOTICE '  - long_distance_activities';
   RAISE NOTICE '  - partner_form_responses';
   RAISE NOTICE '  - partner_messages (love messages)';
+  RAISE NOTICE '  - capacity_checkins (My Capacity Today)';
   RAISE NOTICE '';
   RAISE NOTICE 'Triggers created:';
   RAISE NOTICE '  - trigger_update_couple_on_form';

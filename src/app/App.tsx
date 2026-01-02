@@ -30,6 +30,7 @@ import { AuthModal } from './components/AuthModal';
 import RelationshipModeSetup from './components/RelationshipModeSetup';
 import SoloModeSetup from './components/SoloModeSetup';
 import PartnerInsightsForm from './components/PartnerInsightsForm';
+import CapacityCheckIn from './components/CapacityCheckIn';
 import { useAuth } from './hooks/useAuth';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
@@ -38,7 +39,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'widget-gallery' | 'send-widget-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'widget-gallery' | 'send-widget-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo' | 'capacity-checkin';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -250,6 +251,13 @@ export default function App() {
 
       {currentView === 'messages' && (
         <LoveMessages onBack={handleBack} />
+      )}
+
+      {currentView === 'capacity-checkin' && user && (
+        <CapacityCheckIn
+          onComplete={() => setCurrentView('home')}
+          onBack={() => setCurrentView('home')}
+        />
       )}
 
       {currentView === 'requests' && (
