@@ -408,7 +408,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
                 )}
 
                 {/* Content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -417,7 +417,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
                   >
                     {/* Icon with Pulse */}
                     <motion.div
-                      className="text-8xl mb-6"
+                      className="text-7xl mb-4"
                       animate={{
                         scale: isHolding ? [1, 1.1, 1] : 1,
                       }}
@@ -431,7 +431,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
                     {/* Mood Name */}
                     <motion.h1
-                      className="text-white mb-3 text-5xl font-bold drop-shadow-lg"
+                      className="text-white mb-2 text-4xl font-bold drop-shadow-lg"
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.2, type: "spring" }}
@@ -441,7 +441,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
                     {/* Description */}
                     <motion.p
-                      className="text-white/95 text-xl mb-8 drop-shadow-md px-4"
+                      className="text-white/95 text-lg mb-5 drop-shadow-md px-4"
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.3, type: "spring" }}
@@ -451,12 +451,12 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
                     {/* Capacity Indicator */}
                     <motion.div
-                      className="flex items-center justify-center gap-3 mb-8"
+                      className="flex items-center justify-center gap-3 mb-5"
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.4, type: "spring" }}
                     >
-                      <div className="w-48 h-4 bg-white/25 rounded-full overflow-hidden backdrop-blur-sm border border-white/30">
+                      <div className="w-40 h-3 bg-white/25 rounded-full overflow-hidden backdrop-blur-sm border border-white/30">
                         <motion.div
                           className="h-full bg-gradient-to-r from-white via-white/90 to-white rounded-full"
                           initial={{ width: 0 }}
@@ -464,7 +464,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
                           transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
                         />
                       </div>
-                      <span className="text-white font-bold text-xl drop-shadow-md">{currentMood.capacity}%</span>
+                      <span className="text-white font-bold text-lg drop-shadow-md">{currentMood.capacity}%</span>
                     </motion.div>
                   </motion.div>
 
@@ -474,7 +474,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
                       initial={{ opacity: 0, scale: 0.5 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ type: "spring", stiffness: 300 }}
-                      className="w-44 h-44 relative"
+                      className="w-36 h-36 relative mt-2"
                     >
                       {/* Glow */}
                       <div
@@ -483,29 +483,29 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
                       />
                       <svg className="w-full h-full -rotate-90 relative">
                         <circle
-                          cx="88"
-                          cy="88"
-                          r="75"
+                          cx="72"
+                          cy="72"
+                          r="62"
                           stroke="rgba(255, 255, 255, 0.2)"
-                          strokeWidth="12"
+                          strokeWidth="10"
                           fill="none"
                         />
                         <motion.circle
-                          cx="88"
-                          cy="88"
-                          r="75"
+                          cx="72"
+                          cy="72"
+                          r="62"
                           stroke="white"
-                          strokeWidth="12"
+                          strokeWidth="10"
                           fill="none"
-                          strokeDasharray={471}
-                          strokeDashoffset={471 - (471 * holdProgress) / 100}
+                          strokeDasharray={389}
+                          strokeDashoffset={389 - (389 * holdProgress) / 100}
                           strokeLinecap="round"
                           style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8))' }}
                         />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
                         <motion.span
-                          className="text-white text-3xl font-bold drop-shadow-lg"
+                          className="text-white text-2xl font-bold drop-shadow-lg"
                           animate={{ scale: [1, 1.05, 1] }}
                           transition={{ duration: 0.5, repeat: Infinity }}
                         >
@@ -521,19 +521,19 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.5 }}
-                      className="text-center"
+                      className="text-center mt-2"
                     >
                       <motion.div
-                        className="w-24 h-24 rounded-full border-4 border-white/60 flex items-center justify-center mb-4 mx-auto backdrop-blur-sm"
+                        className="w-20 h-20 rounded-full border-4 border-white/60 flex items-center justify-center mb-3 mx-auto backdrop-blur-sm"
                         animate={{
                           scale: [1, 1.05, 1],
                           borderColor: ['rgba(255,255,255,0.6)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.6)'],
                         }}
                         transition={{ duration: 2, repeat: Infinity }}
                       >
-                        <div className="w-14 h-14 rounded-full bg-white/40" />
+                        <div className="w-12 h-12 rounded-full bg-white/40" />
                       </motion.div>
-                      <p className="text-white/95 text-xl font-semibold drop-shadow-md">
+                      <p className="text-white/95 text-lg font-semibold drop-shadow-md">
                         Hold to select
                       </p>
                     </motion.div>
