@@ -42,6 +42,10 @@ import { useUnreadRequests } from '../hooks/useUnreadRequests';
 import { widgetGiftService } from '../services/widgetGiftService';
 import { GiftCelebration } from './GiftCelebration';
 import { GiftCarousel } from './GiftCarousel';
+import PartnerFormInvite from './PartnerFormInvite';
+import WeeklyRhythm from './WeeklyRhythm';
+import AsyncDateIdeas from './AsyncDateIdeas';
+import LocationDateSuggestions from './LocationDateSuggestions';
 import type { WidgetGiftData } from '../types/widget';
 
 interface HomeProps {
@@ -118,6 +122,26 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     queryKey: ['onboarding', user?.id],
     queryFn: () => onboardingService.getOnboarding(user!.id),
     enabled: !!user,
+  });
+
+  // Query couple data (relationship contains couple data)
+  const couple = relationship;
+
+  // Query partner profile data
+  const { data: partnerProfile } = useQuery({
+    queryKey: ['partnerProfile', relationship?.id, user?.id],
+    queryFn: async () => {
+      if (!relationship?.id || !user?.id) return null;
+      try {
+        // Fetch the partner profile (the one that's not the current user)
+        const profiles = await onboardingService.getPartnerProfiles(relationship.id);
+        return profiles?.find(p => p.user_email !== user.email) || null;
+      } catch (error) {
+        console.error('Failed to fetch partner profile:', error);
+        return null;
+      }
+    },
+    enabled: !!relationship?.id && !!user?.id,
   });
 
   // Calculate days together (mock - would come from relationship data)
@@ -413,6 +437,52 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
+          )}
+
+          {/* Solo Mode - Partner Form Invite */}
+          {couple?.relationship_mode === 'solo' && !couple?.partner_form_completed && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <PartnerFormInvite couple={couple} />
+            </motion.div>
+          )}
+
+          {/* Long Distance Features */}
+          {couple?.is_long_distance && (
+            <>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <WeeklyRhythm couple={couple} user={user} />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+              >
+                <AsyncDateIdeas />
+              </motion.div>
+            </>
+          )}
+
+          {/* Location-Based Date Suggestions */}
+          {couple && partnerProfile && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <LocationDateSuggestions
+                couple={couple}
+                partnerProfile={partnerProfile}
+              />
             </motion.div>
           )}
 
