@@ -1,0 +1,75 @@
+{
+  "name": "Couple",
+  "type": "object",
+  "properties": {
+    "partner1_email": {
+      "type": "string",
+      "format": "email"
+    },
+    "partner1_name": {
+      "type": "string"
+    },
+    "partner2_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Optional for solo mode"
+    },
+    "partner2_name": {
+      "type": "string",
+      "description": "Optional for solo mode"
+    },
+    "relationship_mode": {
+      "type": "string",
+      "enum": ["shared", "solo"],
+      "description": "shared = both using app, solo = one partner using"
+    },
+    "is_long_distance": {
+      "type": "boolean",
+      "default": false
+    },
+    "relationship_start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "location": {
+      "type": "string",
+      "description": "Primary location for date suggestions"
+    },
+    "partner2_location": {
+      "type": "string",
+      "description": "Partner 2's location if long-distance"
+    },
+    "budget_preference": {
+      "type": "string",
+      "enum": ["low", "moderate", "high"],
+      "default": "moderate"
+    },
+    "partner_form_token": {
+      "type": "string",
+      "description": "Unique token for partner insights form (solo mode)"
+    },
+    "partner_form_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "partner_form_submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "invite_code": {
+      "type": "string"
+    },
+    "both_partners_onboarded": {
+      "type": "boolean",
+      "default": false
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "partner1_email",
+    "relationship_mode"
+  ]
+}
