@@ -138,7 +138,36 @@ CREATE INDEX IF NOT EXISTS idx_partner_form_couple ON partner_form_responses(cou
 CREATE INDEX IF NOT EXISTS idx_partner_form_token ON partner_form_responses(form_token);
 
 -- =============================================================================
--- 5. CREATE TRIGGERS
+-- 5. CREATE PARTNER_MESSAGES TABLE (Love Messages)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS partner_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sender_id UUID NOT NULL,
+  receiver_id UUID NOT NULL,
+  message_text TEXT NOT NULL,
+  message_type VARCHAR(50) DEFAULT 'message',
+  read BOOLEAN DEFAULT false,
+  read_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+
+  CONSTRAINT check_message_type CHECK (message_type IN (
+    'message',
+    'miss_you',
+    'thinking_of_you',
+    'love_note',
+    'compliment'
+  ))
+);
+
+-- Create indexes for partner_messages
+CREATE INDEX IF NOT EXISTS idx_partner_messages_receiver ON partner_messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_partner_messages_sender ON partner_messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_partner_messages_created ON partner_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_partner_messages_read ON partner_messages(read);
+
+-- =============================================================================
+-- 6. CREATE TRIGGERS
 -- =============================================================================
 
 -- Function to update couple record when partner form is submitted
@@ -197,11 +226,12 @@ BEGIN
   RAISE NOTICE '  - partner_profiles (with is_app_user, notes)';
   RAISE NOTICE '  - long_distance_activities';
   RAISE NOTICE '  - partner_form_responses';
+  RAISE NOTICE '  - partner_messages (love messages)';
   RAISE NOTICE '';
   RAISE NOTICE 'Triggers created:';
   RAISE NOTICE '  - trigger_update_couple_on_form';
   RAISE NOTICE '  - update_couples_updated_at';
   RAISE NOTICE '  - update_partner_profiles_updated_at';
   RAISE NOTICE '';
-  RAISE NOTICE 'Your database is ready for the relationship modes feature! 🎉';
+  RAISE NOTICE 'Your database is ready! 🎉';
 END $$;
