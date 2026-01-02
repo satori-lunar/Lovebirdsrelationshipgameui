@@ -74,11 +74,15 @@ export const lockscreenService = {
    * Send lockscreen message to partner
    */
   async sendMessage(payload: CreateLockscreenMessagePayload): Promise<void> {
+    // Get current user first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + payload.expiryHours);
 
     const { error } = await supabase.from('lockscreen_messages').insert({
-      sender_id: (await supabase.auth.getUser()).data.user!.id,
+      sender_id: user.id,
       receiver_id: payload.receiverId,
       relationship_id: payload.relationshipId,
       message: payload.message,
