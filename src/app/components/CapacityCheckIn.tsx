@@ -134,6 +134,25 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // Mood selection state (moved from renderMoodStep)
+  const [currentMoodIndex, setCurrentMoodIndex] = React.useState(0);
+  const [holdProgress, setHoldProgress] = React.useState(0);
+  const [isHolding, setIsHolding] = React.useState(false);
+  const holdTimerRef = React.useRef<number | null>(null);
+  const progressIntervalRef = React.useRef<number | null>(null);
+
+  // Cleanup timers on unmount
+  React.useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
+
   const toggleNeed = (needId: string) => {
     setSelectedNeeds(prev =>
       prev.includes(needId)
@@ -199,12 +218,6 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
   }
 
   const renderMoodStep = () => {
-    const [currentMoodIndex, setCurrentMoodIndex] = React.useState(0);
-    const [holdProgress, setHoldProgress] = React.useState(0);
-    const [isHolding, setIsHolding] = React.useState(false);
-    const holdTimerRef = React.useRef<number | null>(null);
-    const progressIntervalRef = React.useRef<number | null>(null);
-
     const currentMood = moods[currentMoodIndex];
 
     const handleDragEnd = (event: any, info: any) => {
@@ -246,17 +259,6 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
       setIsHolding(false);
       setHoldProgress(0);
     };
-
-    React.useEffect(() => {
-      return () => {
-        if (holdTimerRef.current) {
-          clearTimeout(holdTimerRef.current);
-        }
-        if (progressIntervalRef.current) {
-          clearInterval(progressIntervalRef.current);
-        }
-      };
-    }, []);
 
     // Convert Tailwind gradient to CSS gradient
     const getGradientStyle = (colorClass: string) => {
