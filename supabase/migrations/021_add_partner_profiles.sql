@@ -5,7 +5,7 @@
 -- =====================================================
 -- PARTNER PROFILES TABLE
 -- =====================================================
-CREATE TABLE partner_profiles (
+CREATE TABLE IF NOT EXISTS partner_profiles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   couple_id UUID REFERENCES relationships(id) ON DELETE CASCADE,
@@ -41,29 +41,33 @@ CREATE TABLE partner_profiles (
 );
 
 -- Index for faster lookups
-CREATE INDEX idx_partner_profiles_user_id ON partner_profiles(user_id);
-CREATE INDEX idx_partner_profiles_couple_id ON partner_profiles(couple_id);
+CREATE INDEX IF NOT EXISTS idx_partner_profiles_user_id ON partner_profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_partner_profiles_couple_id ON partner_profiles(couple_id);
 
 -- RLS policies
 ALTER TABLE partner_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own profile
-CREATE POLICY "Users can view own profile"
+DROP POLICY IF EXISTS "Users can view own profile" ON partner_profiles;
+CREATE POLICY "
   ON partner_profiles FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Users can update their own profile
-CREATE POLICY "Users can update own profile"
+DROP POLICY IF EXISTS "Users can update own profile" ON partner_profiles;
+CREATE POLICY "
   ON partner_profiles FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Users can insert their own profile
-CREATE POLICY "Users can insert own profile"
+DROP POLICY IF EXISTS "Users can insert own profile" ON partner_profiles;
+CREATE POLICY "
   ON partner_profiles FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can view their partner's profile (same couple)
-CREATE POLICY "Users can view partner profile"
+DROP POLICY IF EXISTS "Users can view partner profile" ON partner_profiles;
+CREATE POLICY "
   ON partner_profiles FOR SELECT
   USING (
     couple_id IN (
@@ -75,7 +79,7 @@ CREATE POLICY "Users can view partner profile"
 -- =====================================================
 -- RELATIONSHIP NEEDS TABLE
 -- =====================================================
-CREATE TABLE relationship_needs (
+CREATE TABLE IF NOT EXISTS relationship_needs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   couple_id UUID NOT NULL REFERENCES relationships(id) ON DELETE CASCADE,
   requester_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -108,34 +112,37 @@ CREATE TABLE relationship_needs (
 );
 
 -- Indexes
-CREATE INDEX idx_relationship_needs_couple_id ON relationship_needs(couple_id);
-CREATE INDEX idx_relationship_needs_requester_id ON relationship_needs(requester_id);
-CREATE INDEX idx_relationship_needs_receiver_id ON relationship_needs(receiver_id);
-CREATE INDEX idx_relationship_needs_status ON relationship_needs(status);
-CREATE INDEX idx_relationship_needs_created_at ON relationship_needs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_relationship_needs_couple_id ON relationship_needs(couple_id);
+CREATE INDEX IF NOT EXISTS idx_relationship_needs_requester_id ON relationship_needs(requester_id);
+CREATE INDEX IF NOT EXISTS idx_relationship_needs_receiver_id ON relationship_needs(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_relationship_needs_status ON relationship_needs(status);
+CREATE INDEX IF NOT EXISTS idx_relationship_needs_created_at ON relationship_needs(created_at DESC);
 
 -- RLS policies
 ALTER TABLE relationship_needs ENABLE ROW LEVEL SECURITY;
 
 -- Users can view needs where they are requester or receiver
-CREATE POLICY "Users can view their needs"
+DROP POLICY IF EXISTS "Users can view their needs" ON partner_profiles;
+CREATE POLICY "
   ON relationship_needs FOR SELECT
   USING (requester_id = auth.uid() OR receiver_id = auth.uid());
 
 -- Users can insert needs where they are the requester
-CREATE POLICY "Users can create needs"
+DROP POLICY IF EXISTS "Users can create needs" ON partner_profiles;
+CREATE POLICY "
   ON relationship_needs FOR INSERT
   WITH CHECK (requester_id = auth.uid());
 
 -- Users can update needs where they are involved
-CREATE POLICY "Users can update their needs"
+DROP POLICY IF EXISTS "Users can update their needs" ON partner_profiles;
+CREATE POLICY "
   ON relationship_needs FOR UPDATE
   USING (requester_id = auth.uid() OR receiver_id = auth.uid());
 
 -- =====================================================
 -- MESSAGE SUGGESTIONS TABLE (for tracking & learning)
 -- =====================================================
-CREATE TABLE message_suggestions (
+CREATE TABLE IF NOT EXISTS message_suggestions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   receiver_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -162,34 +169,37 @@ CREATE TABLE message_suggestions (
 );
 
 -- Indexes
-CREATE INDEX idx_message_suggestions_sender_id ON message_suggestions(sender_id);
-CREATE INDEX idx_message_suggestions_receiver_id ON message_suggestions(receiver_id);
-CREATE INDEX idx_message_suggestions_type ON message_suggestions(suggestion_type);
-CREATE INDEX idx_message_suggestions_created_at ON message_suggestions(created_at DESC);
-CREATE INDEX idx_message_suggestions_was_used ON message_suggestions(was_used);
+CREATE INDEX IF NOT EXISTS idx_message_suggestions_sender_id ON message_suggestions(sender_id);
+CREATE INDEX IF NOT EXISTS idx_message_suggestions_receiver_id ON message_suggestions(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_message_suggestions_type ON message_suggestions(suggestion_type);
+CREATE INDEX IF NOT EXISTS idx_message_suggestions_created_at ON message_suggestions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_message_suggestions_was_used ON message_suggestions(was_used);
 
 -- RLS policies
 ALTER TABLE message_suggestions ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own suggestions
-CREATE POLICY "Users can view own suggestions"
+DROP POLICY IF EXISTS "Users can view own suggestions" ON partner_profiles;
+CREATE POLICY "
   ON message_suggestions FOR SELECT
   USING (sender_id = auth.uid());
 
 -- Users can insert their own suggestions
-CREATE POLICY "Users can insert suggestions"
+DROP POLICY IF EXISTS "Users can insert suggestions" ON partner_profiles;
+CREATE POLICY "
   ON message_suggestions FOR INSERT
   WITH CHECK (sender_id = auth.uid());
 
 -- Users can update their own suggestions
-CREATE POLICY "Users can update own suggestions"
+DROP POLICY IF EXISTS "Users can update own suggestions" ON partner_profiles;
+CREATE POLICY "
   ON message_suggestions FOR UPDATE
   USING (sender_id = auth.uid());
 
 -- =====================================================
 -- LEARNING EVENTS TABLE (track what works)
 -- =====================================================
-CREATE TABLE learning_events (
+CREATE TABLE IF NOT EXISTS learning_events (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
@@ -208,27 +218,29 @@ CREATE TABLE learning_events (
 );
 
 -- Indexes
-CREATE INDEX idx_learning_events_user_id ON learning_events(user_id);
-CREATE INDEX idx_learning_events_type ON learning_events(event_type);
-CREATE INDEX idx_learning_events_created_at ON learning_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_learning_events_user_id ON learning_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_learning_events_type ON learning_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_learning_events_created_at ON learning_events(created_at DESC);
 
 -- RLS policies
 ALTER TABLE learning_events ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own learning events
-CREATE POLICY "Users can view own events"
+DROP POLICY IF EXISTS "Users can view own events" ON partner_profiles;
+CREATE POLICY "
   ON learning_events FOR SELECT
   USING (user_id = auth.uid());
 
 -- Users can insert their own events
-CREATE POLICY "Users can insert events"
+DROP POLICY IF EXISTS "Users can insert events" ON partner_profiles;
+CREATE POLICY "
   ON learning_events FOR INSERT
   WITH CHECK (user_id = auth.uid());
 
 -- =====================================================
 -- QUIET MODE TABLE (track when users need space)
 -- =====================================================
-CREATE TABLE quiet_mode (
+CREATE TABLE IF NOT EXISTS quiet_mode (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
 
   -- Is quiet mode active?
@@ -251,17 +263,20 @@ CREATE TABLE quiet_mode (
 ALTER TABLE quiet_mode ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own quiet mode status
-CREATE POLICY "Users can view own quiet mode"
+DROP POLICY IF EXISTS "Users can view own quiet mode" ON partner_profiles;
+CREATE POLICY "
   ON quiet_mode FOR SELECT
   USING (user_id = auth.uid());
 
 -- Users can manage their own quiet mode
-CREATE POLICY "Users can manage quiet mode"
+DROP POLICY IF EXISTS "Users can manage quiet mode" ON partner_profiles;
+CREATE POLICY "
   ON quiet_mode FOR ALL
   USING (user_id = auth.uid());
 
 -- Partners can view each other's quiet mode (to respect boundaries)
-CREATE POLICY "Partners can view partner quiet mode"
+DROP POLICY IF EXISTS "Partners can view partner quiet mode" ON partner_profiles;
+CREATE POLICY "
   ON quiet_mode FOR SELECT
   USING (
     user_id IN (
