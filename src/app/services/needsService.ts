@@ -33,7 +33,7 @@ class NeedsService {
 
     // Determine receiver ID from couple
     const { data: couple, error: coupleError } = await api.supabase
-      .from('couples')
+      .from('relationships')
       .select('partner_a_id, partner_b_id')
       .eq('id', request.coupleId)
       .single();
