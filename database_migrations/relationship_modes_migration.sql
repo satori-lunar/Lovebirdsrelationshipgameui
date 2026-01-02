@@ -16,15 +16,28 @@ ALTER TABLE couples
   ADD COLUMN IF NOT EXISTS partner_form_completed BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS partner_form_submitted_at TIMESTAMP;
 
--- Add check constraint for relationship_mode
-ALTER TABLE couples
-  ADD CONSTRAINT IF NOT EXISTS check_relationship_mode
-  CHECK (relationship_mode IN ('shared', 'solo'));
+-- Add check constraints (with existence checks)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_relationship_mode'
+  ) THEN
+    ALTER TABLE couples
+      ADD CONSTRAINT check_relationship_mode
+      CHECK (relationship_mode IN ('shared', 'solo'));
+  END IF;
+END $$;
 
--- Add check constraint for budget_preference
-ALTER TABLE couples
-  ADD CONSTRAINT IF NOT EXISTS check_budget_preference
-  CHECK (budget_preference IN ('low', 'moderate', 'high'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_budget_preference'
+  ) THEN
+    ALTER TABLE couples
+      ADD CONSTRAINT check_budget_preference
+      CHECK (budget_preference IN ('low', 'moderate', 'high'));
+  END IF;
+END $$;
 
 -- Create index for form token lookups
 CREATE INDEX IF NOT EXISTS idx_couples_form_token ON couples(partner_form_token);
@@ -58,33 +71,46 @@ CREATE TABLE IF NOT EXISTS long_distance_activities (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Add check constraint for activity_type
-ALTER TABLE long_distance_activities
-  ADD CONSTRAINT IF NOT EXISTS check_activity_type
-  CHECK (activity_type IN (
-    'daily_question',
-    'encouragement',
-    'virtual_date',
-    'voice_note_prompt',
-    'photo_challenge',
-    'send_question',
-    'memory_share',
-    'gratitude_prompt',
-    'check_in'
-  ));
+-- Add check constraints (with existence checks)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_activity_type'
+  ) THEN
+    ALTER TABLE long_distance_activities
+      ADD CONSTRAINT check_activity_type
+      CHECK (activity_type IN (
+        'daily_question',
+        'encouragement',
+        'virtual_date',
+        'voice_note_prompt',
+        'photo_challenge',
+        'send_question',
+        'memory_share',
+        'gratitude_prompt',
+        'check_in'
+      ));
+  END IF;
+END $$;
 
--- Add check constraint for day_of_week
-ALTER TABLE long_distance_activities
-  ADD CONSTRAINT IF NOT EXISTS check_day_of_week
-  CHECK (day_of_week IN (
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-    'sunday'
-  ));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_day_of_week'
+  ) THEN
+    ALTER TABLE long_distance_activities
+      ADD CONSTRAINT check_day_of_week
+      CHECK (day_of_week IN (
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+        'sunday'
+      ));
+  END IF;
+END $$;
 
 -- Create indexes for long_distance_activities
 CREATE INDEX IF NOT EXISTS idx_ld_activities_couple ON long_distance_activities(couple_id);
