@@ -11,11 +11,11 @@ import {
   Check,
   ChevronRight
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { base44 } from '@/api/base44Client';
+import { Card, CardContent } from './ui/card';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { base44 } from '../api/base44Client';
 import moment from 'moment';
 
 const activityIcons = {

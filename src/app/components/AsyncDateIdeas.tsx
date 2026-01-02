@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Mic, Camera, MessageCircle, Music, BookOpen, Gift, Coffee, Star } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from './ui/card';
 
 const asyncDateIdeas = [
   {
