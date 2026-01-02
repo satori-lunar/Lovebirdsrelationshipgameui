@@ -5,12 +5,62 @@ import { Card, CardContent } from './ui/card';
 import { api } from '../services/api';
 
 const moods = {
-  good: { emoji: '😊', label: 'Good', color: 'from-green-400 to-emerald-500' },
-  okay: { emoji: '😐', label: 'Okay', color: 'from-blue-400 to-cyan-500' },
-  low: { emoji: '😔', label: 'Low', color: 'from-gray-400 to-slate-500' },
-  overwhelmed: { emoji: '😣', label: 'Overwhelmed', color: 'from-orange-400 to-amber-500' },
-  sad: { emoji: '😞', label: 'Sad', color: 'from-indigo-400 to-purple-500' },
-  numb: { emoji: '😶', label: 'Numb', color: 'from-slate-500 to-gray-600' },
+  energized: {
+    icon: '⚡',
+    label: 'Energized & Full',
+    capacity: 95,
+    color: 'from-emerald-400 to-green-500',
+    textColor: 'text-emerald-700'
+  },
+  good: {
+    icon: '☀️',
+    label: 'Good & Steady',
+    capacity: 80,
+    color: 'from-blue-400 to-cyan-500',
+    textColor: 'text-blue-700'
+  },
+  okay: {
+    icon: '🌤️',
+    label: 'Okay, Managing',
+    capacity: 60,
+    color: 'from-indigo-400 to-purple-500',
+    textColor: 'text-indigo-700'
+  },
+  stretched: {
+    icon: '⚠️',
+    label: 'Stretched Thin',
+    capacity: 40,
+    color: 'from-amber-400 to-orange-500',
+    textColor: 'text-amber-700'
+  },
+  low: {
+    icon: '🌧️',
+    label: 'Low & Tired',
+    capacity: 25,
+    color: 'from-slate-400 to-gray-500',
+    textColor: 'text-slate-700'
+  },
+  overwhelmed: {
+    icon: '🌊',
+    label: 'Overwhelmed',
+    capacity: 15,
+    color: 'from-red-400 to-rose-500',
+    textColor: 'text-red-700'
+  },
+  struggling: {
+    icon: '⛈️',
+    label: 'Really Struggling',
+    capacity: 10,
+    color: 'from-purple-500 to-violet-600',
+    textColor: 'text-purple-700'
+  },
+  numb: {
+    icon: '🌫️',
+    label: 'Numb & Disconnected',
+    capacity: 5,
+    color: 'from-gray-500 to-slate-600',
+    textColor: 'text-gray-700'
+  },
 };
 
 const needsLabels = {
@@ -146,20 +196,30 @@ export default function PartnerCapacityView({
       <Card className={`overflow-hidden border-0 shadow-xl bg-gradient-to-br ${mood.color}`}>
         <CardContent className="p-6 text-white">
           <div className="flex items-start justify-between mb-4">
-            <div>
+            <div className="flex-1">
               <p className="text-white/80 text-sm mb-1">{timeAgo()}</p>
-              <h3 className="text-2xl font-bold">
+              <h3 className="text-2xl font-bold mb-2">
                 {partnerName}'s Capacity Today
               </h3>
+              {/* Capacity Bar */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-3 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white transition-all"
+                    style={{ width: `${mood.capacity}%` }}
+                  />
+                </div>
+                <span className="text-sm font-semibold text-white/90">{mood.capacity}%</span>
+              </div>
             </div>
-            <div className="text-5xl">{mood.emoji}</div>
+            <div className="text-5xl ml-4">{mood.icon}</div>
           </div>
 
           <div className="bg-white/20 rounded-xl p-4 mb-4">
             <p className="font-semibold text-lg mb-2">Feeling: {mood.label}</p>
             {checkin.needs.length > 0 && (
-              <div className="space-y-1">
-                <p className="text-sm text-white/90">What they need:</p>
+              <div className="space-y-1 mt-3">
+                <p className="text-sm text-white/90 font-medium">What they need:</p>
                 {checkin.needs.map((need) => (
                   <div key={need} className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />

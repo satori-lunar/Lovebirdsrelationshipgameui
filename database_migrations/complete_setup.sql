@@ -192,11 +192,13 @@ CREATE TABLE IF NOT EXISTS capacity_checkins (
   created_at TIMESTAMP DEFAULT NOW(),
 
   CONSTRAINT check_mood CHECK (mood IN (
+    'energized',
     'good',
     'okay',
+    'stretched',
     'low',
     'overwhelmed',
-    'sad',
+    'struggling',
     'numb'
   ))
 );
