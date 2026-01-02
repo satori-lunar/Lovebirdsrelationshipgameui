@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronLeft, Check, Image as ImageIcon, Info, Smartphone, RefreshCw } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { toast } from 'sonner';

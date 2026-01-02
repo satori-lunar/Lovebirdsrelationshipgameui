@@ -1,0 +1,72 @@
+{
+  "name": "LongDistanceActivity",
+  "type": "object",
+  "properties": {
+    "couple_id": {
+      "type": "string"
+    },
+    "activity_type": {
+      "type": "string",
+      "enum": [
+        "daily_question",
+        "encouragement",
+        "virtual_date",
+        "voice_note_prompt",
+        "photo_challenge",
+        "send_question",
+        "memory_share",
+        "gratitude_prompt",
+        "check_in"
+      ]
+    },
+    "scheduled_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "day_of_week": {
+      "type": "string",
+      "enum": [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "partner1_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "partner2_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "partner1_response": {
+      "type": "string"
+    },
+    "partner2_response": {
+      "type": "string"
+    },
+    "is_recurring": {
+      "type": "boolean",
+      "default": true
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "couple_id",
+    "activity_type",
+    "scheduled_date"
+  ]
+}

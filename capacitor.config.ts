@@ -10,8 +10,9 @@ const config: CapacitorConfig = {
   plugins: {
     // Preferences plugin for widget data storage
     Preferences: {
-      // iOS: Use App Groups for widget data sharing
-      // group: 'group.com.lovebirds.app'
+      // iOS: Widget data is shared via App Groups (configured in entitlements)
+      // App Group ID: group.com.lovebirds.app
+      // See ios/App/App/App.entitlements and ios/LovebirdsWidget/LovebirdsWidget.entitlements
     }
   }
 };

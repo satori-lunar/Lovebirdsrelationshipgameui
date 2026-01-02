@@ -1,0 +1,92 @@
+{
+  "name": "PartnerProfile",
+  "type": "object",
+  "properties": {
+    "couple_id": {
+      "type": "string"
+    },
+    "user_email": {
+      "type": "string",
+      "format": "email",
+      "description": "Only set if this partner is an app user"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "nickname": {
+      "type": "string"
+    },
+    "is_app_user": {
+      "type": "boolean",
+      "default": true,
+      "description": "false for solo mode non-user partner"
+    },
+    "is_profile_complete": {
+      "type": "boolean",
+      "default": false
+    },
+    "love_language_primary": {
+      "type": "string",
+      "enum": [
+        "words_of_affirmation",
+        "quality_time",
+        "receiving_gifts",
+        "acts_of_service",
+        "physical_touch"
+      ]
+    },
+    "love_language_scores": {
+      "type": "object",
+      "properties": {
+        "words_of_affirmation": { "type": "number" },
+        "quality_time": { "type": "number" },
+        "receiving_gifts": { "type": "number" },
+        "acts_of_service": { "type": "number" },
+        "physical_touch": { "type": "number" }
+      }
+    },
+    "interests": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "hobbies": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "favorite_foods": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "music_preferences": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "preferred_date_types": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "communication_style": {
+      "type": "string",
+      "enum": ["frequent_texts", "long_calls", "quality_time", "mix"]
+    },
+    "notes": {
+      "type": "string",
+      "description": "Freeform notes about what they love (solo mode)"
+    },
+    "profile_photo_url": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "couple_id",
+    "display_name"
+  ]
+}
