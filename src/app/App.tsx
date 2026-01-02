@@ -27,6 +27,9 @@ import { WidgetGallery } from './components/WidgetGallery';
 import { SendWidgetGift } from './components/SendWidgetGift';
 import { WeeklySuggestions } from './components/WeeklySuggestions';
 import { AuthModal } from './components/AuthModal';
+import RelationshipModeSetup from './components/RelationshipModeSetup';
+import SoloModeSetup from './components/SoloModeSetup';
+import PartnerInsightsForm from './components/PartnerInsightsForm';
 import { useAuth } from './hooks/useAuth';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
@@ -35,7 +38,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'widget-gallery' | 'send-widget-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'widget-gallery' | 'send-widget-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -156,17 +159,29 @@ export default function App() {
       {currentView === 'sign-up' && (
         <SignUp
           onSuccess={() => {
-            // After successful sign up, redirect to onboarding
-            // New users always need to complete onboarding
-            // Wait a moment to show success message and ensure auth state is ready
+            // After successful sign up, go to relationship mode setup
             setTimeout(() => {
-              setCurrentView('onboarding');
-            }, 2000); // Increased delay to ensure auth state is established
+              setCurrentView('relationship-mode-setup');
+            }, 2000);
           }}
           onBack={() => setCurrentView('feature-slides')}
         />
       )}
 
+      {/* New Relationship Mode Setup Flow */}
+      {currentView === 'relationship-mode-setup' && user && (
+        <RelationshipModeSetup onNavigate={handleNavigate} />
+      )}
+
+      {currentView === 'solo-mode-setup' && user && (
+        <SoloModeSetup onNavigate={handleNavigate} />
+      )}
+
+      {currentView === 'partner-insights-form' && (
+        <PartnerInsightsForm />
+      )}
+
+      {/* Legacy onboarding (can be removed or used as fallback) */}
       {currentView === 'onboarding' && user && (
         <Onboarding onComplete={handleOnboardingComplete} />
       )}

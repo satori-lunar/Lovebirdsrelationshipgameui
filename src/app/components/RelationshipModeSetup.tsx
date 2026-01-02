@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Users, Heart, Plane, ArrowRight, Sparkles, Info } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { createPageUrl } from '@/utils';
 
-export default function RelationshipModeSetup() {
-  const navigate = useNavigate();
+interface RelationshipModeSetupProps {
+  onNavigate: (view: string) => void;
+}
+
+export default function RelationshipModeSetup({ onNavigate }: RelationshipModeSetupProps) {
   const [selectedMode, setSelectedMode] = useState(null);
   const [isLongDistance, setIsLongDistance] = useState(false);
 
@@ -49,9 +50,9 @@ export default function RelationshipModeSetup() {
 
     // Navigate based on mode
     if (selectedMode === 'shared') {
-      navigate(createPageUrl('ProfileSetup'));
+      onNavigate('onboarding');
     } else {
-      navigate(createPageUrl('SoloModeSetup'));
+      onNavigate('solo-mode-setup');
     }
   };
 
