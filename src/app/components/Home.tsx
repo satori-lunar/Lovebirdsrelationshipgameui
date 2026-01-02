@@ -22,11 +22,7 @@ import {
   Target,
   Settings,
   Lock,
-  Bell,
-  Smartphone,
-  Menu,
-  X,
-  History
+  Bell
 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Progress } from './ui/progress';
@@ -39,16 +35,13 @@ import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 import { useUnreadMessages } from '../hooks/useUnreadMessages';
 import { useUnreadRequests } from '../hooks/useUnreadRequests';
-import { widgetGiftService } from '../services/widgetGiftService';
 import { api } from '../services/api';
-import { GiftCelebration } from './GiftCelebration';
-import { GiftCarousel } from './GiftCarousel';
 import PartnerFormInvite from './PartnerFormInvite';
 import WeeklyRhythm from './WeeklyRhythm';
 import AsyncDateIdeas from './AsyncDateIdeas';
 import LocationDateSuggestions from './LocationDateSuggestions';
 import PartnerCapacityView from './PartnerCapacityView';
-import type { WidgetGiftData } from '../types/widget';
+import { SubmitNeedModal } from './SubmitNeedModal';
 
 interface HomeProps {
   userName: string;
@@ -68,57 +61,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
   const partnerName = partnerNameFromOnboarding || partnerNameProp;
 
-  // Widget gift state
-  const [pendingGifts, setPendingGifts] = useState<WidgetGiftData[]>([]);
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [showCarousel, setShowCarousel] = useState(false);
-  const [celebrationGift, setCelebrationGift] = useState<WidgetGiftData | null>(null);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
-
-  // Load pending widget gifts
-  useEffect(() => {
-    if (!user) return;
-
-    const loadPendingGifts = async () => {
-      try {
-        const gifts = await widgetGiftService.getPendingGifts(user.id);
-        setPendingGifts(gifts);
-
-        // Show celebration for new gifts
-        if (gifts.length > 0) {
-          const unseenGift = gifts.find(g => g.status === 'delivered');
-          if (unseenGift) {
-            setCelebrationGift(unseenGift);
-            setShowCelebration(true);
-            // Mark as seen
-            await widgetGiftService.markGiftAsSeen(unseenGift.id);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load pending gifts:', error);
-      }
-    };
-
-    loadPendingGifts();
-  }, [user]);
-
-  const handleDismissGift = async (giftId: string) => {
-    try {
-      await widgetGiftService.dismissGift(giftId);
-      setPendingGifts(prev => prev.filter(g => g.id !== giftId));
-    } catch (error) {
-      console.error('Failed to dismiss gift:', error);
-    }
-  };
-
-  const handleCelebrationDismiss = () => {
-    setShowCelebration(false);
-    setCelebrationGift(null);
-    // If there are multiple gifts, show carousel
-    if (pendingGifts.length > 1) {
-      setShowCarousel(true);
-    }
-  };
+  const [showNeedModal, setShowNeedModal] = useState(false);
 
   const { data: onboarding } = useQuery({
     queryKey: ['onboarding', user?.id],
@@ -415,92 +359,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             </motion.div>
           )}
 
-          {/* Pending Gifts Indicator */}
-          {pendingGifts.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-            >
-              <button
-                onClick={() => setShowCarousel(true)}
-                className="w-full"
-              >
-                <Card className="bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500 text-white overflow-hidden border-0 shadow-xl shadow-rose-200 hover:shadow-2xl transition-all">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <motion.div
-                        animate={{
-                          scale: [1, 1.1, 1],
-                          rotate: [0, 5, -5, 0],
-                        }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0"
-                      >
-                        <Gift className="w-7 h-7 text-white" />
-                      </motion.div>
-                      <div className="flex-1 text-left">
-                        <p className="text-rose-100 text-xs font-medium uppercase tracking-wide">
-                          New from {partnerName}
-                        </p>
-                        <h3 className="font-bold text-lg mt-0.5">
-                          {pendingGifts.length} Gift{pendingGifts.length > 1 ? 's' : ''} Waiting! 💝
-                        </h3>
-                        <p className="text-rose-100 text-sm mt-1">
-                          Tap to view your surprise{pendingGifts.length > 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-6 h-6 text-white/80" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-          )}
-
-          {/* Widget Gift Suggestion */}
-          {relationship?.partner_b_id && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="border-2 border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 shadow-lg">
-                <CardContent className="p-5">
-                  <div className="flex items-start gap-4">
-                    <motion.div
-                      animate={{ y: [-2, 2, -2] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-rose-200"
-                    >
-                      <Smartphone className="w-6 h-6 text-white" />
-                    </motion.div>
-                    <div className="flex-1">
-                      <p className="text-xs text-rose-600 font-semibold uppercase tracking-wide">Widget Gift</p>
-                      <h3 className="font-semibold text-gray-900 mt-1">Send love to their home screen</h3>
-                      <p className="text-sm text-gray-600 mt-1">Share a photo or sweet message that appears on {partnerName}'s widget</p>
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={() => onNavigate('send-widget-gift')}
-                          className="px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white text-sm font-medium rounded-xl shadow-md hover:shadow-lg transition-all"
-                        >
-                          Send a Gift 💝
-                        </button>
-                        <button
-                          onClick={() => onNavigate('gift-history')}
-                          className="px-4 py-2 bg-white border border-rose-200 text-rose-600 text-sm font-medium rounded-xl hover:bg-rose-50 transition-colors flex items-center gap-1.5"
-                        >
-                          <History className="w-4 h-4" />
-                          History
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
           {/* My Capacity Today Prompt */}
           {relationship?.partner_b_id && !partnerCapacity && (
             <motion.div
@@ -531,6 +389,47 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                         <div className="mt-3">
                           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-sm font-medium rounded-xl shadow-md">
                             <span>Share Your Capacity</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </button>
+            </motion.div>
+          )}
+
+          {/* What Feels Missing? */}
+          {relationship?.partner_b_id && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.26 }}
+            >
+              <button
+                onClick={() => setShowNeedModal(true)}
+                className="w-full text-left"
+              >
+                <Card className="border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg hover:shadow-xl transition-all">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-4">
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-200"
+                      >
+                        <Heart className="w-6 h-6 text-white" fill="white" />
+                      </motion.div>
+                      <div className="flex-1">
+                        <p className="text-xs text-amber-600 font-semibold uppercase tracking-wide">What Feels Missing?</p>
+                        <h3 className="font-semibold text-gray-900 mt-1">Tell us what you need</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          We'll help {partnerName} know how to support you in a way that feels right to them
+                        </p>
+                        <div className="mt-3">
+                          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-medium rounded-xl shadow-md">
+                            <span>Share What's Missing</span>
                             <ChevronRight className="w-4 h-4" />
                           </div>
                         </div>
@@ -870,48 +769,16 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
         </div>
       </nav>
 
-      {/* Gift Celebration Modal */}
-      <AnimatePresence>
-        {showCelebration && celebrationGift && (
-          <GiftCelebration
-            gift={celebrationGift}
-            onDismiss={handleCelebrationDismiss}
-            onView={() => {
-              handleCelebrationDismiss();
-              if (pendingGifts.length > 0) {
-                setShowCarousel(true);
-              }
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Gift Carousel Modal */}
-      <AnimatePresence>
-        {showCarousel && pendingGifts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setShowCarousel(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md"
-            >
-              <GiftCarousel
-                gifts={pendingGifts}
-                onDismissGift={handleDismissGift}
-                onClose={() => setShowCarousel(false)}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Submit Need Modal */}
+      {user && relationship && (
+        <SubmitNeedModal
+          isOpen={showNeedModal}
+          onClose={() => setShowNeedModal(false)}
+          userId={user.id}
+          coupleId={relationship.id}
+          partnerName={partnerName}
+        />
+      )}
     </div>
   );
 }
