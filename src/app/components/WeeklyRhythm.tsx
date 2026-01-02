@@ -16,7 +16,35 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { api } from '../services/api';
-import moment from 'moment';
+
+// Date utility functions (replacing moment)
+const formatDate = (date: Date): string => {
+  return date.toISOString().split('T')[0];
+};
+
+const getStartOfWeek = (date: Date): Date => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day;
+  return new Date(d.setDate(diff));
+};
+
+const getEndOfWeek = (date: Date): Date => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() + (6 - day);
+  return new Date(d.setDate(diff));
+};
+
+const addDays = (date: Date, days: number): Date => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+const isAfter = (date1: string, date2: string): boolean => {
+  return new Date(date1) > new Date(date2);
+};
 
 const activityIcons = {
   daily_question: MessageCircle,
@@ -57,9 +85,10 @@ export default function WeeklyRhythm({ couple, user }) {
     }
 
     try {
-      const today = moment().format('YYYY-MM-DD');
-      const weekStart = moment().startOf('week').format('YYYY-MM-DD');
-      const weekEnd = moment().endOf('week').format('YYYY-MM-DD');
+      const now = new Date();
+      const today = formatDate(now);
+      const weekStart = formatDate(getStartOfWeek(now));
+      const weekEnd = formatDate(getEndOfWeek(now));
 
       // Get all activities for this week
       const { data: allActivities, error } = await api.supabase
@@ -90,7 +119,7 @@ export default function WeeklyRhythm({ couple, user }) {
 
       // Get upcoming activities
       const upcoming = thisWeek
-        .filter(a => moment(a.scheduled_date).isAfter(today))
+        .filter(a => isAfter(a.scheduled_date, today))
         .slice(0, 3);
 
       setUpcomingActivities(upcoming);
@@ -102,14 +131,14 @@ export default function WeeklyRhythm({ couple, user }) {
   };
 
   const generateWeeklyRhythm = async () => {
-    const weekStart = moment().startOf('week');
+    const weekStart = getStartOfWeek(new Date());
     const activities = [];
 
     // Monday: Daily question
     activities.push({
       couple_id: couple.id,
       activity_type: 'daily_question',
-      scheduled_date: weekStart.clone().add(0, 'days').format('YYYY-MM-DD'),
+      scheduled_date: formatDate(addDays(weekStart, 0)),
       day_of_week: 'monday',
       title: 'Start the Week Connected',
       prompt: "What's one thing you're looking forward to this week? Share with your partner."
@@ -119,7 +148,7 @@ export default function WeeklyRhythm({ couple, user }) {
     activities.push({
       couple_id: couple.id,
       activity_type: 'encouragement',
-      scheduled_date: weekStart.clone().add(1, 'days').format('YYYY-MM-DD'),
+      scheduled_date: formatDate(addDays(weekStart, 1)),
       day_of_week: 'tuesday',
       title: 'Send Some Love',
       prompt: "Send your partner an encouraging message about something they're working on."
@@ -129,7 +158,7 @@ export default function WeeklyRhythm({ couple, user }) {
     activities.push({
       couple_id: couple.id,
       activity_type: 'check_in',
-      scheduled_date: weekStart.clone().add(2, 'days').format('YYYY-MM-DD'),
+      scheduled_date: formatDate(addDays(weekStart, 2)),
       day_of_week: 'wednesday',
       title: 'Mid-Week Check-In',
       prompt: 'How are you feeling this week? Share one high and one low with your partner.'
@@ -140,7 +169,7 @@ export default function WeeklyRhythm({ couple, user }) {
     activities.push({
       couple_id: couple.id,
       activity_type: isPhotoWeek ? 'photo_challenge' : 'voice_note_prompt',
-      scheduled_date: weekStart.clone().add(3, 'days').format('YYYY-MM-DD'),
+      scheduled_date: formatDate(addDays(weekStart, 3)),
       day_of_week: 'thursday',
       title: isPhotoWeek ? 'Photo Challenge' : 'Voice Note Moment',
       prompt: isPhotoWeek
@@ -152,7 +181,7 @@ export default function WeeklyRhythm({ couple, user }) {
     activities.push({
       couple_id: couple.id,
       activity_type: 'virtual_date',
-      scheduled_date: weekStart.clone().add(4, 'days').format('YYYY-MM-DD'),
+      scheduled_date: formatDate(addDays(weekStart, 4)),
       day_of_week: 'friday',
       title: 'Virtual Date Night',
       prompt: 'Plan a virtual date this weekend! Ideas: watch party, cook together over video, play an online game.'
@@ -162,7 +191,7 @@ export default function WeeklyRhythm({ couple, user }) {
     activities.push({
       couple_id: couple.id,
       activity_type: 'send_question',
-      scheduled_date: weekStart.clone().add(5, 'days').format('YYYY-MM-DD'),
+      scheduled_date: formatDate(addDays(weekStart, 5)),
       day_of_week: 'saturday',
       title: 'Deep Question Saturday',
       prompt: "Ask your partner: \"What's a dream you have that you haven't told me about yet?\""
@@ -172,7 +201,7 @@ export default function WeeklyRhythm({ couple, user }) {
     activities.push({
       couple_id: couple.id,
       activity_type: 'encouragement',
-      scheduled_date: weekStart.clone().add(6, 'days').format('YYYY-MM-DD'),
+      scheduled_date: formatDate(addDays(weekStart, 6)),
       day_of_week: 'sunday',
       title: 'Weekly Gratitude',
       prompt: "Tell your partner three things about them you're grateful for this week."
