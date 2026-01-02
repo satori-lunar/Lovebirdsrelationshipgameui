@@ -6,7 +6,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { base44 } from '../api/base44Client';
+// TODO: Import actual API client when backend is ready
+// import { api } from '../services/api';
 
 export default function PartnerInsightsForm() {
   // Get token and couple ID from URL parameters
@@ -52,8 +53,9 @@ export default function PartnerInsightsForm() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Create partner form response
-      await base44.entities.PartnerFormResponse.create({
+      // TODO: Implement backend API calls when ready
+      // For now, store in localStorage
+      const responseData = {
         couple_id: coupleId,
         form_token: token,
         display_name: formData.display_name,
@@ -62,14 +64,12 @@ export default function PartnerInsightsForm() {
         favorite_foods: formData.favorite_foods.split(',').map(f => f.trim()).filter(Boolean),
         music_preferences: formData.music_preferences.split(',').map(m => m.trim()).filter(Boolean),
         preferred_dates: formData.ideal_dates.split(',').map(d => d.trim()).filter(Boolean),
-        appreciation_methods: formData.appreciation_methods.split(',').map(a => a.trim()).filter(Boolean)
-      });
+        appreciation_methods: formData.appreciation_methods.split(',').map(a => a.trim()).filter(Boolean),
+        submitted_at: new Date().toISOString()
+      };
 
-      // Update couple record
-      await base44.entities.Couple.update(coupleId, {
-        partner_form_completed: true,
-        partner_form_submitted_at: new Date().toISOString()
-      });
+      localStorage.setItem(`partner_form_${token}`, JSON.stringify(responseData));
+      console.log('Partner form response saved (localStorage only):', responseData);
 
       setSubmitted(true);
     } catch (error) {

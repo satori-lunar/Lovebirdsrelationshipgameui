@@ -15,7 +15,8 @@ import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { base44 } from '../api/base44Client';
+// TODO: Import actual API client when backend is ready
+// import { api } from '../services/api';
 import moment from 'moment';
 
 const activityIcons = {
@@ -52,37 +53,25 @@ export default function WeeklyRhythm({ couple, user }) {
 
   const loadActivities = async () => {
     try {
+      // TODO: Replace with actual API calls when backend is ready
       const today = moment().format('YYYY-MM-DD');
-      const weekStart = moment().startOf('week').format('YYYY-MM-DD');
-      const weekEnd = moment().endOf('week').format('YYYY-MM-DD');
 
-      // Get all activities for this week
-      const allActivities = await base44.entities.LongDistanceActivity.filter({
-        couple_id: couple.id
-      });
+      // Generate mock weekly rhythm
+      await generateWeeklyRhythm();
 
-      const thisWeek = allActivities.filter(a =>
-        moment(a.scheduled_date).isBetween(weekStart, weekEnd, null, '[]')
-      );
+      // Get activities from localStorage
+      const stored = localStorage.getItem(`weekly_rhythm_${couple?.id || 'demo'}`);
+      const allActivities = stored ? JSON.parse(stored) : [];
 
-      setActivities(thisWeek);
+      setActivities(allActivities);
 
       // Find today's activity
-      const today_activity = thisWeek.find(a => a.scheduled_date === today);
-
-      if (!today_activity) {
-        // Generate today's activity if none exists
-        await generateWeeklyRhythm();
-        loadActivities(); // Reload
-        return;
-      }
-
-      setTodayActivity(today_activity);
+      const today_activity = allActivities.find(a => a.scheduled_date === today);
+      setTodayActivity(today_activity || allActivities[0]);
 
       // Get upcoming activities
-      const upcoming = thisWeek
+      const upcoming = allActivities
         .filter(a => moment(a.scheduled_date).isAfter(today))
-        .sort((a, b) => moment(a.scheduled_date).diff(moment(b.scheduled_date)))
         .slice(0, 3);
 
       setUpcomingActivities(upcoming);
@@ -170,21 +159,34 @@ export default function WeeklyRhythm({ couple, user }) {
       prompt: "Tell your partner three things about them you're grateful for this week."
     });
 
-    // Create all activities
-    for (const activity of activities) {
-      await base44.entities.LongDistanceActivity.create(activity);
+    // TODO: Replace with actual API calls when backend is ready
+    // Store in localStorage for now
+    const existingKey = `weekly_rhythm_${couple?.id || 'demo'}`;
+    const existing = localStorage.getItem(existingKey);
+    if (!existing) {
+      const activitiesWithIds = activities.map((a, i) => ({ ...a, id: `activity_${i}` }));
+      localStorage.setItem(existingKey, JSON.stringify(activitiesWithIds));
     }
   };
 
   const handleComplete = async () => {
     if (!selectedActivity) return;
 
-    const isPartner1 = user.email === couple.partner1_email;
+    // TODO: Replace with actual API calls when backend is ready
+    // Update in localStorage for now
+    const existingKey = `weekly_rhythm_${couple?.id || 'demo'}`;
+    const stored = localStorage.getItem(existingKey);
+    if (stored) {
+      const allActivities = JSON.parse(stored);
+      const updated = allActivities.map(a =>
+        a.id === selectedActivity.id
+          ? { ...a, completed: true, response }
+          : a
+      );
+      localStorage.setItem(existingKey, JSON.stringify(updated));
+    }
 
-    await base44.entities.LongDistanceActivity.update(selectedActivity.id, {
-      [isPartner1 ? 'partner1_completed' : 'partner2_completed']: true,
-      [isPartner1 ? 'partner1_response' : 'partner2_response']: response
-    });
+    console.log('Activity completed (localStorage only):', { activity: selectedActivity.id, response });
 
     setSelectedActivity(null);
     setResponse('');
