@@ -15,6 +15,8 @@ const moods = [
     description: 'Feeling great with plenty to give',
     capacity: 95,
     color: 'from-emerald-400 to-green-500',
+    bgGradient: 'from-emerald-500 via-green-500 to-teal-500',
+    glowColor: 'rgba(52, 211, 153, 0.5)',
     borderColor: 'border-emerald-400',
     icon: '⚡',
     category: 'high'
@@ -25,6 +27,8 @@ const moods = [
     description: 'Balanced and feeling positive',
     capacity: 80,
     color: 'from-blue-400 to-cyan-500',
+    bgGradient: 'from-blue-500 via-cyan-500 to-sky-500',
+    glowColor: 'rgba(96, 165, 250, 0.5)',
     borderColor: 'border-blue-400',
     icon: '☀️',
     category: 'high'
@@ -35,6 +39,8 @@ const moods = [
     description: 'Doing alright, coasting along',
     capacity: 60,
     color: 'from-indigo-400 to-purple-500',
+    bgGradient: 'from-indigo-500 via-purple-500 to-violet-500',
+    glowColor: 'rgba(129, 140, 248, 0.5)',
     borderColor: 'border-indigo-400',
     icon: '🌤️',
     category: 'medium'
@@ -45,6 +51,8 @@ const moods = [
     description: 'Running on limited energy',
     capacity: 40,
     color: 'from-amber-400 to-orange-500',
+    bgGradient: 'from-amber-500 via-orange-500 to-yellow-500',
+    glowColor: 'rgba(251, 191, 36, 0.5)',
     borderColor: 'border-amber-400',
     icon: '⚠️',
     category: 'medium'
@@ -55,6 +63,8 @@ const moods = [
     description: 'Energy depleted, need rest',
     capacity: 25,
     color: 'from-slate-400 to-gray-500',
+    bgGradient: 'from-slate-500 via-gray-500 to-zinc-500',
+    glowColor: 'rgba(148, 163, 184, 0.5)',
     borderColor: 'border-slate-400',
     icon: '🌧️',
     category: 'low'
@@ -65,6 +75,8 @@ const moods = [
     description: 'Everything feels like too much',
     capacity: 15,
     color: 'from-red-400 to-rose-500',
+    bgGradient: 'from-red-500 via-rose-500 to-pink-500',
+    glowColor: 'rgba(248, 113, 113, 0.5)',
     borderColor: 'border-red-400',
     icon: '🌊',
     category: 'low'
@@ -75,6 +87,8 @@ const moods = [
     description: 'Having a very hard time today',
     capacity: 10,
     color: 'from-purple-500 to-violet-600',
+    bgGradient: 'from-purple-600 via-violet-600 to-fuchsia-600',
+    glowColor: 'rgba(168, 85, 247, 0.5)',
     borderColor: 'border-purple-500',
     icon: '⛈️',
     category: 'low'
@@ -85,6 +99,8 @@ const moods = [
     description: 'Feeling emotionally flat or distant',
     capacity: 5,
     color: 'from-gray-500 to-slate-600',
+    bgGradient: 'from-gray-600 via-slate-600 to-stone-600',
+    glowColor: 'rgba(107, 114, 128, 0.5)',
     borderColor: 'border-gray-500',
     icon: '🌫️',
     category: 'low'
@@ -270,153 +286,284 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     };
 
     return (
-      <div
-        className="fixed inset-0 flex flex-col items-center justify-between py-12 overflow-hidden z-50"
-        style={{ background: getGradientStyle(currentMood.color) }}
-      >
+      <div className="fixed inset-0 flex flex-col items-center justify-between py-12 overflow-hidden z-50">
+        {/* Animated Background Gradient */}
+        <motion.div
+          key={currentMoodIndex}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          className={`absolute inset-0 bg-gradient-to-br ${currentMood.bgGradient}`}
+        />
+
+        {/* Floating Particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(12)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-2 h-2 bg-white/20 rounded-full"
+              initial={{
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight
+              }}
+              animate={{
+                y: [null, Math.random() * -100 - 50],
+                x: [null, Math.random() * 40 - 20],
+                opacity: [0.2, 0.5, 0],
+              }}
+              transition={{
+                duration: 3 + Math.random() * 2,
+                repeat: Infinity,
+                delay: Math.random() * 2,
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center px-6"
+          transition={{ type: "spring", duration: 0.8 }}
+          className="relative z-10 text-center px-6"
         >
-          <h1 className="text-3xl font-bold text-white mb-2">How are you feeling?</h1>
-          <p className="text-white/80">Swipe to browse • Hold to select</p>
+          <h1 className="text-3xl font-bold text-white mb-2 drop-shadow-lg">How are you feeling?</h1>
+          <p className="text-white/90 drop-shadow-md">Swipe to browse • Hold to select</p>
         </motion.div>
 
-        <div className="relative w-full flex-1 flex items-center justify-center px-4">
+        {/* Card Container */}
+        <div className="relative w-full flex-1 flex items-center justify-center px-4 z-10">
           <motion.div
             key={currentMoodIndex}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.3}
             onDragEnd={handleDragEnd}
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -100 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, x: 100, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -100, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="relative w-full max-w-sm"
           >
             <motion.div
-              onTouchStart={startHold}
-              onTouchEnd={cancelHold}
-              onTouchCancel={cancelHold}
-              onMouseDown={startHold}
-              onMouseUp={cancelHold}
-              onMouseLeave={cancelHold}
-              whileTap={{ scale: 0.98 }}
-              className="relative w-full h-[70vh] max-h-[600px] rounded-[3rem] shadow-2xl overflow-hidden cursor-pointer touch-none bg-white/10 backdrop-blur-sm border-2 border-white/20"
+              animate={{
+                y: [0, -10, 0],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              style={{
+                filter: `drop-shadow(0 20px 60px ${currentMood.glowColor})`
+              }}
             >
-              {/* Hold Progress Overlay */}
-              {isHolding && (
-                <motion.div
-                  className="absolute inset-0 bg-white/30 backdrop-blur-sm"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 1.5 }}
-                  style={{
-                    clipPath: `circle(${holdProgress}% at 50% 50%)`,
-                  }}
-                />
-              )}
+              <motion.div
+                onTouchStart={startHold}
+                onTouchEnd={cancelHold}
+                onTouchCancel={cancelHold}
+                onMouseDown={startHold}
+                onMouseUp={cancelHold}
+                onMouseLeave={cancelHold}
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className="relative w-full h-[70vh] max-h-[600px] rounded-[3rem] overflow-hidden cursor-pointer touch-none"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  backdropFilter: 'blur(20px)',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                }}
+              >
+                {/* Shimmer Effect */}
+                <div className="absolute inset-0 overflow-hidden">
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                    animate={{
+                      x: ['-100%', '200%'],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
+                  />
+                </div>
 
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-center"
-                >
-                  {/* Icon */}
-                  <div className="text-7xl mb-6">
-                    {currentMood.icon}
-                  </div>
-
-                  {/* Mood Name */}
-                  <h1 className="text-white mb-3 text-4xl font-bold">
-                    {currentMood.label}
-                  </h1>
-
-                  {/* Description */}
-                  <p className="text-white/90 text-xl mb-8">
-                    {currentMood.description}
-                  </p>
-
-                  {/* Capacity Indicator */}
-                  <div className="flex items-center justify-center gap-3 mb-8">
-                    <div className="w-48 h-3 bg-white/20 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-white transition-all rounded-full"
-                        style={{ width: `${currentMood.capacity}%` }}
-                      />
-                    </div>
-                    <span className="text-white font-semibold text-lg">{currentMood.capacity}%</span>
-                  </div>
-                </motion.div>
-
-                {/* Hold Progress Circle */}
+                {/* Hold Progress Overlay */}
                 {isHolding && (
+                  <motion.div
+                    className="absolute inset-0"
+                    style={{
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%)',
+                      backdropFilter: 'blur(10px)',
+                      clipPath: `circle(${holdProgress}% at 50% 50%)`,
+                    }}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1.2 }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                  />
+                )}
+
+                {/* Content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="w-40 h-40 relative"
-                  >
-                    <svg className="w-full h-full -rotate-90">
-                      <circle
-                        cx="80"
-                        cy="80"
-                        r="70"
-                        stroke="rgba(255, 255, 255, 0.3)"
-                        strokeWidth="10"
-                        fill="none"
-                      />
-                      <motion.circle
-                        cx="80"
-                        cy="80"
-                        r="70"
-                        stroke="white"
-                        strokeWidth="10"
-                        fill="none"
-                        strokeDasharray={440}
-                        strokeDashoffset={440 - (440 * holdProgress) / 100}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-white text-2xl font-bold">{Math.round(holdProgress)}%</span>
-                    </div>
-                  </motion.div>
-                )}
-
-                {!isHolding && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
+                    transition={{ type: "spring", delay: 0.1 }}
                     className="text-center"
                   >
-                    <div className="w-20 h-20 rounded-full border-4 border-white/50 flex items-center justify-center mb-4 mx-auto">
-                      <div className="w-12 h-12 rounded-full bg-white/30" />
-                    </div>
-                    <p className="text-white/90 text-lg font-medium">
-                      Hold to select
-                    </p>
+                    {/* Icon with Pulse */}
+                    <motion.div
+                      className="text-8xl mb-6"
+                      animate={{
+                        scale: isHolding ? [1, 1.1, 1] : 1,
+                      }}
+                      transition={{
+                        duration: 0.5,
+                        repeat: isHolding ? Infinity : 0,
+                      }}
+                    >
+                      {currentMood.icon}
+                    </motion.div>
+
+                    {/* Mood Name */}
+                    <motion.h1
+                      className="text-white mb-3 text-5xl font-bold drop-shadow-lg"
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.2, type: "spring" }}
+                    >
+                      {currentMood.label}
+                    </motion.h1>
+
+                    {/* Description */}
+                    <motion.p
+                      className="text-white/95 text-xl mb-8 drop-shadow-md px-4"
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.3, type: "spring" }}
+                    >
+                      {currentMood.description}
+                    </motion.p>
+
+                    {/* Capacity Indicator */}
+                    <motion.div
+                      className="flex items-center justify-center gap-3 mb-8"
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.4, type: "spring" }}
+                    >
+                      <div className="w-48 h-4 bg-white/25 rounded-full overflow-hidden backdrop-blur-sm border border-white/30">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-white via-white/90 to-white rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${currentMood.capacity}%` }}
+                          transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
+                        />
+                      </div>
+                      <span className="text-white font-bold text-xl drop-shadow-md">{currentMood.capacity}%</span>
+                    </motion.div>
                   </motion.div>
-                )}
-              </div>
+
+                  {/* Hold Progress Circle */}
+                  {isHolding && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                      className="w-44 h-44 relative"
+                    >
+                      {/* Glow */}
+                      <div
+                        className="absolute inset-0 rounded-full blur-xl opacity-60"
+                        style={{ background: currentMood.glowColor }}
+                      />
+                      <svg className="w-full h-full -rotate-90 relative">
+                        <circle
+                          cx="88"
+                          cy="88"
+                          r="75"
+                          stroke="rgba(255, 255, 255, 0.2)"
+                          strokeWidth="12"
+                          fill="none"
+                        />
+                        <motion.circle
+                          cx="88"
+                          cy="88"
+                          r="75"
+                          stroke="white"
+                          strokeWidth="12"
+                          fill="none"
+                          strokeDasharray={471}
+                          strokeDashoffset={471 - (471 * holdProgress) / 100}
+                          strokeLinecap="round"
+                          style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8))' }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <motion.span
+                          className="text-white text-3xl font-bold drop-shadow-lg"
+                          animate={{ scale: [1, 1.05, 1] }}
+                          transition={{ duration: 0.5, repeat: Infinity }}
+                        >
+                          {Math.round(holdProgress)}%
+                        </motion.span>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Hold Prompt */}
+                  {!isHolding && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                      className="text-center"
+                    >
+                      <motion.div
+                        className="w-24 h-24 rounded-full border-4 border-white/60 flex items-center justify-center mb-4 mx-auto backdrop-blur-sm"
+                        animate={{
+                          scale: [1, 1.05, 1],
+                          borderColor: ['rgba(255,255,255,0.6)', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.6)'],
+                        }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        <div className="w-14 h-14 rounded-full bg-white/40" />
+                      </motion.div>
+                      <p className="text-white/95 text-xl font-semibold drop-shadow-md">
+                        Hold to select
+                      </p>
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
             </motion.div>
           </motion.div>
         </div>
 
         {/* Mood Indicators */}
-        <div className="flex gap-2 px-6">
+        <motion.div
+          className="flex gap-2.5 px-6 relative z-10"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           {moods.map((mood, index) => (
-            <div
+            <motion.div
               key={mood.id}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === currentMoodIndex ? 'w-8 bg-white' : 'w-2 bg-white/40'
+              className={`h-2.5 rounded-full transition-all duration-500 ${
+                index === currentMoodIndex
+                  ? 'w-10 bg-white shadow-lg'
+                  : 'w-2.5 bg-white/50'
               }`}
+              whileHover={{ scale: 1.2 }}
+              animate={{
+                scale: index === currentMoodIndex ? 1 : 1,
+              }}
             />
           ))}
-        </div>
+        </motion.div>
       </div>
     );
   };
