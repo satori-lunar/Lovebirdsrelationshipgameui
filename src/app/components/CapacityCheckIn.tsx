@@ -191,6 +191,37 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     }
   };
 
+  // Submit directly for high-capacity moods (>80%) without asking for needs/context
+  const handleSubmitDirectly = async (moodId: string) => {
+    if (!user?.id || !relationship?.id) return;
+
+    setSubmitting(true);
+    try {
+      const { error } = await api.supabase
+        .from('capacity_checkins')
+        .insert({
+          user_id: user.id,
+          couple_id: relationship.id,
+          mood: moodId,
+          needs: [], // Empty - feeling good, no needs
+          context: null, // No context needed
+          created_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      setSubmitted(true);
+      if (onComplete) {
+        setTimeout(() => onComplete(), 1500);
+      }
+    } catch (error) {
+      console.error('Error saving capacity check-in:', error);
+      alert(`Error saving check-in: ${error.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 flex items-center justify-center px-6 py-12">
@@ -244,8 +275,16 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
         setHoldProgress(100);
         setSelectedMood(currentMood.id);
         setIsHolding(false);
-        // Automatically advance to next step
-        setTimeout(() => setStep('needs'), 300);
+        // Only show needs/context questions for moods 80% or below
+        // For higher capacity moods, submit directly
+        if (currentMood.capacity <= 80) {
+          setTimeout(() => setStep('needs'), 300);
+        } else {
+          // High capacity mood - submit directly without needs/context
+          setTimeout(() => {
+            handleSubmitDirectly(currentMood.id);
+          }, 300);
+        }
       }, holdDuration);
     };
 
