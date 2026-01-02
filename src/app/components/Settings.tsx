@@ -268,28 +268,39 @@ export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
           </div>
         </Card>
 
-        {/* Widget Gallery */}
+        {/* Lockscreen Wallpaper */}
         {onNavigate && (
           <Card className="p-6 border-0 shadow-lg bg-white">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                 <Smartphone className="w-5 h-5 text-purple-600" />
               </div>
-              <h2 className="font-semibold text-lg">Home Screen Widget</h2>
+              <h2 className="font-semibold text-lg">Lockscreen Wallpaper</h2>
             </div>
 
             <p className="text-sm text-gray-600 mb-4">
-              Display your favorite memories on your phone's home screen
+              Create a dynamic wallpaper that reflects your relationship
             </p>
 
             <Button
-              onClick={() => onNavigate('widget-gallery')}
+              onClick={() => onNavigate('lockscreen-wallpaper')}
               variant="outline"
               className="w-full flex items-center justify-between h-12"
             >
               <span className="flex items-center gap-2">
                 <Smartphone className="w-4 h-4" />
-                Configure Widget
+                Customize Wallpaper
+              </span>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+
+            <Button
+              onClick={() => onNavigate('send-lockscreen-message')}
+              variant="ghost"
+              className="w-full flex items-center justify-between h-10 mt-2"
+            >
+              <span className="flex items-center gap-2 text-sm">
+                Send Partner a Lockscreen Message
               </span>
               <ChevronRight className="w-4 h-4" />
             </Button>
