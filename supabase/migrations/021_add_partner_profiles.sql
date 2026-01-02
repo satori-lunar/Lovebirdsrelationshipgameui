@@ -49,25 +49,25 @@ ALTER TABLE partner_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own profile
 DROP POLICY IF EXISTS "Users can view own profile" ON partner_profiles;
-CREATE POLICY "
+CREATE POLICY "Users can view own profile"
   ON partner_profiles FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Users can update their own profile
 DROP POLICY IF EXISTS "Users can update own profile" ON partner_profiles;
-CREATE POLICY "
+CREATE POLICY "Users can update own profile"
   ON partner_profiles FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Users can insert their own profile
 DROP POLICY IF EXISTS "Users can insert own profile" ON partner_profiles;
-CREATE POLICY "
+CREATE POLICY "Users can insert own profile"
   ON partner_profiles FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can view their partner's profile (same couple)
 DROP POLICY IF EXISTS "Users can view partner profile" ON partner_profiles;
-CREATE POLICY "
+CREATE POLICY "Users can view partner profile"
   ON partner_profiles FOR SELECT
   USING (
     couple_id IN (
@@ -122,20 +122,20 @@ CREATE INDEX IF NOT EXISTS idx_relationship_needs_created_at ON relationship_nee
 ALTER TABLE relationship_needs ENABLE ROW LEVEL SECURITY;
 
 -- Users can view needs where they are requester or receiver
-DROP POLICY IF EXISTS "Users can view their needs" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can view their needs" ON relationship_needs;
+CREATE POLICY "Users can view their needs"
   ON relationship_needs FOR SELECT
   USING (requester_id = auth.uid() OR receiver_id = auth.uid());
 
 -- Users can insert needs where they are the requester
-DROP POLICY IF EXISTS "Users can create needs" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can create needs" ON relationship_needs;
+CREATE POLICY "Users can create needs"
   ON relationship_needs FOR INSERT
   WITH CHECK (requester_id = auth.uid());
 
 -- Users can update needs where they are involved
-DROP POLICY IF EXISTS "Users can update their needs" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can update their needs" ON relationship_needs;
+CREATE POLICY "Users can update their needs"
   ON relationship_needs FOR UPDATE
   USING (requester_id = auth.uid() OR receiver_id = auth.uid());
 
@@ -179,20 +179,20 @@ CREATE INDEX IF NOT EXISTS idx_message_suggestions_was_used ON message_suggestio
 ALTER TABLE message_suggestions ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own suggestions
-DROP POLICY IF EXISTS "Users can view own suggestions" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can view own suggestions" ON message_suggestions;
+CREATE POLICY "Users can view own suggestions"
   ON message_suggestions FOR SELECT
   USING (sender_id = auth.uid());
 
 -- Users can insert their own suggestions
-DROP POLICY IF EXISTS "Users can insert suggestions" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can insert suggestions" ON message_suggestions;
+CREATE POLICY "Users can insert suggestions"
   ON message_suggestions FOR INSERT
   WITH CHECK (sender_id = auth.uid());
 
 -- Users can update their own suggestions
-DROP POLICY IF EXISTS "Users can update own suggestions" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can update own suggestions" ON message_suggestions;
+CREATE POLICY "Users can update own suggestions"
   ON message_suggestions FOR UPDATE
   USING (sender_id = auth.uid());
 
@@ -226,14 +226,14 @@ CREATE INDEX IF NOT EXISTS idx_learning_events_created_at ON learning_events(cre
 ALTER TABLE learning_events ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own learning events
-DROP POLICY IF EXISTS "Users can view own events" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can view own events" ON learning_events;
+CREATE POLICY "Users can view own events"
   ON learning_events FOR SELECT
   USING (user_id = auth.uid());
 
 -- Users can insert their own events
-DROP POLICY IF EXISTS "Users can insert events" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can insert events" ON learning_events;
+CREATE POLICY "Users can insert events"
   ON learning_events FOR INSERT
   WITH CHECK (user_id = auth.uid());
 
@@ -263,20 +263,20 @@ CREATE TABLE IF NOT EXISTS quiet_mode (
 ALTER TABLE quiet_mode ENABLE ROW LEVEL SECURITY;
 
 -- Users can view their own quiet mode status
-DROP POLICY IF EXISTS "Users can view own quiet mode" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can view own quiet mode" ON quiet_mode;
+CREATE POLICY "Users can view own quiet mode"
   ON quiet_mode FOR SELECT
   USING (user_id = auth.uid());
 
 -- Users can manage their own quiet mode
-DROP POLICY IF EXISTS "Users can manage quiet mode" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Users can manage quiet mode" ON quiet_mode;
+CREATE POLICY "Users can manage quiet mode"
   ON quiet_mode FOR ALL
   USING (user_id = auth.uid());
 
 -- Partners can view each other's quiet mode (to respect boundaries)
-DROP POLICY IF EXISTS "Partners can view partner quiet mode" ON partner_profiles;
-CREATE POLICY "
+DROP POLICY IF EXISTS "Partners can view partner quiet mode" ON quiet_mode;
+CREATE POLICY "Partners can view partner quiet mode"
   ON quiet_mode FOR SELECT
   USING (
     user_id IN (
