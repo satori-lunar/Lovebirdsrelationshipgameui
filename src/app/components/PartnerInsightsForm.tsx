@@ -6,8 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-// TODO: Import actual API client when backend is ready
-// import { api } from '../services/api';
+import { api } from '../services/api';
 
 export default function PartnerInsightsForm() {
   // Get token and couple ID from URL parameters
@@ -51,30 +50,47 @@ export default function PartnerInsightsForm() {
   };
 
   const handleSubmit = async () => {
+    if (!token || !coupleId) {
+      alert('Invalid form link. Please check the URL and try again.');
+      return;
+    }
+
     setLoading(true);
     try {
-      // TODO: Implement backend API calls when ready
-      // For now, store in localStorage
-      const responseData = {
-        couple_id: coupleId,
-        form_token: token,
-        display_name: formData.display_name,
-        love_languages: formData.love_languages,
-        hobbies: formData.hobbies.split(',').map(h => h.trim()).filter(Boolean),
-        favorite_foods: formData.favorite_foods.split(',').map(f => f.trim()).filter(Boolean),
-        music_preferences: formData.music_preferences.split(',').map(m => m.trim()).filter(Boolean),
-        preferred_dates: formData.ideal_dates.split(',').map(d => d.trim()).filter(Boolean),
-        appreciation_methods: formData.appreciation_methods.split(',').map(a => a.trim()).filter(Boolean),
-        submitted_at: new Date().toISOString()
-      };
+      // Create partner form response
+      const { error: responseError } = await api.supabase
+        .from('partner_form_responses')
+        .insert({
+          couple_id: coupleId,
+          form_token: token,
+          display_name: formData.display_name,
+          love_languages: formData.love_languages,
+          hobbies: formData.hobbies.split(',').map(h => h.trim()).filter(Boolean),
+          favorite_foods: formData.favorite_foods.split(',').map(f => f.trim()).filter(Boolean),
+          music_preferences: formData.music_preferences.split(',').map(m => m.trim()).filter(Boolean),
+          preferred_dates: formData.ideal_dates.split(',').map(d => d.trim()).filter(Boolean),
+          appreciation_methods: formData.appreciation_methods.split(',').map(a => a.trim()).filter(Boolean),
+          created_at: new Date().toISOString()
+        });
 
-      localStorage.setItem(`partner_form_${token}`, JSON.stringify(responseData));
-      console.log('Partner form response saved (localStorage only):', responseData);
+      if (responseError) throw responseError;
 
+      // Update couple record to mark form as completed
+      const { error: updateError } = await api.supabase
+        .from('couples')
+        .update({
+          partner_form_completed: true,
+          partner_form_submitted_at: new Date().toISOString()
+        })
+        .eq('id', coupleId);
+
+      if (updateError) throw updateError;
+
+      console.log('Partner form response saved successfully');
       setSubmitted(true);
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Error submitting form. Please try again.');
+      alert(`Error submitting form: ${error.message}. Please try again.`);
     } finally {
       setLoading(false);
     }

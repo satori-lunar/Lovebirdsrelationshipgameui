@@ -15,8 +15,7 @@ import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-// TODO: Import actual API client when backend is ready
-// import { api } from '../services/api';
+import { api } from '../services/api';
 import moment from 'moment';
 
 const activityIcons = {
@@ -52,25 +51,45 @@ export default function WeeklyRhythm({ couple, user }) {
   }, [couple.id]);
 
   const loadActivities = async () => {
+    if (!couple?.id) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      // TODO: Replace with actual API calls when backend is ready
       const today = moment().format('YYYY-MM-DD');
+      const weekStart = moment().startOf('week').format('YYYY-MM-DD');
+      const weekEnd = moment().endOf('week').format('YYYY-MM-DD');
 
-      // Generate mock weekly rhythm
-      await generateWeeklyRhythm();
+      // Get all activities for this week
+      const { data: allActivities, error } = await api.supabase
+        .from('long_distance_activities')
+        .select('*')
+        .eq('couple_id', couple.id)
+        .gte('scheduled_date', weekStart)
+        .lte('scheduled_date', weekEnd)
+        .order('scheduled_date', { ascending: true });
 
-      // Get activities from localStorage
-      const stored = localStorage.getItem(`weekly_rhythm_${couple?.id || 'demo'}`);
-      const allActivities = stored ? JSON.parse(stored) : [];
+      if (error) throw error;
 
-      setActivities(allActivities);
+      const thisWeek = allActivities || [];
+
+      // If no activities exist for this week, generate them
+      if (thisWeek.length === 0) {
+        await generateWeeklyRhythm();
+        // Reload activities after generation
+        await loadActivities();
+        return;
+      }
+
+      setActivities(thisWeek);
 
       // Find today's activity
-      const today_activity = allActivities.find(a => a.scheduled_date === today);
-      setTodayActivity(today_activity || allActivities[0]);
+      const today_activity = thisWeek.find(a => a.scheduled_date === today);
+      setTodayActivity(today_activity || thisWeek[0]);
 
       // Get upcoming activities
-      const upcoming = allActivities
+      const upcoming = thisWeek
         .filter(a => moment(a.scheduled_date).isAfter(today))
         .slice(0, 3);
 
@@ -159,38 +178,47 @@ export default function WeeklyRhythm({ couple, user }) {
       prompt: "Tell your partner three things about them you're grateful for this week."
     });
 
-    // TODO: Replace with actual API calls when backend is ready
-    // Store in localStorage for now
-    const existingKey = `weekly_rhythm_${couple?.id || 'demo'}`;
-    const existing = localStorage.getItem(existingKey);
-    if (!existing) {
-      const activitiesWithIds = activities.map((a, i) => ({ ...a, id: `activity_${i}` }));
-      localStorage.setItem(existingKey, JSON.stringify(activitiesWithIds));
+    // Create all activities in Supabase
+    try {
+      const { error } = await api.supabase
+        .from('long_distance_activities')
+        .insert(activities);
+
+      if (error) throw error;
+      console.log('Weekly rhythm generated successfully');
+    } catch (error) {
+      console.error('Error generating weekly rhythm:', error);
+      throw error;
     }
   };
 
   const handleComplete = async () => {
-    if (!selectedActivity) return;
+    if (!selectedActivity || !user) return;
 
-    // TODO: Replace with actual API calls when backend is ready
-    // Update in localStorage for now
-    const existingKey = `weekly_rhythm_${couple?.id || 'demo'}`;
-    const stored = localStorage.getItem(existingKey);
-    if (stored) {
-      const allActivities = JSON.parse(stored);
-      const updated = allActivities.map(a =>
-        a.id === selectedActivity.id
-          ? { ...a, completed: true, response }
-          : a
-      );
-      localStorage.setItem(existingKey, JSON.stringify(updated));
+    try {
+      const isPartner1 = user.email === couple.partner1_email;
+      const completionField = isPartner1 ? 'partner1_completed' : 'partner2_completed';
+      const responseField = isPartner1 ? 'partner1_response' : 'partner2_response';
+
+      const { error } = await api.supabase
+        .from('long_distance_activities')
+        .update({
+          [completionField]: true,
+          [responseField]: response
+        })
+        .eq('id', selectedActivity.id);
+
+      if (error) throw error;
+
+      console.log('Activity completed successfully');
+
+      setSelectedActivity(null);
+      setResponse('');
+      loadActivities();
+    } catch (error) {
+      console.error('Error completing activity:', error);
+      alert(`Error completing activity: ${error.message}`);
     }
-
-    console.log('Activity completed (localStorage only):', { activity: selectedActivity.id, response });
-
-    setSelectedActivity(null);
-    setResponse('');
-    loadActivities();
   };
 
   if (loading) {

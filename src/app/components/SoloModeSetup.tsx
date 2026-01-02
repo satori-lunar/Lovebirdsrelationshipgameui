@@ -6,14 +6,15 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-// TODO: Import actual API client when backend is ready
-// import { api } from '../services/api';
+import { api } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
 
 interface SoloModeSetupProps {
   onNavigate: (view: string) => void;
 }
 
 export default function SoloModeSetup({ onNavigate }: SoloModeSetupProps) {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -33,26 +34,71 @@ export default function SoloModeSetup({ onNavigate }: SoloModeSetupProps) {
   };
 
   const handleSubmit = async () => {
+    if (!user) {
+      alert('Please sign in to continue');
+      return;
+    }
+
     setLoading(true);
     try {
-      // TODO: Implement backend API calls when ready
-      // For now, just store data in localStorage
-      localStorage.setItem('solo_mode_setup', JSON.stringify({
-        ...formData,
-        relationship_mode: 'solo',
-        is_long_distance: localStorage.getItem('is_long_distance') === 'true',
-        completed_at: new Date().toISOString()
-      }));
+      const isLongDistance = localStorage.getItem('is_long_distance') === 'true';
 
-      console.log('Solo mode setup saved (localStorage only):', formData);
+      // Create couple record
+      const { data: couple, error: coupleError } = await api.supabase
+        .from('couples')
+        .insert({
+          partner1_email: user.email,
+          partner1_name: user.user_metadata?.name || user.email,
+          relationship_mode: 'solo',
+          is_long_distance: isLongDistance,
+          relationship_start_date: formData.relationship_start || null,
+          location: formData.location,
+          budget_preference: formData.budget_range,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (coupleError) throw coupleError;
+
+      // Create partner profile (non-app user)
+      const { error: partnerError } = await api.supabase
+        .from('partner_profiles')
+        .insert({
+          couple_id: couple.id,
+          display_name: formData.partner_name,
+          nickname: formData.partner_nickname,
+          is_app_user: false,
+          love_language_primary: formData.partner_love_language,
+          notes: formData.what_they_love,
+          created_at: new Date().toISOString()
+        });
+
+      if (partnerError) throw partnerError;
+
+      // Create user's own profile
+      const { error: userProfileError } = await api.supabase
+        .from('partner_profiles')
+        .insert({
+          couple_id: couple.id,
+          user_email: user.email,
+          display_name: user.user_metadata?.name || user.email,
+          is_app_user: true,
+          is_profile_complete: true,
+          created_at: new Date().toISOString()
+        });
+
+      if (userProfileError) throw userProfileError;
+
+      console.log('Solo mode setup completed:', couple.id);
 
       // Navigate to home
       setTimeout(() => {
         onNavigate('home');
       }, 500);
     } catch (error) {
-      console.error('Error setting up profile:', error);
-      alert('Error setting up profile. Please try again.');
+      console.error('Error creating solo mode profile:', error);
+      alert(`Error setting up profile: ${error.message}. Please try again.`);
     } finally {
       setLoading(false);
     }
