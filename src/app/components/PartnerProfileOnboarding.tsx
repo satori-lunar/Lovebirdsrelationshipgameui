@@ -404,36 +404,65 @@ export function PartnerProfileOnboarding({
 
     setSaving(true);
     try {
-      await partnerProfileService.createProfile({
-        userId,
-        coupleId,
-        loveLanguagePrimary,
-        loveLanguageSecondary: loveLanguageSecondary || undefined,
-        communicationStyle,
-        stressNeeds,
-        frequencyPreference,
-        dailyCheckinsEnabled: true,
-        preferredCheckinTimes: checkinTimes,
-        customPreferences: [
-          { key: 'display_name', value: displayName },
-          { key: 'birthday', value: birthday },
-          { key: 'personality_type', value: personalityType },
-          { key: 'hobbies', value: JSON.stringify(hobbies) },
-          { key: 'favorite_activities', value: JSON.stringify(favoriteActivities) },
-          { key: 'favorite_foods', value: JSON.stringify(favoriteFoods) },
-          { key: 'music_preferences', value: JSON.stringify(musicPreferences) },
-          { key: 'likes', value: JSON.stringify(likes) },
-          { key: 'dislikes', value: JSON.stringify(dislikes) }
-        ],
-        learnedPatterns: {},
-        engagementScore: 50
-      });
+      // TEMPORARY FIX: Save to onboarding_responses table instead of partner_profiles
+      // TODO: Once migrations 021-023 are run, switch to partnerProfileService.createProfile()
+
+      const profileData = {
+        user_id: userId,
+        name: displayName,
+        birthday: birthday || null,
+        love_language_primary: loveLanguagePrimary,
+        love_language_secondary: loveLanguageSecondary || null,
+        preferences: {
+          hobbies,
+          favorite_activities: favoriteActivities,
+          favorite_foods: favoriteFoods,
+          music_preferences: musicPreferences,
+          likes,
+          dislikes,
+          communication_style: communicationStyle,
+          stress_needs: stressNeeds,
+          frequency_preference: frequencyPreference,
+          preferred_checkin_times: checkinTimes,
+          personality_type: personalityType
+        }
+      };
+
+      // Check if onboarding response exists
+      const { data: existing } = await api.supabase
+        .from('onboarding_responses')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing
+        const { error } = await api.supabase
+          .from('onboarding_responses')
+          .update(profileData)
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      } else {
+        // Insert new
+        const { error } = await api.supabase
+          .from('onboarding_responses')
+          .insert(profileData);
+
+        if (error) throw error;
+      }
 
       setStep('complete');
 
-      // Check if partner has a guess about this user
-      const { data: guessData } = await api.supabase
-        .rpc('get_partner_guess_about_me', { p_user_id: userId });
+      // Check if partner has a guess about this user (gracefully handle if function doesn't exist)
+      let guessData = null;
+      try {
+        const result = await api.supabase.rpc('get_partner_guess_about_me', { p_user_id: userId });
+        guessData = result.data;
+      } catch (err) {
+        // Function doesn't exist yet - migrations not run
+        console.log('Partner guess function not available yet');
+      }
 
       if (guessData && guessData.length > 0) {
         setTimeout(() => {
