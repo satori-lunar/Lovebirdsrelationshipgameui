@@ -193,7 +193,17 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
   // Submit directly for high-capacity moods (>80%) without asking for needs/context
   const handleSubmitDirectly = async (moodId: string) => {
-    if (!user?.id || !relationship?.id) return;
+    if (!user?.id || !relationship?.id) {
+      console.error('Missing required data:', { userId: user?.id, relationshipId: relationship?.id });
+      alert('Unable to save check-in: Missing user or relationship data');
+      return;
+    }
+
+    console.log('Submitting high-capacity check-in:', {
+      userId: user.id,
+      relationshipId: relationship.id,
+      mood: moodId
+    });
 
     setSubmitting(true);
     try {
