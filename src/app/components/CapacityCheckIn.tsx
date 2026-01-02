@@ -9,12 +9,86 @@ import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 
 const moods = [
-  { id: 'good', emoji: '😊', label: 'Good', color: 'from-green-400 to-emerald-500' },
-  { id: 'okay', emoji: '😐', label: 'Okay', color: 'from-blue-400 to-cyan-500' },
-  { id: 'low', emoji: '😔', label: 'Low', color: 'from-gray-400 to-slate-500' },
-  { id: 'overwhelmed', emoji: '😣', label: 'Overwhelmed', color: 'from-orange-400 to-amber-500' },
-  { id: 'sad', emoji: '😞', label: 'Sad', color: 'from-indigo-400 to-purple-500' },
-  { id: 'numb', emoji: '😶', label: 'Numb', color: 'from-slate-500 to-gray-600' },
+  {
+    id: 'energized',
+    label: 'Energized & Full',
+    description: 'Feeling great with plenty to give',
+    capacity: 95,
+    color: 'from-emerald-400 to-green-500',
+    borderColor: 'border-emerald-400',
+    icon: '⚡',
+    category: 'high'
+  },
+  {
+    id: 'good',
+    label: 'Good & Steady',
+    description: 'Balanced and feeling positive',
+    capacity: 80,
+    color: 'from-blue-400 to-cyan-500',
+    borderColor: 'border-blue-400',
+    icon: '☀️',
+    category: 'high'
+  },
+  {
+    id: 'okay',
+    label: 'Okay, Managing',
+    description: 'Doing alright, coasting along',
+    capacity: 60,
+    color: 'from-indigo-400 to-purple-500',
+    borderColor: 'border-indigo-400',
+    icon: '🌤️',
+    category: 'medium'
+  },
+  {
+    id: 'stretched',
+    label: 'Stretched Thin',
+    description: 'Running on limited energy',
+    capacity: 40,
+    color: 'from-amber-400 to-orange-500',
+    borderColor: 'border-amber-400',
+    icon: '⚠️',
+    category: 'medium'
+  },
+  {
+    id: 'low',
+    label: 'Low & Tired',
+    description: 'Energy depleted, need rest',
+    capacity: 25,
+    color: 'from-slate-400 to-gray-500',
+    borderColor: 'border-slate-400',
+    icon: '🌧️',
+    category: 'low'
+  },
+  {
+    id: 'overwhelmed',
+    label: 'Overwhelmed',
+    description: 'Everything feels like too much',
+    capacity: 15,
+    color: 'from-red-400 to-rose-500',
+    borderColor: 'border-red-400',
+    icon: '🌊',
+    category: 'low'
+  },
+  {
+    id: 'struggling',
+    label: 'Really Struggling',
+    description: 'Having a very hard time today',
+    capacity: 10,
+    color: 'from-purple-500 to-violet-600',
+    borderColor: 'border-purple-500',
+    icon: '⛈️',
+    category: 'low'
+  },
+  {
+    id: 'numb',
+    label: 'Numb & Disconnected',
+    description: 'Feeling emotionally flat or distant',
+    capacity: 5,
+    color: 'from-gray-500 to-slate-600',
+    borderColor: 'border-gray-500',
+    icon: '🌫️',
+    category: 'low'
+  },
 ];
 
 const needs = [
@@ -115,29 +189,67 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
           My Capacity Today
         </h2>
         <p className="text-gray-600">
-          How are you feeling right now?
+          Choose what best describes how you're feeling
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-3">
         {moods.map((mood) => (
           <motion.button
             key={mood.id}
             onClick={() => setSelectedMood(mood.id)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="relative"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className="w-full text-left"
           >
-            <Card className={`cursor-pointer transition-all ${
+            <Card className={`cursor-pointer transition-all border-2 ${
               selectedMood === mood.id
-                ? 'ring-4 ring-purple-400 shadow-xl'
-                : 'hover:shadow-lg'
+                ? `${mood.borderColor} ring-4 ring-opacity-20 shadow-xl bg-gradient-to-r ${mood.color} bg-opacity-5`
+                : 'border-gray-200 hover:shadow-lg hover:border-gray-300'
             }`}>
-              <CardContent className="p-6">
-                <div className={`w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br ${mood.color} flex items-center justify-center`}>
-                  <span className="text-3xl">{mood.emoji}</span>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  {/* Icon Section */}
+                  <div className={`flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br ${mood.color} flex items-center justify-center shadow-md`}>
+                    <span className="text-2xl">{mood.icon}</span>
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-gray-900 text-base">
+                        {mood.label}
+                      </h3>
+                      <span className="text-xs font-medium text-gray-500 ml-2">
+                        {mood.capacity}%
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {mood.description}
+                    </p>
+
+                    {/* Capacity Bar */}
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full bg-gradient-to-r ${mood.color} transition-all`}
+                        style={{ width: `${mood.capacity}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Selection Indicator */}
+                  {selectedMood === mood.id && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="flex-shrink-0"
+                    >
+                      <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${mood.color} flex items-center justify-center`}>
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
-                <p className="font-semibold text-gray-900">{mood.label}</p>
               </CardContent>
             </Card>
           </motion.button>
