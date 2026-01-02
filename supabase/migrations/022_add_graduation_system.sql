@@ -6,7 +6,7 @@
 -- COUPLE GRADUATIONS TABLE
 -- =====================================================
 CREATE TABLE couple_graduations (
-  couple_id UUID PRIMARY KEY REFERENCES couples(id) ON DELETE CASCADE,
+  couple_id UUID PRIMARY KEY REFERENCES relationships(id) ON DELETE CASCADE,
   graduated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lifetime_free_access BOOLEAN DEFAULT true,
 
@@ -29,7 +29,7 @@ CREATE POLICY "Partners can view graduation"
   ON couple_graduations FOR SELECT
   USING (
     couple_id IN (
-      SELECT id FROM couples
+      SELECT id FROM relationships
       WHERE partner_a_id = auth.uid() OR partner_b_id = auth.uid()
     )
   );

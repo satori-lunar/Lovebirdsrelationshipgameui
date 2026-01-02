@@ -404,17 +404,19 @@ export function PartnerProfileOnboarding({
 
     setSaving(true);
     try {
-      await partnerProfileService.createProfile({
-        userId,
-        coupleId,
-        loveLanguagePrimary,
-        loveLanguageSecondary: loveLanguageSecondary || undefined,
-        communicationStyle,
-        stressNeeds,
-        frequencyPreference,
-        dailyCheckinsEnabled: true,
-        preferredCheckinTimes: checkinTimes,
-        customPreferences: [
+      // Save directly to partner_profiles table using direct Supabase insert
+      // (bypassing service to avoid mapping issues)
+      const profileData = {
+        user_id: userId,
+        couple_id: null, // Will be set when they join/create a couple
+        love_language_primary: loveLanguagePrimary,
+        love_language_secondary: loveLanguageSecondary || null,
+        communication_style: communicationStyle,
+        stress_needs: stressNeeds,
+        frequency_preference: frequencyPreference,
+        daily_checkins_enabled: true,
+        preferred_checkin_times: checkinTimes,
+        custom_preferences: [
           { key: 'display_name', value: displayName },
           { key: 'birthday', value: birthday },
           { key: 'personality_type', value: personalityType },
@@ -425,15 +427,90 @@ export function PartnerProfileOnboarding({
           { key: 'likes', value: JSON.stringify(likes) },
           { key: 'dislikes', value: JSON.stringify(dislikes) }
         ],
-        learnedPatterns: {},
-        engagementScore: 50
-      });
+        learned_patterns: {},
+        engagement_score: 50
+      };
+
+      // Check if profile already exists
+      const { data: existing } = await api.supabase
+        .from('partner_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing profile
+        const { error } = await api.supabase
+          .from('partner_profiles')
+          .update(profileData)
+          .eq('user_id', userId);
+
+        if (error) {
+          console.error('Failed to update profile:', error);
+          throw error;
+        }
+      } else {
+        // Insert new profile
+        const { error } = await api.supabase
+          .from('partner_profiles')
+          .insert(profileData);
+
+        if (error) {
+          console.error('Failed to insert profile:', error);
+          throw error;
+        }
+      }
+
+      // Also save to onboarding_responses for compatibility
+      const onboardingData = {
+        user_id: userId,
+        name: displayName,
+        birthday: birthday || null,
+        love_language_primary: loveLanguagePrimary,
+        love_language_secondary: loveLanguageSecondary || null,
+        preferences: {
+          hobbies,
+          favorite_activities: favoriteActivities,
+          favorite_foods: favoriteFoods,
+          music_preferences: musicPreferences,
+          likes,
+          dislikes,
+          communication_style: communicationStyle,
+          stress_needs: stressNeeds,
+          frequency_preference: frequencyPreference,
+          preferred_checkin_times: checkinTimes,
+          personality_type: personalityType
+        }
+      };
+
+      const { data: existingOnboarding } = await api.supabase
+        .from('onboarding_responses')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingOnboarding) {
+        await api.supabase
+          .from('onboarding_responses')
+          .update(onboardingData)
+          .eq('user_id', userId);
+      } else {
+        await api.supabase
+          .from('onboarding_responses')
+          .insert(onboardingData);
+      }
 
       setStep('complete');
 
-      // Check if partner has a guess about this user
-      const { data: guessData } = await api.supabase
-        .rpc('get_partner_guess_about_me', { p_user_id: userId });
+      // Check if partner has a guess about this user (gracefully handle if function doesn't exist)
+      let guessData = null;
+      try {
+        const result = await api.supabase.rpc('get_partner_guess_about_me', { p_user_id: userId });
+        guessData = result.data;
+      } catch (err) {
+        // Function doesn't exist yet - migrations not run
+        console.log('Partner guess function not available yet');
+      }
 
       if (guessData && guessData.length > 0) {
         setTimeout(() => {

@@ -8,7 +8,7 @@
 -- =====================================================
 CREATE TABLE partner_profile_guesses (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  couple_id UUID NOT NULL REFERENCES couples(id) ON DELETE CASCADE,
+  couple_id UUID NOT NULL REFERENCES relationships(id) ON DELETE CASCADE,
   guesser_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE, -- Who filled this out
 
   -- Love Language (what guesser thinks)
@@ -46,7 +46,7 @@ CREATE POLICY "Users can view partner guesses"
   ON partner_profile_guesses FOR SELECT
   USING (
     couple_id IN (
-      SELECT id FROM couples
+      SELECT id FROM relationships
       WHERE partner_a_id = auth.uid() OR partner_b_id = auth.uid()
     )
   );
@@ -108,7 +108,7 @@ SELECT
     ELSE 0
   END AS a_guessed_b_primary_correct
 
-FROM couples c
+FROM relationships c
 LEFT JOIN partner_profiles ppa ON ppa.user_id = c.partner_a_id
 LEFT JOIN partner_profiles ppb ON ppb.user_id = c.partner_b_id
 LEFT JOIN partner_profile_guesses ppga ON ppga.couple_id = c.id AND ppga.guesser_id = c.partner_a_id
@@ -148,7 +148,7 @@ BEGIN
     ppg.likes,
     ppg.dislikes
   FROM partner_profile_guesses ppg
-  JOIN couples c ON ppg.couple_id = c.id
+  JOIN relationships c ON ppg.couple_id = c.id
   JOIN auth.users u ON ppg.guesser_id = u.id
   WHERE (c.partner_a_id = p_user_id AND ppg.guesser_id = c.partner_b_id)
      OR (c.partner_b_id = p_user_id AND ppg.guesser_id = c.partner_a_id);
@@ -174,7 +174,7 @@ BEGIN
   INTO v_a_score
   FROM partner_profile_guesses ppg
   JOIN partner_profiles pp ON pp.couple_id = p_couple_id
-  JOIN couples c ON c.id = p_couple_id
+  JOIN relationships c ON c.id = p_couple_id
   WHERE ppg.couple_id = p_couple_id
     AND ppg.guesser_id = c.partner_a_id
     AND pp.user_id = c.partner_b_id;
@@ -187,7 +187,7 @@ BEGIN
   INTO v_b_score
   FROM partner_profile_guesses ppg
   JOIN partner_profiles pp ON pp.couple_id = p_couple_id
-  JOIN couples c ON c.id = p_couple_id
+  JOIN relationships c ON c.id = p_couple_id
   WHERE ppg.couple_id = p_couple_id
     AND ppg.guesser_id = c.partner_b_id
     AND pp.user_id = c.partner_a_id;

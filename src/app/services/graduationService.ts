@@ -75,7 +75,7 @@ class GraduationService {
 
     // Get couple creation date
     const { data: couple } = await api.supabase
-      .from('couples')
+      .from('relationships')
       .select('created_at')
       .eq('id', coupleId)
       .single();
@@ -320,7 +320,7 @@ class GraduationService {
 
     // Get both partners
     const { data: couple } = await api.supabase
-      .from('couples')
+      .from('relationships')
       .select('partner_a_id, partner_b_id')
       .eq('id', coupleId)
       .single();

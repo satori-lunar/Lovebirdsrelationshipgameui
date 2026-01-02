@@ -45,7 +45,7 @@ class PartnerProfileService {
   async getPartnerProfile(coupleId: string, currentUserId: string): Promise<PartnerProfile | null> {
     // Get the couple to find partner ID
     const { data: couple, error: coupleError } = await api.supabase
-      .from('couples')
+      .from('relationships')
       .select('partner_a_id, partner_b_id')
       .eq('id', coupleId)
       .single();

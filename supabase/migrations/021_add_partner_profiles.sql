@@ -8,7 +8,7 @@
 CREATE TABLE partner_profiles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  couple_id UUID REFERENCES couples(id) ON DELETE CASCADE,
+  couple_id UUID REFERENCES relationships(id) ON DELETE CASCADE,
 
   -- Love Language (primary and secondary)
   love_language_primary TEXT NOT NULL CHECK (love_language_primary IN ('words', 'quality_time', 'gifts', 'acts', 'touch')),
@@ -67,7 +67,7 @@ CREATE POLICY "Users can view partner profile"
   ON partner_profiles FOR SELECT
   USING (
     couple_id IN (
-      SELECT id FROM couples
+      SELECT id FROM relationships
       WHERE partner_a_id = auth.uid() OR partner_b_id = auth.uid()
     )
   );
@@ -77,7 +77,7 @@ CREATE POLICY "Users can view partner profile"
 -- =====================================================
 CREATE TABLE relationship_needs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  couple_id UUID NOT NULL REFERENCES couples(id) ON DELETE CASCADE,
+  couple_id UUID NOT NULL REFERENCES relationships(id) ON DELETE CASCADE,
   requester_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   receiver_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
 
@@ -265,9 +265,9 @@ CREATE POLICY "Partners can view partner quiet mode"
   ON quiet_mode FOR SELECT
   USING (
     user_id IN (
-      SELECT partner_a_id FROM couples WHERE partner_b_id = auth.uid()
+      SELECT partner_a_id FROM relationships WHERE partner_b_id = auth.uid()
       UNION
-      SELECT partner_b_id FROM couples WHERE partner_a_id = auth.uid()
+      SELECT partner_b_id FROM relationships WHERE partner_a_id = auth.uid()
     )
   );
 
@@ -315,7 +315,7 @@ BEGIN
   SELECT pp.id, pp.user_id, pp.love_language_primary, pp.love_language_secondary,
          pp.communication_style, pp.stress_needs, pp.frequency_preference
   FROM partner_profiles pp
-  JOIN couples c ON pp.couple_id = c.id
+  JOIN relationships c ON pp.couple_id = c.id
   WHERE (c.partner_a_id = p_user_id AND pp.user_id = c.partner_b_id)
      OR (c.partner_b_id = p_user_id AND pp.user_id = c.partner_a_id);
 END;
