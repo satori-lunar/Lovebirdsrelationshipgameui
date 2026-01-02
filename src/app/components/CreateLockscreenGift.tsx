@@ -475,9 +475,9 @@ function MessageStep({ design, setDesign }: any) {
   }, [message, fontStyle]);
 
   const examples = [
-    'No matter the distance, it's always you.',
-    'I carry you with me everywhere.',
-    'Still falling for you.',
+    "No matter the distance, it's always you.",
+    "I carry you with me everywhere.",
+    "Still falling for you.",
   ];
 
   return (
