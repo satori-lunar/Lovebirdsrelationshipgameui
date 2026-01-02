@@ -32,7 +32,9 @@ export default function PartnerInsightsForm() {
     favorite_foods: '',
     music_preferences: '',
     ideal_dates: '',
-    appreciation_methods: ''
+    appreciation_methods: '',
+    when_low_helps: [],
+    when_low_avoid: []
   });
 
   const handleInputChange = (field, value) => {
@@ -46,6 +48,24 @@ export default function PartnerInsightsForm() {
         ...prev.love_languages,
         [language]: value
       }
+    }));
+  };
+
+  const toggleHelps = (item) => {
+    setFormData(prev => ({
+      ...prev,
+      when_low_helps: prev.when_low_helps.includes(item)
+        ? prev.when_low_helps.filter(i => i !== item)
+        : [...prev.when_low_helps, item]
+    }));
+  };
+
+  const toggleAvoid = (item) => {
+    setFormData(prev => ({
+      ...prev,
+      when_low_avoid: prev.when_low_avoid.includes(item)
+        ? prev.when_low_avoid.filter(i => i !== item)
+        : [...prev.when_low_avoid, item]
     }));
   };
 
@@ -70,6 +90,8 @@ export default function PartnerInsightsForm() {
           music_preferences: formData.music_preferences.split(',').map(m => m.trim()).filter(Boolean),
           preferred_dates: formData.ideal_dates.split(',').map(d => d.trim()).filter(Boolean),
           appreciation_methods: formData.appreciation_methods.split(',').map(a => a.trim()).filter(Boolean),
+          when_low_helps: formData.when_low_helps,
+          when_low_avoid: formData.when_low_avoid,
           created_at: new Date().toISOString()
         });
 
@@ -365,6 +387,103 @@ export default function PartnerInsightsForm() {
                 Back
               </Button>
               <Button
+                onClick={() => setStep(5)}
+                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500"
+              >
+                Next
+              </Button>
+            </div>
+          </motion.div>
+        );
+
+      case 5:
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="space-y-6"
+          >
+            <div className="text-center mb-6">
+              <div className="inline-block p-3 bg-gradient-to-br from-purple-500 to-violet-500 rounded-2xl mb-4">
+                <Heart className="w-8 h-8 text-white" fill="white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                One last thing...
+              </h2>
+              <p className="text-sm text-gray-600">
+                Help them know how to support you when you're having a tough day
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <Label className="text-base mb-3 block">What helps when you're feeling low?</Label>
+                <p className="text-xs text-gray-500 mb-3">Select all that apply</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    'Physical closeness',
+                    'Quiet presence',
+                    'Distraction',
+                    'Words of encouragement',
+                    'Space alone',
+                    'Talking it out',
+                    'Acts of service',
+                    'Quality time'
+                  ].map((item) => (
+                    <button
+                      key={item}
+                      onClick={() => toggleHelps(item)}
+                      className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                        formData.when_low_helps.includes(item)
+                          ? 'bg-purple-500 text-white ring-2 ring-purple-400'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-base mb-3 block">What doesn't help (or makes it worse)?</Label>
+                <p className="text-xs text-gray-500 mb-3">Select all that apply</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    'Too many questions',
+                    'Being told to cheer up',
+                    'Silence',
+                    'Forced positivity',
+                    'Comparing to others',
+                    'Dismissing feelings',
+                    'Trying to fix it',
+                    'Being alone'
+                  ].map((item) => (
+                    <button
+                      key={item}
+                      onClick={() => toggleAvoid(item)}
+                      className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                        formData.when_low_avoid.includes(item)
+                          ? 'bg-rose-500 text-white ring-2 ring-rose-400'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setStep(4)}
+                variant="outline"
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button
                 onClick={handleSubmit}
                 disabled={loading}
                 className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500"
@@ -383,7 +502,7 @@ export default function PartnerInsightsForm() {
       <div className="max-w-2xl mx-auto">
         {/* Progress */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {[1, 2, 3, 4].map((num) => (
+          {[1, 2, 3, 4, 5].map((num) => (
             <div
               key={num}
               className={`h-2 rounded-full transition-all ${

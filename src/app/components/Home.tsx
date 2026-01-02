@@ -40,12 +40,14 @@ import { onboardingService } from '../services/onboardingService';
 import { useUnreadMessages } from '../hooks/useUnreadMessages';
 import { useUnreadRequests } from '../hooks/useUnreadRequests';
 import { widgetGiftService } from '../services/widgetGiftService';
+import { api } from '../services/api';
 import { GiftCelebration } from './GiftCelebration';
 import { GiftCarousel } from './GiftCarousel';
 import PartnerFormInvite from './PartnerFormInvite';
 import WeeklyRhythm from './WeeklyRhythm';
 import AsyncDateIdeas from './AsyncDateIdeas';
 import LocationDateSuggestions from './LocationDateSuggestions';
+import PartnerCapacityView from './PartnerCapacityView';
 import type { WidgetGiftData } from '../types/widget';
 
 interface HomeProps {
@@ -142,6 +144,50 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
       }
     },
     enabled: !!relationship?.id && !!user?.id,
+  });
+
+  // Query partner's latest capacity check-in
+  const { data: partnerCapacity } = useQuery({
+    queryKey: ['partnerCapacity', relationship?.id, user?.id],
+    queryFn: async () => {
+      if (!relationship?.id || !user?.id) return null;
+      try {
+        // Get partner's profile to find their user_id
+        const profiles = await onboardingService.getPartnerProfiles(relationship.id);
+        const partner = profiles?.find(p => p.user_email !== user.email);
+        if (!partner?.user_email) return null;
+
+        // Get partner's latest capacity check-in from today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const { data, error } = await api.supabase
+          .from('capacity_checkins')
+          .select('*')
+          .eq('couple_id', relationship.id)
+          .gte('created_at', today.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+          console.error('Failed to fetch partner capacity:', error);
+          return null;
+        }
+
+        // Check if this check-in is from the partner (not the current user)
+        if (data && data.user_id !== user.id) {
+          return data;
+        }
+
+        return null;
+      } catch (error) {
+        console.error('Failed to fetch partner capacity:', error);
+        return null;
+      }
+    },
+    enabled: !!relationship?.id && !!user?.id,
+    refetchInterval: 60000, // Refresh every minute
   });
 
   // Calculate days together (mock - would come from relationship data)
@@ -354,6 +400,21 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             </button>
           </motion.div>
 
+          {/* Partner Capacity Check-In */}
+          {partnerCapacity && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.17 }}
+            >
+              <PartnerCapacityView
+                checkin={partnerCapacity}
+                partnerName={partnerName}
+                isLongDistance={couple?.is_long_distance || false}
+              />
+            </motion.div>
+          )}
+
           {/* Pending Gifts Indicator */}
           {pendingGifts.length > 0 && (
             <motion.div
@@ -437,6 +498,47 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                   </div>
                 </CardContent>
               </Card>
+            </motion.div>
+          )}
+
+          {/* My Capacity Today Prompt */}
+          {relationship?.partner_b_id && !partnerCapacity && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.23 }}
+            >
+              <button
+                onClick={() => onNavigate('capacity-checkin')}
+                className="w-full text-left"
+              >
+                <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all">
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-4">
+                      <motion.div
+                        animate={{ y: [-2, 2, -2] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                        className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-200"
+                      >
+                        <Heart className="w-6 h-6 text-white" fill="white" />
+                      </motion.div>
+                      <div className="flex-1">
+                        <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">My Capacity Today</p>
+                        <h3 className="font-semibold text-gray-900 mt-1">Share how you're feeling</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Let {partnerName} know your mood and what you need - it helps them show up better for you
+                        </p>
+                        <div className="mt-3">
+                          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-sm font-medium rounded-xl shadow-md">
+                            <span>Share Your Capacity</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </button>
             </motion.div>
           )}
 
