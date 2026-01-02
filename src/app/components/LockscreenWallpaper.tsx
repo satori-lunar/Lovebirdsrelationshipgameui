@@ -120,7 +120,7 @@ export function LockscreenWallpaper({ onBack }: LockscreenWallpaperProps) {
         newConfig = {
           ...baseConfig,
           type: 'time',
-          relationshipStartDate: relationship?.anniversary || new Date().toISOString(),
+          relationshipStartDate: relationship?.connected_at || relationship?.created_at || new Date().toISOString(),
           displayFormat: 'years_months',
           showMilestones: true,
         } as TimeWallpaperConfig;
@@ -192,8 +192,8 @@ export function LockscreenWallpaper({ onBack }: LockscreenWallpaperProps) {
       };
 
       const additionalData = {
-        relationshipStartDate: relationship?.anniversary,
-        partnerName: relationship?.partner_name || 'Partner',
+        relationshipStartDate: relationship?.connected_at || relationship?.created_at,
+        partnerName: 'Partner',
       };
 
       if (config.type === 'growth') {

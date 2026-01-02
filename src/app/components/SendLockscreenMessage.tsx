@@ -64,13 +64,20 @@ export function SendLockscreenMessage({ onBack }: SendLockscreenMessageProps) {
   const maxLength = 150;
   const remainingChars = maxLength - message.length;
 
+  // Determine partner ID from relationship
+  const partnerId = relationship
+    ? user?.id === relationship.partner_a_id
+      ? relationship.partner_b_id
+      : relationship.partner_a_id
+    : null;
+
   const handleSend = async () => {
     if (!message.trim()) {
       toast.error('Please write a message');
       return;
     }
 
-    if (!relationship) {
+    if (!relationship || !partnerId) {
       toast.error('No relationship found');
       return;
     }
@@ -79,7 +86,7 @@ export function SendLockscreenMessage({ onBack }: SendLockscreenMessageProps) {
 
     try {
       await lockscreenService.sendMessage({
-        receiverId: relationship.partner_id,
+        receiverId: partnerId,
         relationshipId: relationship.id,
         message: message.trim(),
         tone: selectedTone,
@@ -87,7 +94,7 @@ export function SendLockscreenMessage({ onBack }: SendLockscreenMessageProps) {
       });
 
       toast.success('Message sent!', {
-        description: `${relationship.partner_name} will see it on their lockscreen`,
+        description: 'Your partner will see it on their lockscreen',
       });
 
       // Clear form
@@ -134,7 +141,7 @@ export function SendLockscreenMessage({ onBack }: SendLockscreenMessageProps) {
         {/* Subtitle */}
         <div className="text-center">
           <p className="text-gray-600 text-sm">
-            Send an intentional message to {relationship?.partner_name || 'your partner'}
+            Send an intentional message to your partner
           </p>
           <p className="text-pink-600 text-xs mt-1">
             It will appear on their lockscreen wallpaper
@@ -281,7 +288,7 @@ export function SendLockscreenMessage({ onBack }: SendLockscreenMessageProps) {
           ) : (
             <>
               <Send className="w-4 h-4 mr-2" />
-              Send to {relationship?.partner_name || 'Partner'}
+              Send to Partner
             </>
           )}
         </Button>
