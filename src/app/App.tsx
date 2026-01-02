@@ -31,6 +31,7 @@ import RelationshipModeSetup from './components/RelationshipModeSetup';
 import SoloModeSetup from './components/SoloModeSetup';
 import PartnerInsightsForm from './components/PartnerInsightsForm';
 import CapacityCheckIn from './components/CapacityCheckIn';
+import { PartnerProfileOnboarding } from './components/PartnerProfileOnboarding';
 import { useAuth } from './hooks/useAuth';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
@@ -39,7 +40,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo' | 'capacity-checkin';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo' | 'capacity-checkin';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -185,6 +186,16 @@ export default function App() {
       {/* Legacy onboarding (can be removed or used as fallback) */}
       {currentView === 'onboarding' && user && (
         <Onboarding onComplete={handleOnboardingComplete} />
+      )}
+
+      {/* New comprehensive profile onboarding */}
+      {currentView === 'profile-onboarding' && user && (
+        <PartnerProfileOnboarding
+          userId={user.id}
+          coupleId={user.id} // Will be set properly when couple is created
+          partnerName="your partner"
+          onComplete={handleOnboardingComplete}
+        />
       )}
 
       <AuthModal

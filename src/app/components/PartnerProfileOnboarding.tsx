@@ -47,7 +47,7 @@ import type {
 } from '../types/partnerProfile';
 import { partnerProfileService } from '../services/partnerProfileService';
 import { PartnerProfileComparison } from './PartnerProfileComparison';
-import { api } from '../api';
+import { api } from '../services/api';
 
 interface PartnerProfileOnboardingProps {
   userId: string;

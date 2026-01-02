@@ -50,7 +50,7 @@ export default function RelationshipModeSetup({ onNavigate }: RelationshipModeSe
 
     // Navigate based on mode
     if (selectedMode === 'shared') {
-      onNavigate('onboarding');
+      onNavigate('profile-onboarding');
     } else {
       onNavigate('solo-mode-setup');
     }
