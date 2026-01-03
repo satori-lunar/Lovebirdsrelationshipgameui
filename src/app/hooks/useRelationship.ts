@@ -44,9 +44,9 @@ export function useRelationship() {
   return {
     relationship,
     isLoading,
-    createRelationship: createRelationshipMutation.mutate,
-    connectPartner: connectPartnerMutation.mutate,
-    disconnectPartner: disconnectPartnerMutation.mutate,
+    createRelationship: createRelationshipMutation.mutateAsync,
+    connectPartner: connectPartnerMutation.mutateAsync,
+    disconnectPartner: disconnectPartnerMutation.mutateAsync,
     isCreating: createRelationshipMutation.isPending,
     isConnecting: connectPartnerMutation.isPending,
     isDisconnecting: disconnectPartnerMutation.isPending,

@@ -32,10 +32,17 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
 
   const handleCreateInvite = async () => {
     try {
-      await createRelationship();
+      console.log('🎯 Creating invite...');
+      const result = await createRelationship();
+      console.log('✅ Invite created:', result);
+
+      // Small delay to ensure query has refreshed
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       setShowInviteDialog(true);
       toast.success('Invite code generated! Share it with your partner.');
     } catch (error: any) {
+      console.error('❌ Failed to create invite:', error);
       toast.error(error.message || 'Failed to create invite code');
     }
   };
@@ -47,11 +54,14 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
     }
 
     try {
+      console.log('🔗 Connecting with code:', inviteCode.trim().toUpperCase());
       await connectPartner(inviteCode.trim().toUpperCase());
+      console.log('✅ Connected successfully!');
       setShowConnectDialog(false);
       setInviteCode('');
       toast.success('Successfully connected!');
     } catch (error: any) {
+      console.error('❌ Connection failed:', error);
       toast.error(error.message || 'Failed to connect. Please check your invite code.');
     }
   };
@@ -254,81 +264,89 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
                 </p>
                 <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-purple-200">
                   <p className="text-xs text-gray-600 mb-2 text-center font-medium">Your Invite Code</p>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={currentInviteCode || ''}
-                      readOnly
-                      className="text-3xl font-mono text-center tracking-widest font-bold bg-white/80"
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleCopyInviteCode}
-                      className="shrink-0"
-                    >
-                      {copied ? (
-                        <Check className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
+                  {!currentInviteCode ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={currentInviteCode}
+                        readOnly
+                        className="text-3xl font-mono text-center tracking-widest font-bold bg-white/80"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyInviteCode}
+                        className="shrink-0"
+                      >
+                        {copied ? (
+                          <Check className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-3">Share via:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleShareViaSMS}
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Messages</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleShareViaEmail}
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span>Email</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleShareViaWhatsApp}
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <MessageCircle className="w-4 h-4 text-green-600" />
-                    <span>WhatsApp</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleShareViaFacebook}
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <Facebook className="w-4 h-4 text-blue-600" />
-                    <span>Facebook</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleShareViaTwitter}
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <Twitter className="w-4 h-4 text-sky-500" />
-                    <span>Twitter</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleNativeShare}
-                    className="flex items-center gap-2 justify-start"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>More...</span>
-                  </Button>
+              {currentInviteCode && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-3">Share via:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleShareViaSMS}
+                      className="flex items-center gap-2 justify-start"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Messages</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleShareViaEmail}
+                      className="flex items-center gap-2 justify-start"
+                    >
+                      <Mail className="w-4 h-4" />
+                      <span>Email</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleShareViaWhatsApp}
+                      className="flex items-center gap-2 justify-start"
+                    >
+                      <MessageCircle className="w-4 h-4 text-green-600" />
+                      <span>WhatsApp</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleShareViaFacebook}
+                      className="flex items-center gap-2 justify-start"
+                    >
+                      <Facebook className="w-4 h-4 text-blue-600" />
+                      <span>Facebook</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleShareViaTwitter}
+                      className="flex items-center gap-2 justify-start"
+                    >
+                      <Twitter className="w-4 h-4 text-sky-500" />
+                      <span>Twitter</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleNativeShare}
+                      className="flex items-center gap-2 justify-start"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span>More...</span>
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="bg-blue-50 rounded-lg p-3">
                 <p className="text-xs text-blue-800">
@@ -336,19 +354,21 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
                 </p>
               </div>
 
-              <div className="border-t pt-4">
-                <p className="text-sm text-gray-600 mb-3">Or have your partner enter their code:</p>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowInviteDialog(false);
-                    setShowConnectDialog(true);
-                  }}
-                  className="w-full"
-                >
-                  Enter {partnerName}'s Code
-                </Button>
-              </div>
+              {currentInviteCode && (
+                <div className="border-t pt-4">
+                  <p className="text-sm text-gray-600 mb-3">Or have your partner enter their code:</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowInviteDialog(false);
+                      setShowConnectDialog(true);
+                    }}
+                    className="w-full"
+                  >
+                    Enter {partnerName}'s Code
+                  </Button>
+                </div>
+              )}
 
               <Button
                 onClick={() => setShowInviteDialog(false)}
