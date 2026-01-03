@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Sparkles, Heart, X, Users, CheckCircle, Clock } from 'lucide-react';
+import { ChevronLeft, Sparkles, Heart, X, Users, CheckCircle, Clock, Zap, Dices } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
@@ -15,7 +15,7 @@ interface DatePlanningProps {
   initialMode?: DateMode;
 }
 
-type DateMode = 'select' | 'plan-for-partner' | 'swipe-together';
+type DateMode = 'select' | 'plan-for-partner' | 'swipe-together' | 'random-challenge';
 type SwipeStage = 'welcome' | 'swiping' | 'matches' | 'decision' | 'final';
 
 // Import types that are needed for the component
@@ -32,6 +32,7 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
   const [finalDate, setFinalDate] = useState<number | null>(null);
   const [decisionMethod, setDecisionMethod] = useState<'coin' | 'dice' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [challengeDate, setChallengeDate] = useState<typeof dateIdeas[0] | null>(null);
 
   // Local state for tracking likes when no relationship exists
   const [localLikes, setLocalLikes] = useState<Set<number>>(new Set());
@@ -228,6 +229,36 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
                     Recommended
                   </span>
                   <span className="text-xs text-gray-500">No decision fatigue</span>
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => {
+              // Generate random date
+              const randomDate = dateIdeas[Math.floor(Math.random() * dateIdeas.length)];
+              setChallengeDate(randomDate);
+              setMode('random-challenge');
+            }}
+            className="w-full bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow text-left border-2 border-orange-200 hover:border-orange-400"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Zap className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold mb-1 flex items-center gap-2">
+                  Random Challenge
+                  <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
+                    Dare!
+                  </span>
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Feeling spontaneous? Let us pick a random date for you to do!
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-orange-600 font-medium">⚡ No overthinking required</span>
                 </div>
               </div>
             </div>
@@ -555,6 +586,21 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
         />
       );
     }
+  }
+
+  // Random Challenge Mode
+  if (mode === 'random-challenge' && challengeDate) {
+    return (
+      <RandomChallengeScreen
+        date={challengeDate}
+        onAccept={onBack}
+        onReroll={() => {
+          const randomDate = dateIdeas[Math.floor(Math.random() * dateIdeas.length)];
+          setChallengeDate(randomDate);
+        }}
+        onBack={() => setMode('select')}
+      />
+    );
   }
 
   return null;
@@ -1140,6 +1186,176 @@ function FinalDateScreen({
             </div>
           </Card>
         </motion.div>
+      </div>
+    </div>
+  );
+}
+
+// Random Challenge Screen Component
+function RandomChallengeScreen({
+  date,
+  onAccept,
+  onReroll,
+  onBack
+}: {
+  date: typeof dateIdeas[0];
+  onAccept: () => void;
+  onReroll: () => void;
+  onBack: () => void;
+}) {
+  const [isRolling, setIsRolling] = useState(false);
+
+  const handleReroll = () => {
+    setIsRolling(true);
+    setTimeout(() => {
+      onReroll();
+      setIsRolling(false);
+    }, 600);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-yellow-50 pb-8">
+      <div className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white p-6 pb-12">
+        <div className="max-w-md mx-auto">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 mb-6 hover:opacity-80"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+
+          <div className="text-center">
+            <div className="text-6xl mb-4">⚡</div>
+            <h1 className="text-3xl mb-2 font-bold">Your Random Challenge!</h1>
+            <p className="text-white/90 text-lg">
+              We dare you to do this date together!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto px-6 -mt-6 space-y-4">
+        <motion.div
+          key={date.id}
+          initial={{ scale: 0.9, opacity: 0, rotateY: -90 }}
+          animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+          transition={{
+            duration: 0.6,
+            type: "spring",
+            stiffness: 200,
+            damping: 20
+          }}
+        >
+          <Card className="p-8 border-0 shadow-2xl overflow-hidden relative">
+            {/* Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-400 via-yellow-400 to-pink-400" />
+
+            {/* Content */}
+            <div className="relative z-10">
+              {/* Challenge Badge */}
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white font-bold text-sm shadow-lg">
+                  <Zap className="w-4 h-4" />
+                  <span>CHALLENGE ACCEPTED?</span>
+                  <Zap className="w-4 h-4" />
+                </div>
+              </div>
+
+              <div className="text-8xl mb-6 text-center drop-shadow-lg">
+                {date.image}
+              </div>
+
+              <h2 className="text-3xl font-bold text-center mb-4 text-white drop-shadow-lg">
+                {date.title}
+              </h2>
+
+              <p className="text-base text-white text-center mb-8 leading-relaxed drop-shadow-md">
+                {date.description}
+              </p>
+
+              <div className="space-y-3 mb-8">
+                <div className="flex items-center gap-3 p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
+                  <Clock className="w-6 h-6 text-orange-600" />
+                  <div>
+                    <p className="text-xs text-gray-700">Duration</p>
+                    <p className="font-semibold text-gray-900">{date.duration}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
+                  <MapPin className="w-6 h-6 text-yellow-600" />
+                  <div>
+                    <p className="text-xs text-gray-700">Location</p>
+                    <p className="font-semibold text-gray-900">{date.location}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">
+                  <DollarSign className="w-6 h-6 text-pink-600" />
+                  <div>
+                    <p className="text-xs text-gray-700">Budget</p>
+                    <p className="font-semibold text-gray-900">{date.budget}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Challenge Details */}
+              <Card className="p-4 bg-white/20 backdrop-blur-sm border-white/40 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">🎯</div>
+                  <div>
+                    <h3 className="font-bold text-white mb-1">The Challenge</h3>
+                    <p className="text-sm text-white/90">
+                      Complete this date within the next week for maximum relationship points!
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="space-y-3">
+                <Button
+                  onClick={onAccept}
+                  disabled={isRolling}
+                  className="w-full bg-white hover:bg-white/90 text-orange-600 h-14 text-lg font-bold shadow-xl"
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Accept Challenge!
+                </Button>
+                <Button
+                  onClick={handleReroll}
+                  disabled={isRolling}
+                  variant="outline"
+                  className="w-full h-12 bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-white/30"
+                >
+                  {isRolling ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 0.6, ease: "linear" }}
+                        className="mr-2"
+                      >
+                        <Dices className="w-5 h-5" />
+                      </motion.div>
+                      Rolling...
+                    </>
+                  ) : (
+                    <>
+                      <Dices className="w-5 h-5 mr-2" />
+                      Different Challenge
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Fun Stats Card */}
+        <Card className="p-4 bg-white border-0 shadow-lg">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-2">💡 <strong>Pro Tip:</strong> Random dates often lead to the best memories!</p>
+            <p className="text-xs text-gray-500">Couples who try random dates report 40% more fun and spontaneity! ✨</p>
+          </div>
+        </Card>
       </div>
     </div>
   );
