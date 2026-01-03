@@ -191,12 +191,11 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
               </div>
             </div>
             <Button
-              size="sm"
               variant={variant === 'settings' ? 'outline' : 'ghost'}
-              className={`text-xs ${variant === 'settings' ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-white/80 hover:text-white'}`}
+              className={`min-h-[44px] py-2 px-3 text-sm ${variant === 'settings' ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-white/80 hover:text-white'}`}
               onClick={() => setShowDisconnectDialog(true)}
             >
-              <UserMinus className="w-3 h-3 mr-1" />
+              <UserMinus className="w-4 h-4 mr-1" />
               Disconnect
             </Button>
           </div>
@@ -250,14 +249,13 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
             <p className={`text-xs ${variant === 'settings' ? 'text-gray-600' : 'text-white/80'}`}>Connect to unlock all features together</p>
           </div>
           <Button
-            size="sm"
-            className={variant === 'settings'
-              ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600 text-xs'
-              : 'bg-white text-purple-600 hover:bg-white/90 text-xs'}
+            className={`min-h-[44px] py-2.5 px-4 text-sm ${variant === 'settings'
+              ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600'
+              : 'bg-white text-purple-600 hover:bg-white/90'}`}
             onClick={handleCreateInvite}
             disabled={isCreating}
           >
-            <Link2 className="w-3 h-3 mr-1" />
+            <Link2 className="w-4 h-4 mr-1" />
             {isCreating ? 'Creating...' : 'Invite'}
           </Button>
         </div>
@@ -466,8 +464,7 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
         )}
 
         <Button
-          size="sm"
-          className={`w-full text-xs ${
+          className={`w-full py-3 min-h-[44px] text-sm ${
             variant === 'settings'
               ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600'
               : 'bg-white text-purple-600 hover:bg-white/90'
