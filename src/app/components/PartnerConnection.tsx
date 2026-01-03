@@ -20,10 +20,12 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
   const [showConnectDialog, setShowConnectDialog] = useState(false);
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [createdRelationship, setCreatedRelationship] = useState<any>(null);
 
   const isConnected = !!relationship?.partner_b_id;
   const hasRelationship = !!relationship;
-  const currentInviteCode = relationship?.invite_code;
+  // Use created relationship if available, otherwise use the one from query
+  const currentInviteCode = createdRelationship?.invite_code || relationship?.invite_code;
 
   // Different styling based on variant
   const cardClass = variant === 'settings'
@@ -36,8 +38,14 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
       const result = await createRelationship();
       console.log('✅ Invite created:', result);
 
-      // Small delay to ensure query has refreshed
-      await new Promise(resolve => setTimeout(resolve, 500));
+      if (!result || !result.invite_code) {
+        console.error('❌ No invite code in result:', result);
+        toast.error('Failed to generate invite code. Please try again.');
+        return;
+      }
+
+      // Store the created relationship immediately
+      setCreatedRelationship(result);
 
       setShowInviteDialog(true);
       toast.success('Invite code generated! Share it with your partner.');
@@ -59,6 +67,7 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
       console.log('✅ Connected successfully!');
       setShowConnectDialog(false);
       setInviteCode('');
+      setCreatedRelationship(null); // Clear created relationship
       toast.success('Successfully connected!');
     } catch (error: any) {
       console.error('❌ Connection failed:', error);
@@ -70,6 +79,7 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
     try {
       await disconnectPartner();
       setShowDisconnectDialog(false);
+      setCreatedRelationship(null); // Clear created relationship
       toast.success('Successfully disconnected from partner');
     } catch (error: any) {
       toast.error(error.message || 'Failed to disconnect');
