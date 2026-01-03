@@ -10,6 +10,13 @@ export function useRelationship() {
     queryKey: ['relationship', user?.id],
     queryFn: () => relationshipService.getRelationship(user!.id),
     enabled: !!user,
+    refetchInterval: (query) => {
+      // If not connected yet (partner_b_id is null), poll every 3 seconds
+      // Once connected, stop polling
+      const data = query.state.data;
+      return data && !data.partner_b_id ? 3000 : false;
+    },
+    refetchOnWindowFocus: true, // Also refetch when window regains focus
   });
 
   const createRelationshipMutation = useMutation({
