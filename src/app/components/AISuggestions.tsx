@@ -40,45 +40,51 @@ export function AISuggestions({
   const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    if (user?.id && partnerId && isExpanded && !hasLoaded) {
+    if (user?.id && isExpanded && !hasLoaded) {
       loadSuggestions();
     }
-  }, [user?.id, partnerId, isExpanded, hasLoaded]);
+  }, [user?.id, isExpanded, hasLoaded]);
 
   const loadSuggestions = async () => {
-    if (!user?.id || !partnerId) return;
+    if (!user?.id) return;
 
     setIsLoading(true);
     try {
+      // Use partnerId if available, otherwise use user's own ID for solo suggestions
+      const targetId = partnerId || user.id;
       const newSuggestions = await aiSuggestionService.refreshSuggestions(
         type,
         user.id,
-        partnerId,
+        targetId,
         messageType
       );
       setSuggestions(newSuggestions);
       setHasLoaded(true);
     } catch (error) {
       console.error('Error loading suggestions:', error);
+      // Fallback to empty suggestions array on error
+      setSuggestions([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRefresh = async () => {
-    if (!user?.id || !partnerId) return;
+    if (!user?.id) return;
 
     setIsLoading(true);
     try {
+      const targetId = partnerId || user.id;
       const newSuggestions = await aiSuggestionService.refreshSuggestions(
         type,
         user.id,
-        partnerId,
+        targetId,
         messageType
       );
       setSuggestions(newSuggestions);
     } catch (error) {
       console.error('Error refreshing suggestions:', error);
+      setSuggestions([]);
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +94,7 @@ export function AISuggestions({
     onSelect(suggestion);
   };
 
-  if (!user?.id || !partnerId) {
+  if (!user?.id) {
     return null;
   }
 
