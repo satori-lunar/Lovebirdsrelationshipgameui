@@ -9,7 +9,9 @@ import { AISuggestions } from './AISuggestions';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { usePartner } from '../hooks/usePartner';
+import { useCoupleGoals } from '../hooks/useCoupleGoals';
 import type { AISuggestion } from '../services/aiSuggestionService';
+import { toast } from 'sonner';
 
 interface RelationshipTrackerProps {
   onBack: () => void;
@@ -36,8 +38,19 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
 
+  // Use database for goals
+  const {
+    goals: dbGoals,
+    isLoading: goalsLoading,
+    createGoal,
+    toggleGoal,
+    deleteGoal,
+    isCreating,
+    isToggling,
+    isDeleting
+  } = useCoupleGoals(relationship?.id);
+
   const [dates, setDates] = useState<ImportantDate[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
   const [activeTab, setActiveTab] = useState<'dates' | 'goals'>('dates');
 
   const [isAddingDate, setIsAddingDate] = useState(false);
@@ -47,24 +60,43 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     type: 'custom' as const
   });
 
-  const handleGoalSelect = (suggestion: AISuggestion) => {
-    const newGoal: Goal = {
-      id: Date.now(),
-      title: suggestion.text,
-      category: suggestion.category,
-      completed: false,
-    };
-    setGoals([...goals, newGoal]);
+  const handleGoalSelect = async (suggestion: AISuggestion) => {
+    if (!relationship?.id) {
+      toast.error('Please connect with your partner first');
+      return;
+    }
+
+    try {
+      await createGoal({
+        coupleId: relationship.id,
+        title: suggestion.text,
+        category: suggestion.category,
+      });
+      toast.success('Goal added!');
+    } catch (error) {
+      console.error('Failed to create goal:', error);
+      toast.error('Failed to add goal');
+    }
   };
 
-  const toggleGoalComplete = (goalId: number) => {
-    setGoals(goals.map(g =>
-      g.id === goalId ? { ...g, completed: !g.completed } : g
-    ));
+  const toggleGoalComplete = async (goalId: string, currentCompleted: boolean) => {
+    try {
+      await toggleGoal({ goalId, completed: !currentCompleted });
+      toast.success(currentCompleted ? 'Goal reopened' : 'Goal completed! 🎉');
+    } catch (error) {
+      console.error('Failed to toggle goal:', error);
+      toast.error('Failed to update goal');
+    }
   };
 
-  const removeGoal = (goalId: number) => {
-    setGoals(goals.filter(g => g.id !== goalId));
+  const removeGoal = async (goalId: string) => {
+    try {
+      await deleteGoal(goalId);
+      toast.success('Goal removed');
+    } catch (error) {
+      console.error('Failed to delete goal:', error);
+      toast.error('Failed to remove goal');
+    }
   };
 
   const getDaysUntil = (dateStr: string) => {
@@ -369,7 +401,12 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
             <div className="space-y-4">
               <h2 className="font-semibold">Your Goals</h2>
 
-              {goals.length === 0 ? (
+              {goalsLoading ? (
+                <Card className="p-8 text-center border-0 shadow-lg">
+                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                  <p className="text-gray-600">Loading goals...</p>
+                </Card>
+              ) : dbGoals.length === 0 ? (
                 <Card className="p-8 text-center border-0 shadow-lg">
                   <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 mb-2">No goals yet</p>
@@ -378,7 +415,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                   </p>
                 </Card>
               ) : (
-                goals.map((goal) => (
+                dbGoals.map((goal) => (
                   <Card
                     key={goal.id}
                     className={`p-4 border-0 shadow-md transition-all ${
@@ -387,7 +424,8 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                   >
                     <div className="flex items-start gap-3">
                       <button
-                        onClick={() => toggleGoalComplete(goal.id)}
+                        onClick={() => toggleGoalComplete(goal.id, goal.completed)}
+                        disabled={isToggling}
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
                           goal.completed
                             ? 'bg-green-500 border-green-500 text-white'
@@ -412,6 +450,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                       </div>
                       <button
                         onClick={() => removeGoal(goal.id)}
+                        disabled={isDeleting}
                         className="text-gray-400 hover:text-red-500 transition-colors"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -425,22 +464,22 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
             </div>
 
             {/* Stats */}
-            {goals.length > 0 && (
+            {dbGoals.length > 0 && (
               <Card className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-0">
                 <div className="flex justify-around text-center">
                   <div>
-                    <p className="text-2xl font-bold text-purple-600">{goals.length}</p>
+                    <p className="text-2xl font-bold text-purple-600">{dbGoals.length}</p>
                     <p className="text-xs text-gray-600">Total Goals</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-green-600">
-                      {goals.filter(g => g.completed).length}
+                      {dbGoals.filter(g => g.completed).length}
                     </p>
                     <p className="text-xs text-gray-600">Completed</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-orange-600">
-                      {goals.filter(g => !g.completed).length}
+                      {dbGoals.filter(g => !g.completed).length}
                     </p>
                     <p className="text-xs text-gray-600">In Progress</p>
                   </div>
