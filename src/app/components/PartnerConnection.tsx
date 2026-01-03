@@ -9,9 +9,10 @@ import { toast } from 'sonner';
 
 interface PartnerConnectionProps {
   partnerName: string;
+  variant?: 'home' | 'settings'; // 'home' for glassmorphic style, 'settings' for plain
 }
 
-export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
+export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConnectionProps) {
   const { user } = useAuth();
   const { relationship, isLoading, createRelationship, connectPartner, isCreating, isConnecting } = useRelationship();
   const [inviteCode, setInviteCode] = useState('');
@@ -22,6 +23,11 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
   const isConnected = !!relationship?.partner_b_id;
   const hasRelationship = !!relationship;
   const currentInviteCode = relationship?.invite_code;
+
+  // Different styling based on variant
+  const cardClass = variant === 'settings'
+    ? 'bg-white rounded-xl p-4 border border-gray-200'
+    : 'bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30';
 
   const handleCreateInvite = async () => {
     try {
@@ -118,12 +124,12 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30">
+      <div className={cardClass}>
         <div className="flex items-center gap-3">
-          <Users className="w-10 h-10 text-white/90 animate-pulse" />
+          <Users className={`w-10 h-10 ${variant === 'settings' ? 'text-gray-400' : 'text-white/90'} animate-pulse`} />
           <div className="flex-1">
-            <p className="font-semibold text-sm mb-1">Loading...</p>
-            <p className="text-xs text-white/80">Checking connection status</p>
+            <p className={`font-semibold text-sm mb-1 ${variant === 'settings' ? 'text-gray-900' : 'text-white'}`}>Loading...</p>
+            <p className={`text-xs ${variant === 'settings' ? 'text-gray-500' : 'text-white/80'}`}>Checking connection status</p>
           </div>
         </div>
       </div>
@@ -132,18 +138,24 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
 
   if (isConnected) {
     return (
-      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30">
+      <div className={cardClass}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center border-2 border-white/50">
-                <span className="text-base">{partnerName.charAt(0).toUpperCase()}</span>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                variant === 'settings'
+                  ? 'bg-green-100 border-green-200'
+                  : 'bg-white/30 border-white/50'
+              }`}>
+                <span className={`text-base ${variant === 'settings' ? 'text-green-700' : 'text-white'}`}>
+                  {partnerName.charAt(0).toUpperCase()}
+                </span>
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
             </div>
             <div>
-              <p className="font-semibold text-sm">{partnerName}</p>
-              <p className="text-xs text-white/80">Connected</p>
+              <p className={`font-semibold text-sm ${variant === 'settings' ? 'text-gray-900' : 'text-white'}`}>{partnerName}</p>
+              <p className={`text-xs ${variant === 'settings' ? 'text-green-600' : 'text-white/80'}`}>✓ Connected</p>
             </div>
           </div>
         </div>
@@ -154,16 +166,18 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
   // Not connected - show invite or connect options
   if (!relationship) {
     return (
-      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30">
+      <div className={cardClass}>
         <div className="flex items-center gap-3">
-          <Users className="w-10 h-10 text-white/90" />
+          <Users className={`w-10 h-10 ${variant === 'settings' ? 'text-purple-600' : 'text-white/90'}`} />
           <div className="flex-1">
-            <p className="font-semibold text-sm mb-1">Invite {partnerName}</p>
-            <p className="text-xs text-white/80">Connect to unlock all features together</p>
+            <p className={`font-semibold text-sm mb-1 ${variant === 'settings' ? 'text-gray-900' : 'text-white'}`}>Invite {partnerName}</p>
+            <p className={`text-xs ${variant === 'settings' ? 'text-gray-600' : 'text-white/80'}`}>Connect to unlock all features together</p>
           </div>
-          <Button 
+          <Button
             size="sm"
-            className="bg-white text-purple-600 hover:bg-white/90 text-xs"
+            className={variant === 'settings'
+              ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600 text-xs'
+              : 'bg-white text-purple-600 hover:bg-white/90 text-xs'}
             onClick={handleCreateInvite}
             disabled={isCreating}
           >
@@ -296,20 +310,26 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
   // Has relationship but not connected - show invite code and connect option
   return (
     <>
-      <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30 space-y-3">
+      <div className={`${cardClass} space-y-3`}>
         <div className="flex items-center gap-3">
-          <Users className="w-10 h-10 text-white/90" />
+          <Users className={`w-10 h-10 ${variant === 'settings' ? 'text-purple-600' : 'text-white/90'}`} />
           <div className="flex-1">
-            <p className="font-semibold text-sm mb-1">Waiting for {partnerName}</p>
-            <p className="text-xs text-white/80">Share your code or enter theirs</p>
+            <p className={`font-semibold text-sm mb-1 ${variant === 'settings' ? 'text-gray-900' : 'text-white'}`}>
+              Waiting for {partnerName}
+            </p>
+            <p className={`text-xs ${variant === 'settings' ? 'text-gray-600' : 'text-white/80'}`}>
+              Share your code or enter theirs
+            </p>
           </div>
         </div>
 
         {currentInviteCode && (
-          <div className="bg-white/30 rounded-xl p-3 space-y-2">
-            <p className="text-xs text-white/90 mb-2 font-medium">Your Invite Code:</p>
+          <div className={variant === 'settings' ? 'bg-purple-50 rounded-xl p-3 space-y-2 border border-purple-100' : 'bg-white/30 rounded-xl p-3 space-y-2'}>
+            <p className={`text-xs mb-2 font-medium ${variant === 'settings' ? 'text-purple-700' : 'text-white/90'}`}>
+              Your Invite Code:
+            </p>
             <div className="flex items-center gap-2">
-              <div className="flex-1 bg-white/50 rounded-lg px-3 py-2">
+              <div className={`flex-1 rounded-lg px-3 py-2 ${variant === 'settings' ? 'bg-white border border-purple-200' : 'bg-white/50'}`}>
                 <p className="text-xl font-mono font-bold text-center tracking-widest text-gray-800">
                   {currentInviteCode}
                 </p>
@@ -317,7 +337,7 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
               <Button
                 size="icon"
                 variant="secondary"
-                className="bg-white/80 hover:bg-white shrink-0"
+                className={variant === 'settings' ? 'bg-white border border-purple-200 hover:bg-purple-50 shrink-0' : 'bg-white/80 hover:bg-white shrink-0'}
                 onClick={handleCopyInviteCode}
               >
                 {copied ? (
@@ -330,8 +350,8 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                variant="secondary"
-                className="flex-1 bg-white/60 hover:bg-white/80 text-xs"
+                variant="outline"
+                className="flex-1 text-xs"
                 onClick={handleShareViaSMS}
               >
                 <MessageCircle className="w-3 h-3 mr-1" />
@@ -339,8 +359,8 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
               </Button>
               <Button
                 size="sm"
-                variant="secondary"
-                className="flex-1 bg-white/60 hover:bg-white/80 text-xs"
+                variant="outline"
+                className="flex-1 text-xs"
                 onClick={handleShareViaEmail}
               >
                 <Mail className="w-3 h-3 mr-1" />
@@ -348,8 +368,8 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
               </Button>
               <Button
                 size="sm"
-                variant="secondary"
-                className="flex-1 bg-white/60 hover:bg-white/80 text-xs"
+                variant="outline"
+                className="flex-1 text-xs"
                 onClick={() => setShowInviteDialog(true)}
               >
                 <Share2 className="w-3 h-3 mr-1" />
@@ -361,7 +381,11 @@ export function PartnerConnection({ partnerName }: PartnerConnectionProps) {
 
         <Button
           size="sm"
-          className="w-full bg-white text-purple-600 hover:bg-white/90 text-xs"
+          className={`w-full text-xs ${
+            variant === 'settings'
+              ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600'
+              : 'bg-white text-purple-600 hover:bg-white/90'
+          }`}
           onClick={() => setShowConnectDialog(true)}
         >
           Enter {partnerName}'s Code

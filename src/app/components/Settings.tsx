@@ -110,7 +110,7 @@ export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
             <h2 className="font-semibold text-lg">Partner Connection</h2>
           </div>
 
-          <PartnerConnection partnerName={partnerName} />
+          <PartnerConnection partnerName={partnerName} variant="settings" />
         </Card>
 
         {/* Notification Settings */}
