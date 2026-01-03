@@ -467,34 +467,33 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
           {/* Long Distance Features */}
           {couple?.is_long_distance && (
-            <>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <WeeklyRhythm couple={couple} user={user} />
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-              >
-                <AsyncDateIdeas />
-              </motion.div>
-            </>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <WeeklyRhythm couple={couple} user={user} />
+            </motion.div>
           )}
 
-          {/* Location-Based Date Suggestions */}
-          {couple && partnerProfile && (
+          {/* Async Date Ideas - Always Show */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <AsyncDateIdeas />
+          </motion.div>
+
+          {/* Location-Based Date Suggestions - Show even without partner */}
+          {relationship && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
               <LocationDateSuggestions
-                couple={couple}
+                couple={relationship}
                 partnerProfile={partnerProfile}
               />
             </motion.div>
