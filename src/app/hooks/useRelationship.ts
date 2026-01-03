@@ -11,17 +11,23 @@ export function useRelationship() {
     queryFn: () => relationshipService.getRelationship(user!.id),
     enabled: !!user,
     refetchInterval: (query) => {
-      // If not connected yet (partner_b_id is null), poll every 3 seconds
-      // Once connected, stop polling
+      // Poll every 3 seconds if:
+      // 1. No relationship exists yet, OR
+      // 2. Relationship exists but partner_b_id is null (waiting for partner)
       const data = query.state.data;
-      return data && !data.partner_b_id ? 3000 : false;
+      const shouldPoll = !data || !data.partner_b_id;
+      console.log('🔄 Polling check:', { hasData: !!data, partner_b_id: data?.partner_b_id, shouldPoll });
+      return shouldPoll ? 3000 : false;
     },
     refetchOnWindowFocus: true, // Also refetch when window regains focus
+    refetchOnMount: true, // Always refetch on mount
+    staleTime: 0, // Consider data stale immediately, so refetch happens
   });
 
   const createRelationshipMutation = useMutation({
     mutationFn: () => relationshipService.createRelationship(user!.id),
     onSuccess: () => {
+      console.log('✅ Create relationship success - invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['relationship'] });
     },
   });
@@ -30,14 +36,20 @@ export function useRelationship() {
     mutationFn: (inviteCode: string) =>
       relationshipService.connectPartner(inviteCode, user!.id),
     onSuccess: () => {
+      console.log('✅ Connect partner success - invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['relationship'] });
+      // Force an immediate refetch
+      queryClient.refetchQueries({ queryKey: ['relationship'] });
     },
   });
 
   const disconnectPartnerMutation = useMutation({
     mutationFn: () => relationshipService.disconnectPartner(user!.id),
     onSuccess: () => {
+      console.log('✅ Disconnect partner success - invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['relationship'] });
+      // Force an immediate refetch
+      queryClient.refetchQueries({ queryKey: ['relationship'] });
     },
   });
 

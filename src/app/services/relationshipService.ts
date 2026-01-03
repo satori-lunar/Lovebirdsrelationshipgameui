@@ -149,6 +149,7 @@ export const relationshipService = {
 
   async getRelationship(userId: string): Promise<Relationship | null> {
     try {
+      console.log('🔍 Fetching relationship for user:', userId);
       const { data: relationship, error } = await api.supabase
         .from('relationships')
         .select('*')
@@ -156,14 +157,22 @@ export const relationshipService = {
         .maybeSingle(); // Use maybeSingle() instead of single() to avoid 406 errors
 
       if (error) {
-        console.error('Error fetching relationship:', error);
+        console.error('❌ Error fetching relationship:', error);
         // Return null instead of throwing - user just doesn't have a relationship yet
         return null;
       }
 
+      console.log('✅ Relationship fetched:', {
+        id: relationship?.id,
+        partner_a_id: relationship?.partner_a_id,
+        partner_b_id: relationship?.partner_b_id,
+        invite_code: relationship?.invite_code,
+        connected: !!relationship?.partner_b_id
+      });
+
       return relationship;
     } catch (error) {
-      console.error('Unexpected error in getRelationship:', error);
+      console.error('❌ Unexpected error in getRelationship:', error);
       return null;
     }
   },
