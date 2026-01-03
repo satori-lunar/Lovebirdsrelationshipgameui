@@ -33,18 +33,20 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
   const [decisionMethod, setDecisionMethod] = useState<'coin' | 'dice' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Local state for tracking likes when no relationship exists
+  const [localLikes, setLocalLikes] = useState<Set<number>>(new Set());
+
   // Determine if current user is partner A
   const isPartnerA = relationship ? user?.id === relationship.partner_a_id : true;
 
-  // Fetch swipe date ideas
+  // Fetch swipe date ideas - always load dates even without relationship
   const { data: swipeDateIdeas = [], isLoading: swipeIdeasLoading } = useQuery({
     queryKey: ['swipe-date-ideas', relationship?.id],
     queryFn: async () => {
-      if (!relationship?.id) return [];
-      // For now, return the static date ideas. In production, you'd generate personalized ones
-      return dateIdeas.slice(0, 30);
+      // Return all date ideas for swiping
+      return dateIdeas;
     },
-    enabled: swipeStage === 'swiping' && !!relationship?.id,
+    enabled: swipeStage === 'swiping',
   });
 
   // Fetch date matches (real-time updates)
@@ -76,17 +78,24 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
     },
   });
 
-  // Calculate user's progress
-  const userProgress = dateMatches.filter(match => {
-    return isPartnerA ? match.partner_a_liked : match.partner_b_liked;
-  }).length;
+  // Calculate user's progress (use local state if no relationship)
+  const userProgress = relationship?.id
+    ? dateMatches.filter(match => {
+        return isPartnerA ? match.partner_a_liked : match.partner_b_liked;
+      }).length
+    : currentSwipeIndex;
 
-  const partnerProgress = dateMatches.filter(match => {
-    return isPartnerA ? match.partner_b_liked : match.partner_a_liked;
-  }).length;
+  const partnerProgress = relationship?.id
+    ? dateMatches.filter(match => {
+        return isPartnerA ? match.partner_b_liked : match.partner_a_liked;
+      }).length
+    : 0; // No partner without relationship
 
-  // Check if both partners are done
-  const bothPartnersDone = userProgress >= swipeDateIdeas.length && partnerProgress >= swipeDateIdeas.length;
+  // Check if user is done swiping
+  const isUserDone = currentSwipeIndex >= swipeDateIdeas.length;
+  const bothPartnersDone = relationship?.id
+    ? (userProgress >= swipeDateIdeas.length && partnerProgress >= swipeDateIdeas.length)
+    : isUserDone;
 
   // Auto-advance to matches when both partners are done
   useEffect(() => {
@@ -103,20 +112,23 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
 
     const currentDateId = swipeDateIdeas[currentSwipeIndex].id;
 
-    // Record the swipe in database
+    // Record the swipe
     if (liked) {
-      likeDateMutation.mutate({ dateIdeaId: currentDateId, liked: true });
+      // Add to local likes
+      setLocalLikes(prev => new Set([...prev, currentDateId]));
+
+      // Also record in database if relationship exists
+      if (relationship?.id && user?.id) {
+        likeDateMutation.mutate({ dateIdeaId: String(currentDateId), liked: true });
+      }
     }
 
     // Move to next card
     if (currentSwipeIndex < swipeDateIdeas.length - 1) {
       setCurrentSwipeIndex(currentSwipeIndex + 1);
     } else {
-      // User is done swiping
-      if (bothPartnersDone) {
-        setSwipeStage('matches');
-      }
-      // If partner isn't done yet, just stay on the last card or show waiting state
+      // User is done swiping - go to matches
+      setSwipeStage('matches');
     }
   };
 
@@ -126,8 +138,13 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
 
     // Simulate decision animation
     setTimeout(() => {
-      const randomMatch = matches[Math.floor(Math.random() * matches.length)];
-      setFinalDate(randomMatch);
+      // Get matches from local likes or database
+      const matchedIds = relationship?.id
+        ? dateMatches.map(match => match.date_idea_id)
+        : Array.from(localLikes);
+
+      const randomMatchId = matchedIds[Math.floor(Math.random() * matchedIds.length)];
+      setFinalDate(randomMatchId);
       setIsAnimating(false);
       setSwipeStage('final');
     }, 2000);
@@ -140,6 +157,7 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
     setFinalDate(null);
     setDecisionMethod(null);
     setIsAnimating(false);
+    setLocalLikes(new Set());
   };
 
   const selectDateForPartner = (id: number) => {
@@ -494,8 +512,11 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
 
     // Matches Screen
     if (swipeStage === 'matches') {
-      // Get matched date ideas from the matches
-      const matchedDateIds = dateMatches.map(match => match.date_idea_id);
+      // Get matched date ideas (use local likes if no relationship)
+      const matchedDateIds = relationship?.id
+        ? dateMatches.map(match => match.date_idea_id)
+        : Array.from(localLikes);
+
       const matchedDateIdeas = swipeDateIdeas.filter(idea =>
         matchedDateIds.includes(idea.id)
       );
