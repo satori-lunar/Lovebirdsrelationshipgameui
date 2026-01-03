@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Users, Link2, Copy, Check, X, Share2, Mail, MessageCircle, Facebook, Twitter } from 'lucide-react';
+import { Users, Link2, Copy, Check, X, Share2, Mail, MessageCircle, Facebook, Twitter, UserMinus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from './ui/dialog';
 import { useRelationship } from '../hooks/useRelationship';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
@@ -14,10 +14,11 @@ interface PartnerConnectionProps {
 
 export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConnectionProps) {
   const { user } = useAuth();
-  const { relationship, isLoading, createRelationship, connectPartner, isCreating, isConnecting } = useRelationship();
+  const { relationship, isLoading, createRelationship, connectPartner, disconnectPartner, isCreating, isConnecting, isDisconnecting } = useRelationship();
   const [inviteCode, setInviteCode] = useState('');
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showConnectDialog, setShowConnectDialog] = useState(false);
+  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const isConnected = !!relationship?.partner_b_id;
@@ -52,6 +53,16 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
       toast.success('Successfully connected!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to connect. Please check your invite code.');
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await disconnectPartner();
+      setShowDisconnectDialog(false);
+      toast.success('Successfully disconnected from partner');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to disconnect');
     }
   };
 
@@ -138,28 +149,73 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
 
   if (isConnected) {
     return (
-      <div className={cardClass}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                variant === 'settings'
-                  ? 'bg-green-100 border-green-200'
-                  : 'bg-white/30 border-white/50'
-              }`}>
-                <span className={`text-base ${variant === 'settings' ? 'text-green-700' : 'text-white'}`}>
-                  {partnerName.charAt(0).toUpperCase()}
-                </span>
+      <>
+        <div className={cardClass}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                  variant === 'settings'
+                    ? 'bg-green-100 border-green-200'
+                    : 'bg-white/30 border-white/50'
+                }`}>
+                  <span className={`text-base ${variant === 'settings' ? 'text-green-700' : 'text-white'}`}>
+                    {partnerName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
+              <div>
+                <p className={`font-semibold text-sm ${variant === 'settings' ? 'text-gray-900' : 'text-white'}`}>{partnerName}</p>
+                <p className={`text-xs ${variant === 'settings' ? 'text-green-600' : 'text-white/80'}`}>✓ Connected</p>
+              </div>
             </div>
-            <div>
-              <p className={`font-semibold text-sm ${variant === 'settings' ? 'text-gray-900' : 'text-white'}`}>{partnerName}</p>
-              <p className={`text-xs ${variant === 'settings' ? 'text-green-600' : 'text-white/80'}`}>✓ Connected</p>
-            </div>
+            <Button
+              size="sm"
+              variant={variant === 'settings' ? 'outline' : 'ghost'}
+              className={`text-xs ${variant === 'settings' ? 'text-red-600 border-red-200 hover:bg-red-50' : 'text-white/80 hover:text-white'}`}
+              onClick={() => setShowDisconnectDialog(true)}
+            >
+              <UserMinus className="w-3 h-3 mr-1" />
+              Disconnect
+            </Button>
           </div>
         </div>
-      </div>
+
+        <Dialog open={showDisconnectDialog} onOpenChange={setShowDisconnectDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Disconnect from {partnerName}?</DialogTitle>
+              <DialogDescription className="pt-2">
+                This will remove your connection with {partnerName}. You'll both need to create new invite codes to reconnect.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800">
+                  <strong>Note:</strong> Your data and memories will not be deleted. You can reconnect at any time by sharing a new invite code.
+                </p>
+              </div>
+            </div>
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDisconnectDialog(false)}
+                disabled={isDisconnecting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDisconnect}
+                disabled={isDisconnecting}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 

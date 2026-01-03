@@ -184,5 +184,38 @@ export const relationshipService = {
     }
     return relationship.partner_a_id;
   },
+
+  async disconnectPartner(userId: string): Promise<void> {
+    console.log('💔 Attempting to disconnect partner for user:', userId);
+
+    // Get the user's relationship
+    const relationship = await this.getRelationship(userId);
+
+    if (!relationship) {
+      console.error('❌ No relationship found');
+      throw new Error('No relationship found');
+    }
+
+    if (!relationship.partner_b_id) {
+      console.error('❌ Not connected to a partner');
+      throw new Error('Not connected to a partner');
+    }
+
+    console.log('🗑️ Deleting relationship:', relationship.id);
+
+    // Delete the entire relationship - clean break
+    // Both users will need to create new invites to reconnect
+    const { error } = await api.supabase
+      .from('relationships')
+      .delete()
+      .eq('id', relationship.id);
+
+    if (error) {
+      console.error('❌ Failed to delete relationship:', error);
+      throw new Error('Failed to disconnect. Please try again.');
+    }
+
+    console.log('✅ Successfully disconnected from partner');
+  },
 };
 

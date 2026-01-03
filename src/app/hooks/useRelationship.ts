@@ -34,13 +34,22 @@ export function useRelationship() {
     },
   });
 
+  const disconnectPartnerMutation = useMutation({
+    mutationFn: () => relationshipService.disconnectPartner(user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['relationship'] });
+    },
+  });
+
   return {
     relationship,
     isLoading,
     createRelationship: createRelationshipMutation.mutate,
     connectPartner: connectPartnerMutation.mutate,
+    disconnectPartner: disconnectPartnerMutation.mutate,
     isCreating: createRelationshipMutation.isPending,
     isConnecting: connectPartnerMutation.isPending,
+    isDisconnecting: disconnectPartnerMutation.isPending,
   };
 }
 
