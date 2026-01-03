@@ -7,7 +7,6 @@
 
 import { api } from './api';
 import { aiSuggestionService } from './aiSuggestionService';
-import { partnerProfileService } from './partnerProfileService';
 import {
   RelationshipNeed,
   AINeedSuggestion,
@@ -21,15 +20,7 @@ class NeedsService {
    * Submit a relationship need
    */
   async submitNeed(request: SubmitNeedRequest): Promise<string> {
-    // Get partner's profile to generate appropriate suggestion
-    const partnerProfile = await partnerProfileService.getPartnerProfile(
-      request.coupleId,
-      request.requesterId
-    );
-
-    if (!partnerProfile) {
-      throw new Error('Partner profile not found');
-    }
+    console.log('📤 Submitting need:', request);
 
     // Determine receiver ID from couple
     const { data: couple, error: coupleError } = await api.supabase
@@ -38,13 +29,27 @@ class NeedsService {
       .eq('id', request.coupleId)
       .single();
 
-    if (coupleError) throw coupleError;
+    if (coupleError) {
+      console.error('❌ Failed to fetch couple:', coupleError);
+      throw coupleError;
+    }
 
     const receiverId = couple.partner_a_id === request.requesterId
       ? couple.partner_b_id
       : couple.partner_a_id;
 
-    // Generate AI suggestion for the receiver
+    console.log('👥 Receiver ID:', receiverId);
+
+    // Try to get partner's onboarding data for personalization (optional)
+    const { data: partnerOnboarding } = await api.supabase
+      .from('onboarding_responses')
+      .select('love_language_primary, communication_style')
+      .eq('user_id', receiverId)
+      .maybeSingle();
+
+    console.log('💑 Partner onboarding data:', partnerOnboarding);
+
+    // Generate AI suggestion with partner's preferences if available
     const aiSuggestion = await aiSuggestionService.generateNeedResponse(
       {
         id: '',
@@ -60,12 +65,9 @@ class NeedsService {
         createdAt: new Date()
       },
       {
-        loveLanguage: partnerProfile.loveLanguagePrimary,
-        communicationStyle: partnerProfile.communicationStyle,
-        customPreferences: partnerProfile.customPreferences.reduce((acc, pref) => {
-          acc[pref.id] = pref.rule;
-          return acc;
-        }, {} as Record<string, any>)
+        loveLanguage: partnerOnboarding?.love_language_primary || 'quality_time',
+        communicationStyle: partnerOnboarding?.communication_style || 'gentle',
+        customPreferences: {}
       }
     );
 
@@ -88,19 +90,15 @@ class NeedsService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Failed to insert need:', error);
+      throw error;
+    }
 
-    // Record engagement event
-    await partnerProfileService.recordEngagementEvent({
-      id: '',
-      userId: request.requesterId,
-      eventType: 'need_submitted',
-      context: {
-        needCategory: request.needCategory,
-        urgency: request.urgency
-      },
-      createdAt: new Date()
-    });
+    console.log('✅ Need submitted successfully:', data.id);
+
+    // TODO: Record engagement event (optional analytics)
+    // await partnerProfileService.recordEngagementEvent(...)
 
     return data.id;
   }
@@ -180,19 +178,8 @@ class NeedsService {
 
     if (error) throw error;
 
-    // Record engagement event
-    await partnerProfileService.recordEngagementEvent({
-      id: '',
-      userId: resolution.resolvedBy,
-      eventType: 'feature_engaged',
-      context: {
-        feature: 'needs',
-        action: 'resolved',
-        howResolved: resolution.howItWasResolved,
-        wasHelpful: resolution.wasHelpful
-      },
-      createdAt: new Date()
-    });
+    // TODO: Record engagement event (optional analytics)
+    // await partnerProfileService.recordEngagementEvent(...)
   }
 
   /**
