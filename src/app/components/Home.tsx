@@ -79,15 +79,26 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     queryFn: async () => {
       if (!relationship?.id || !user?.id) return null;
       try {
-        // Fetch the partner profile (the one that's not the current user)
-        const profiles = await onboardingService.getPartnerProfiles(relationship.id);
-        return profiles?.find(p => p.user_email !== user.email) || null;
+        // Determine partner's user_id from relationship
+        const partnerId = relationship.partner_a_id === user.id
+          ? relationship.partner_b_id
+          : relationship.partner_a_id;
+
+        if (!partnerId) {
+          console.log('No partner connected yet');
+          return null;
+        }
+
+        // Fetch partner's onboarding data directly
+        const partnerData = await onboardingService.getOnboarding(partnerId);
+        console.log('✅ Partner profile data:', partnerData);
+        return partnerData;
       } catch (error) {
         console.error('Failed to fetch partner profile:', error);
         return null;
       }
     },
-    enabled: !!relationship?.id && !!user?.id,
+    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
   });
 
   // Query partner's latest capacity check-in

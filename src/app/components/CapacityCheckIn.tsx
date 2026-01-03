@@ -275,12 +275,12 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
         setHoldProgress(100);
         setSelectedMood(currentMood.id);
         setIsHolding(false);
-        // Only show needs/context questions for moods 80% or below
-        // For higher capacity moods, submit directly
-        if (currentMood.capacity <= 80) {
+        // Only show needs/context questions for moods below 80%
+        // For 80% and higher capacity, submit directly - they're fine!
+        if (currentMood.capacity < 80) {
           setTimeout(() => setStep('needs'), 300);
         } else {
-          // High capacity mood - submit directly without needs/context
+          // High capacity mood (80%+) - submit directly without needs/context
           setTimeout(() => {
             handleSubmitDirectly(currentMood.id);
           }, 300);
