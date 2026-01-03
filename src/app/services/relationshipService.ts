@@ -82,6 +82,24 @@ export const relationshipService = {
       throw new Error('Cannot connect to yourself');
     }
 
+    // IMPORTANT: Delete any orphaned relationship where this user is partner_a
+    // This handles the case where User B created their own invite before entering User A's code
+    console.log('🗑️ Checking for orphaned relationships...');
+    const { data: orphanedRelationship } = await api.supabase
+      .from('relationships')
+      .select('*')
+      .eq('partner_a_id', partnerBId)
+      .is('partner_b_id', null)
+      .maybeSingle();
+
+    if (orphanedRelationship) {
+      console.log('🗑️ Deleting orphaned relationship:', orphanedRelationship.id);
+      await api.supabase
+        .from('relationships')
+        .delete()
+        .eq('id', orphanedRelationship.id);
+    }
+
     console.log('🔄 Updating relationship to connect partner_b...');
 
     try {
