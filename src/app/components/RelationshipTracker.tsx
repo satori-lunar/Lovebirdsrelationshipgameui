@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ChevronLeft, Calendar, Plus, Heart, Gift, Cake, PartyPopper, Target } from 'lucide-react';
+import { ChevronLeft, Calendar, Plus, Heart, Gift, Cake, PartyPopper, Target, Sparkles, Users, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { AISuggestions } from './AISuggestions';
+import { DatePlanning } from './DatePlanning';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { usePartner } from '../hooks/usePartner';
@@ -52,6 +53,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
 
   const [dates, setDates] = useState<ImportantDate[]>([]);
   const [activeTab, setActiveTab] = useState<'dates' | 'goals'>('dates');
+  const [datePlanningMode, setDatePlanningMode] = useState<'swipe-together' | 'random-challenge' | null>(null);
 
   const [isAddingDate, setIsAddingDate] = useState(false);
   const [newDate, setNewDate] = useState({
@@ -148,12 +150,23 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     }
   };
 
+  // If date planning mode is active, show DatePlanning component
+  if (datePlanningMode) {
+    return (
+      <DatePlanning
+        onBack={() => setDatePlanningMode(null)}
+        partnerName={partnerName}
+        initialMode={datePlanningMode}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
       {/* Header */}
       <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6 pb-12">
         <div className="max-w-md mx-auto">
-          <button 
+          <button
             onClick={onBack}
             className="flex items-center gap-2 mb-6 hover:opacity-80"
           >
@@ -207,6 +220,46 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
         {/* Dates Tab Content */}
         {activeTab === 'dates' && (
           <>
+            {/* Date Planning Widget */}
+            <Card className="p-4 mb-6 bg-gradient-to-r from-pink-50 to-purple-50 border-0 shadow-lg">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <h3 className="font-semibold text-gray-800">Plan a Date</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => setDatePlanningMode('swipe-together')}
+                  className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border-2 border-transparent hover:border-purple-300"
+                >
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Users className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700 text-center">Choose Together</span>
+                </button>
+
+                <button
+                  onClick={() => setDatePlanningMode('random-challenge')}
+                  className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border-2 border-transparent hover:border-orange-300"
+                >
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-100 to-yellow-100 rounded-full flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700 text-center">Random Challenge</span>
+                </button>
+
+                <button
+                  className="flex flex-col items-center gap-2 p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border-2 border-transparent hover:border-pink-300 opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
+                    <Heart className="w-6 h-6 text-pink-600" />
+                  </div>
+                  <span className="text-xs font-medium text-gray-700 text-center">Plan for Partner</span>
+                  <span className="text-xs text-gray-400">Coming Soon</span>
+                </button>
+              </div>
+            </Card>
+
             {/* Add Date Button */}
             <Dialog open={isAddingDate} onOpenChange={setIsAddingDate}>
           <DialogTrigger asChild>
