@@ -93,11 +93,20 @@ export const relationshipService = {
       .maybeSingle();
 
     if (orphanedRelationship) {
-      console.log('🗑️ Deleting orphaned relationship:', orphanedRelationship.id);
-      await api.supabase
+      console.log('🗑️ Found orphaned relationship:', orphanedRelationship.id);
+      const { error: deleteError } = await api.supabase
         .from('relationships')
         .delete()
         .eq('id', orphanedRelationship.id);
+
+      if (deleteError) {
+        console.error('❌ Failed to delete orphaned relationship:', deleteError);
+        throw new Error(
+          'Failed to delete your previous invite. Please run migration 024 to enable relationship deletion. ' +
+          'See supabase/migrations/024_add_relationship_delete_policy.sql'
+        );
+      }
+      console.log('✅ Successfully deleted orphaned relationship');
     }
 
     console.log('🔄 Updating relationship to connect partner_b...');
