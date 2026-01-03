@@ -465,18 +465,22 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
 
         <button
           type="button"
-          className="w-full mt-4 mb-2 py-5 px-6 text-lg font-bold rounded-xl bg-red-500 text-white shadow-lg active:scale-95 transition-all"
+          className={`w-full mt-4 mb-2 py-5 px-6 text-base font-semibold rounded-xl shadow-lg active:scale-95 transition-all ${
+            variant === 'settings'
+              ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600'
+              : 'bg-white text-purple-600 hover:bg-white/90'
+          }`}
           style={{
             touchAction: 'manipulation',
             WebkitTapHighlightColor: 'transparent',
             minHeight: '56px'
           }}
           onClick={() => {
-            console.log('📱 MOBILE ENTER CODE BUTTON CLICKED - NEW VERSION');
+            console.log('📱 Enter code button clicked');
             setShowConnectDialog(true);
           }}
         >
-          🔓 TEST - Enter {partnerName}'s Code
+          Enter {partnerName}'s Code
         </button>
       </div>
 
