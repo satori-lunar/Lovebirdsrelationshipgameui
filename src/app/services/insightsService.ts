@@ -54,6 +54,8 @@ class InsightsService {
    * Get all saved insights for a user
    */
   async getSavedInsights(userId: string): Promise<SavedInsight[]> {
+    console.log('📚 Fetching saved insights for user:', userId);
+
     const { data, error } = await api.supabase
       .from('saved_partner_insights')
       .select('*')
@@ -61,10 +63,12 @@ class InsightsService {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching saved insights:', error);
-      throw new Error('Failed to fetch saved insights');
+      console.error('❌ Error fetching saved insights:', error);
+      // Return empty array instead of throwing - let the UI show "no insights" state
+      return [];
     }
 
+    console.log(`✅ Found ${data?.length || 0} saved insights`);
     return data || [];
   }
 
