@@ -463,16 +463,23 @@ export function PartnerConnection({ partnerName, variant = 'home' }: PartnerConn
           </div>
         )}
 
-        <Button
-          className={`w-full py-3 min-h-[44px] text-sm ${
-            variant === 'settings'
-              ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600'
-              : 'bg-white text-purple-600 hover:bg-white/90'
-          }`}
-          onClick={() => setShowConnectDialog(true)}
-        >
-          Enter {partnerName}'s Code
-        </Button>
+        <div className="mt-4 mb-2">
+          <Button
+            type="button"
+            className={`w-full py-4 min-h-[48px] text-base font-semibold cursor-pointer relative z-10 active:scale-95 transition-transform ${
+              variant === 'settings'
+                ? 'bg-gradient-to-r from-purple-500 to-violet-500 text-white hover:from-purple-600 hover:to-violet-600'
+                : 'bg-white text-purple-600 hover:bg-white/90'
+            }`}
+            style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+            onClick={(e) => {
+              console.log('📱 Enter code button clicked');
+              setShowConnectDialog(true);
+            }}
+          >
+            Enter {partnerName}'s Code
+          </Button>
+        </div>
       </div>
 
       <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
