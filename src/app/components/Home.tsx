@@ -96,10 +96,15 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     queryFn: async () => {
       if (!relationship?.id || !user?.id) return null;
       try {
-        // Get partner's profile to find their user_id
-        const profiles = await onboardingService.getPartnerProfiles(relationship.id);
-        const partner = profiles?.find(p => p.user_email !== user.email);
-        if (!partner?.user_email) return null;
+        // Determine partner's user_id from relationship
+        const partnerId = relationship.partner_a_id === user.id
+          ? relationship.partner_b_id
+          : relationship.partner_a_id;
+
+        if (!partnerId) {
+          console.log('No partner connected yet');
+          return null;
+        }
 
         // Get partner's latest capacity check-in from today
         const today = new Date();
@@ -109,29 +114,26 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           .from('capacity_checkins')
           .select('*')
           .eq('couple_id', relationship.id)
+          .eq('user_id', partnerId) // Filter by partner's user_id
           .gte('created_at', today.toISOString())
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle(); // Use maybeSingle to handle no results gracefully
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
           console.error('Failed to fetch partner capacity:', error);
           return null;
         }
 
-        // Check if this check-in is from the partner (not the current user)
-        if (data && data.user_id !== user.id) {
-          return data;
-        }
-
-        return null;
+        console.log('✅ Partner capacity check-in:', data);
+        return data;
       } catch (error) {
         console.error('Failed to fetch partner capacity:', error);
         return null;
       }
     },
-    enabled: !!relationship?.id && !!user?.id,
-    refetchInterval: 60000, // Refresh every minute
+    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
+    refetchInterval: 30000, // Refresh every 30 seconds to catch new check-ins quickly
   });
 
   // Calculate days together (mock - would come from relationship data)
