@@ -7,18 +7,33 @@ export function usePartnerInsights() {
   const queryClient = useQueryClient();
 
   // Get all saved insights
-  const { data: savedInsights, isLoading } = useQuery({
+  const { data: savedInsights, isLoading, error } = useQuery({
     queryKey: ['savedInsights', user?.id],
     queryFn: () => insightsService.getSavedInsights(user!.id),
     enabled: !!user,
   });
 
+  console.log('🔍 usePartnerInsights Debug:', {
+    userId: user?.id,
+    isLoading,
+    savedInsightsCount: savedInsights?.length || 0,
+    savedInsights,
+    error
+  });
+
   // Save a new insight
   const saveInsightMutation = useMutation({
-    mutationFn: (params: SaveInsightParams) =>
-      insightsService.saveInsight(user!.id, params),
-    onSuccess: () => {
+    mutationFn: (params: SaveInsightParams) => {
+      console.log('💾 Saving insight with params:', params);
+      return insightsService.saveInsight(user!.id, params);
+    },
+    onSuccess: (data) => {
+      console.log('✅ Insight saved successfully:', data);
       queryClient.invalidateQueries({ queryKey: ['savedInsights'] });
+      queryClient.invalidateQueries({ queryKey: ['isInsightSaved'] });
+    },
+    onError: (error) => {
+      console.error('❌ Failed to save insight:', error);
     },
   });
 
