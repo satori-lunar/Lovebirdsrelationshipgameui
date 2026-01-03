@@ -7,8 +7,10 @@ import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { useAuth } from '../hooks/useAuth';
+import { useRelationship } from '../hooks/useRelationship';
 import { authService } from '../services/authService';
 import { toast } from 'sonner';
+import { PartnerConnection } from './PartnerConnection';
 
 interface SettingsProps {
   onBack: () => void;
@@ -18,6 +20,7 @@ interface SettingsProps {
 
 export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
   const { user, signOut } = useAuth();
+  const { relationship } = useRelationship();
 
   const [notificationSettings, setNotificationSettings] = useState({
     weeklyLoveLanguage: true,
@@ -26,19 +29,10 @@ export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
     partnerActivity: false,
   });
 
-  const [inviteCode] = useState('LOVE-2024-XY7Z');
-  const [copied, setCopied] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
-  const isPartnerConnected = true; // Mock state
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(inviteCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const toggleNotification = (key: keyof typeof notificationSettings) => {
     setNotificationSettings(prev => ({
@@ -116,74 +110,7 @@ export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
             <h2 className="font-semibold text-lg">Partner Connection</h2>
           </div>
 
-          {isPartnerConnected ? (
-            <div>
-              <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl mb-4">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                  <span className="text-lg font-semibold text-purple-600">
-                    {partnerName.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold">{partnerName}</p>
-                  <p className="text-sm text-green-700">✓ Connected</p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-600">
-                You and {partnerName} are connected! All features are unlocked.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Share this invite with {partnerName} to connect your accounts
-              </p>
-              
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Input 
-                    value={inviteCode} 
-                    readOnly 
-                    className="flex-1 font-mono text-center bg-gray-50"
-                  />
-                  <Button
-                    onClick={handleCopy}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4 text-green-600" />
-                        <span className="text-green-600">Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Email
-                  </Button>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Text
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <p className="text-xs text-purple-900">
-                  💡 <span className="font-semibold">Tip:</span> {partnerName} needs to download the app and enter this code during sign up
-                </p>
-              </div>
-            </div>
-          )}
+          <PartnerConnection partnerName={partnerName} />
         </Card>
 
         {/* Notification Settings */}
