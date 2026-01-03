@@ -58,11 +58,11 @@ export default function LocationDateSuggestions({ couple, partnerProfile }) {
   const [suggestions, setSuggestions] = useState([]);
   const [weather, setWeather] = useState('sunny');
   const [loading, setLoading] = useState(true);
-  const [selectedBudget, setSelectedBudget] = useState(couple.budget_preference || 'moderate');
+  const [selectedBudget, setSelectedBudget] = useState(couple?.budget_preference || couple?.budget_comfort || 'moderate');
 
   useEffect(() => {
     generateSuggestions();
-  }, [couple.location, selectedBudget, partnerProfile]);
+  }, [couple?.id, selectedBudget, partnerProfile?.id]);
 
   const generateSuggestions = async () => {
     setLoading(true);
@@ -91,8 +91,10 @@ export default function LocationDateSuggestions({ couple, partnerProfile }) {
     }
 
     // 4. Location-specific (simulated - in production use location API)
-    const locationSuggestions = generateLocationSpecificDates(couple.location);
-    generated.push(...locationSuggestions);
+    if (couple?.id) {
+      const locationSuggestions = generateLocationSpecificDates(couple.location || 'Your Area');
+      generated.push(...locationSuggestions);
+    }
 
     // Filter by budget and shuffle
     const filtered = generated.filter(s => matchesBudget(s.budget, selectedBudget));
@@ -278,7 +280,7 @@ export default function LocationDateSuggestions({ couple, partnerProfile }) {
           </h2>
         </div>
         <p className="text-gray-600">
-          Personalized suggestions for {couple.location}
+          Personalized suggestions for {couple?.location || 'you'}
         </p>
       </div>
 
