@@ -12,7 +12,6 @@ import { DatePlanner } from './components/DatePlanner';
 import { DateChallenge } from './components/DateChallenge';
 import { DatesWrapper } from './components/DatesWrapper';
 import { GiftGuidance } from './components/GiftGuidance';
-import { SurpriseVault } from './components/SurpriseVault';
 import { LoveMessages } from './components/LoveMessages';
 import { PartnerRequests } from './components/PartnerRequests';
 import { WeeklyWishes } from './components/WeeklyWishes';
@@ -39,7 +38,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -239,13 +238,6 @@ export default function App() {
 
       {currentView === 'gifts' && userData && (
         <GiftGuidance
-          onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
-        />
-      )}
-
-      {currentView === 'vault' && userData && (
-        <SurpriseVault
           onBack={handleBack}
           partnerName={userData.partnerName || 'your partner'}
         />

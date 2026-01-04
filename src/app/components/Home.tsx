@@ -18,7 +18,6 @@ import {
   ChevronDown,
   Flame,
   Settings,
-  Lock,
   Calendar,
   Bookmark
 } from 'lucide-react';
@@ -673,16 +672,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                         <Bookmark className="w-5 h-5 text-white" />
                       </div>
                       <h3 className="font-medium text-gray-900 text-xs">Remember</h3>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigate('vault')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-md">
-                        <Lock className="w-5 h-5 text-white" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Vault</h3>
                     </button>
                   </div>
                 </motion.div>
