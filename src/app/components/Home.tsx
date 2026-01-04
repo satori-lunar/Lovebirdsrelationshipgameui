@@ -18,7 +18,8 @@ import {
   ChevronDown,
   Flame,
   Settings,
-  Lock
+  Lock,
+  Calendar
 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Progress } from './ui/progress';
@@ -500,6 +501,26 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               </button>
             </motion.div>
 
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.25 }}
+            >
+              <button
+                onClick={() => onNavigate('dates')}
+                className="w-full"
+              >
+                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
+                  <CardContent className="p-5 flex flex-col items-center text-center">
+                    <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Calendar className="w-7 h-7 text-purple-500" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Plan a Date</h3>
+                    <p className="text-xs text-gray-500 mt-1">Date ideas</p>
+                  </CardContent>
+                </Card>
+              </button>
+            </motion.div>
 
             <motion.div
               initial={{ opacity: 0, x: -20 }}
