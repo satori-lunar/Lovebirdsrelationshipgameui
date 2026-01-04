@@ -166,7 +166,6 @@ class PartnerProfileService {
         userId,
         dailyQuestionEnabled: true,
         weeklyReflectionEnabled: true,
-        nudgesPerWeek: 3,
         suggestionsPerWeek: 5,
         quietModeActive: false,
         reasoning: 'Default configuration for new user'
@@ -180,7 +179,6 @@ class PartnerProfileService {
         userId,
         dailyQuestionEnabled: false,
         weeklyReflectionEnabled: false,
-        nudgesPerWeek: 0,
         suggestionsPerWeek: quietMode.allowEmergencyMessages ? 1 : 0,
         quietModeActive: true,
         quietModeUntil: quietMode.endsAt,
@@ -197,7 +195,6 @@ class PartnerProfileService {
         userId,
         dailyQuestionEnabled: profile.frequencyPreference !== 'low_touch',
         weeklyReflectionEnabled: true,
-        nudgesPerWeek: Math.max(1, baseFrequency.nudgesPerWeek - 2),
         suggestionsPerWeek: Math.max(2, baseFrequency.suggestionsPerWeek - 3),
         quietModeActive: false,
         reasoning: 'Reduced frequency due to declining engagement'
@@ -210,7 +207,6 @@ class PartnerProfileService {
         userId,
         dailyQuestionEnabled: true,
         weeklyReflectionEnabled: true,
-        nudgesPerWeek: Math.min(7, baseFrequency.nudgesPerWeek + 1),
         suggestionsPerWeek: Math.min(10, baseFrequency.suggestionsPerWeek + 2),
         quietModeActive: false,
         reasoning: 'High engagement - maintaining active support'
@@ -223,7 +219,6 @@ class PartnerProfileService {
         userId,
         dailyQuestionEnabled: profile.dailyCheckinsEnabled,
         weeklyReflectionEnabled: true,
-        nudgesPerWeek: Math.max(1, baseFrequency.nudgesPerWeek - 3),
         suggestionsPerWeek: Math.max(1, baseFrequency.suggestionsPerWeek - 4),
         quietModeActive: false,
         reasoning: 'Showing independence - reducing prompts (this is success!)'
@@ -332,19 +327,16 @@ class PartnerProfileService {
       high_touch: {
         dailyQuestionEnabled: true,
         weeklyReflectionEnabled: true,
-        nudgesPerWeek: 5,
         suggestionsPerWeek: 7
       },
       moderate: {
         dailyQuestionEnabled: true,
         weeklyReflectionEnabled: true,
-        nudgesPerWeek: 3,
         suggestionsPerWeek: 4
       },
       low_touch: {
         dailyQuestionEnabled: false,
         weeklyReflectionEnabled: true,
-        nudgesPerWeek: 1,
         suggestionsPerWeek: 2
       }
     };

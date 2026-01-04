@@ -27,7 +27,6 @@ export interface PersonalizationContext {
     preferences: {
       date_types?: string[];
       gift_budget?: string;
-      nudge_frequency?: string;
     };
     wants_needs: {
       gestures?: string[];
@@ -110,7 +109,6 @@ export const personalizationService = {
           preferences: {
             date_types: partnerOnboarding?.preferences?.date_types || [],
             gift_budget: partnerOnboarding?.preferences?.gift_budget,
-            nudge_frequency: partnerOnboarding?.preferences?.nudge_frequency,
           },
           wants_needs: {
             gestures: partnerOnboarding?.wants_needs?.gestures || [],

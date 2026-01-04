@@ -20,7 +20,6 @@ export interface WantsNeeds {
 export interface Preferences {
   date_types?: string[];
   gift_budget?: 'Under $25' | '$25–$75' | '$75–$200' | 'No limit / special occasions';
-  nudge_frequency?: 'Daily' | 'Weekly' | 'Monthly' | 'Only for milestones';
 }
 
 export interface Consent {
