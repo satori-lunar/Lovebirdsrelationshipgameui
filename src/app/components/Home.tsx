@@ -142,6 +142,41 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     refetchInterval: 30000, // Refresh every 30 seconds to catch new check-ins quickly
   });
 
+  // Query user's own latest capacity check-in
+  const { data: myCapacity } = useQuery({
+    queryKey: ['myCapacity', relationship?.id, user?.id],
+    queryFn: async () => {
+      if (!relationship?.id || !user?.id) return null;
+      try {
+        // Get user's latest capacity check-in from today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const { data, error } = await api.supabase
+          .from('capacity_checkins')
+          .select('*')
+          .eq('couple_id', relationship.id)
+          .eq('user_id', user.id) // Filter by current user's ID
+          .gte('created_at', today.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(); // Use maybeSingle to handle no results gracefully
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+          console.error('Failed to fetch my capacity:', error);
+          return null;
+        }
+
+        return data;
+      } catch (error) {
+        console.error('Failed to fetch my capacity:', error);
+        return null;
+      }
+    },
+    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
   // Calculate days together (mock - would come from relationship data)
   const getDaysTogether = () => {
     if (!relationship?.created_at) return null;
@@ -367,8 +402,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             </motion.div>
           )}
 
-          {/* My Capacity Today Prompt */}
-          {relationship?.partner_b_id && !partnerCapacity && (
+          {/* My Capacity Today - Always visible to allow updates throughout the day */}
+          {relationship?.partner_b_id && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -390,13 +425,23 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                       </motion.div>
                       <div className="flex-1">
                         <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">My Capacity Today</p>
-                        <h3 className="font-semibold text-gray-900 mt-1">Share how you're feeling</h3>
+                        <h3 className="font-semibold text-gray-900 mt-1">
+                          {myCapacity ? 'Update how you\'re feeling' : 'Share how you\'re feeling'}
+                        </h3>
                         <p className="text-sm text-gray-600 mt-1">
-                          Let {partnerName} know your mood and what you need - it helps them show up better for you
+                          {myCapacity
+                            ? `Moods change throughout the day - let ${partnerName} know how you're doing now`
+                            : `Let ${partnerName} know your mood and what you need - it helps them show up better for you`
+                          }
                         </p>
+                        {myCapacity && (
+                          <p className="text-xs text-purple-600 mt-2">
+                            Current: {myCapacity.mood_label || 'Shared earlier today'}
+                          </p>
+                        )}
                         <div className="mt-3">
                           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-sm font-medium rounded-xl shadow-md">
-                            <span>Share Your Capacity</span>
+                            <span>{myCapacity ? 'Update Your Capacity' : 'Share Your Capacity'}</span>
                             <ChevronRight className="w-4 h-4" />
                           </div>
                         </div>
