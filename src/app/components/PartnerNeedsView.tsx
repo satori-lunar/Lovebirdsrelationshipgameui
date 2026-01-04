@@ -188,12 +188,44 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
 
               {/* AI Suggestion */}
               {need.aiSuggestion && (
-                <div className="mb-4 p-4 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl border border-purple-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-purple-600" />
-                    <h4 className="font-semibold text-purple-900 text-sm">How to help:</h4>
+                <div className="mb-4 space-y-3">
+                  {/* What they need */}
+                  <div className="p-4 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl border border-purple-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      <h4 className="font-semibold text-purple-900 text-sm">What they need:</h4>
+                    </div>
+                    <p className="text-sm text-gray-800">{need.aiSuggestion.receiverMessage}</p>
                   </div>
-                  <p className="text-sm text-gray-800">{need.aiSuggestion.suggestion}</p>
+
+                  {/* How to help with reasoning */}
+                  {need.aiSuggestion.reasoning && (
+                    <div className="p-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl border border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Heart className="w-4 h-4 text-blue-600" />
+                        <h4 className="font-semibold text-blue-900 text-sm">How to help:</h4>
+                      </div>
+                      <p className="text-sm text-gray-800">{need.aiSuggestion.reasoning}</p>
+                    </div>
+                  )}
+
+                  {/* Suggested actions */}
+                  {need.aiSuggestion.suggestedActions && need.aiSuggestion.suggestedActions.length > 0 && (
+                    <div className="p-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl border border-green-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <h4 className="font-semibold text-green-900 text-sm">Suggested actions:</h4>
+                      </div>
+                      <ul className="space-y-2">
+                        {need.aiSuggestion.suggestedActions.map((action, idx) => (
+                          <li key={idx} className="text-sm text-gray-800 flex items-start gap-2">
+                            <span className="text-green-600 mt-0.5">•</span>
+                            <span>{action.action}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
 

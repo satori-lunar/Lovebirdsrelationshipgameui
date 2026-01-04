@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Heart, Send, Check } from 'lucide-react';
+import { Heart, Send, Check, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -724,6 +724,17 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 px-6 py-12">
       <div className="max-w-2xl mx-auto">
+        {/* Back Button */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="font-medium">Back</span>
+          </button>
+        )}
+
         {/* Progress */}
         <div className="flex items-center justify-center gap-2 mb-8">
           {['mood', 'needs', 'context'].map((s, i) => (
@@ -746,15 +757,6 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
           {step === 'needs' && renderNeedsStep()}
           {step === 'context' && renderContextStep()}
         </div>
-
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="mt-6 w-full text-center text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-        )}
       </div>
     </div>
   );

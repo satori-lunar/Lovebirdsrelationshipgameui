@@ -27,6 +27,16 @@ import {
   NEED_TO_SUGGESTION_TYPE
 } from './suggestionTemplates';
 
+/**
+ * Simple AI suggestion for UI components
+ */
+export interface AISuggestion {
+  id: string;
+  text: string;
+  emoji: string;
+  category?: string;
+}
+
 class AISuggestionService {
   /**
    * Generate message suggestions for a partner
@@ -75,6 +85,59 @@ class AISuggestionService {
 
     // Apply custom preferences
     return this.applyCustomPreferences(suggestions, customPreferences);
+  }
+
+  /**
+   * Refresh suggestions for UI components
+   */
+  async refreshSuggestions(
+    type: SuggestionType,
+    userId: string,
+    targetId: string,
+    messageType?: string
+  ): Promise<AISuggestion[]> {
+    try {
+      // Get partner's onboarding data for context
+      const { data: partnerData } = await api.supabase
+        .from('onboarding_responses')
+        .select('love_language_primary, communication_style, name')
+        .eq('user_id', targetId)
+        .maybeSingle();
+
+      const loveLanguage = (partnerData?.love_language_primary as LoveLanguage) || 'quality_time';
+      const communicationStyle = (partnerData?.communication_style as CommunicationStyle) || 'gentle';
+      const partnerName = partnerData?.name || 'them';
+
+      // Get template variations
+      const variations = getAllVariations(loveLanguage, type);
+
+      // Convert to simple AISuggestion format
+      const suggestions: AISuggestion[] = [
+        {
+          id: this.generateId(),
+          text: variations.gentle.replace('{name}', partnerName),
+          emoji: this.getEmojiForType(type),
+          category: type,
+        },
+        {
+          id: this.generateId(),
+          text: variations.playful.replace('{name}', partnerName),
+          emoji: this.getEmojiForType(type),
+          category: type,
+        },
+        {
+          id: this.generateId(),
+          text: variations.direct.replace('{name}', partnerName),
+          emoji: this.getEmojiForType(type),
+          category: type,
+        },
+      ];
+
+      return suggestions;
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      return [];
+    }
   }
 
   /**
@@ -196,6 +259,22 @@ class AISuggestionService {
 
   private generateId(): string {
     return `sug_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private getEmojiForType(type: SuggestionType): string {
+    const emojiMap: Record<SuggestionType, string> = {
+      affection: '💕',
+      appreciation: '🙏',
+      encouragement: '💪',
+      comfort: '🤗',
+      celebration: '🎉',
+      playful: '😄',
+      romantic: '❤️',
+      support: '🫂',
+      missing_you: '🥺',
+      thinking_of_you: '💭',
+    };
+    return emojiMap[type] || '💌';
   }
 
   private generateReasoning(
