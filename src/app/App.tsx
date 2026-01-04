@@ -85,7 +85,6 @@ export default function App() {
   };
 
   const handleNavigate = (page: string) => {
-    console.log('🔄 [App] Navigating to:', page);
     setCurrentView(page as AppState);
   };
 
@@ -288,16 +287,6 @@ export default function App() {
           onBack={handleBack}
           partnerName={userData.partnerName || 'your partner'}
         />
-      )}
-      {currentView === 'tracker' && !userData && (
-        <>
-          {console.log('⚠️ [App] Tracker view requested but userData is missing:', { currentView, userData })}
-        </>
-      )}
-      {currentView === 'tracker' && (
-        <>
-          {console.log('📍 [App] Tracker view state:', { currentView, hasUserData: !!userData, userData })}
-        </>
       )}
 
       {currentView === 'memories' && (
