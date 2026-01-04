@@ -38,8 +38,6 @@ import { useUnreadRequests } from '../hooks/useUnreadRequests';
 import { api } from '../services/api';
 import PartnerFormInvite from './PartnerFormInvite';
 import WeeklyRhythm from './WeeklyRhythm';
-import AsyncDateIdeas from './AsyncDateIdeas';
-import LocationDateSuggestions from './LocationDateSuggestions';
 import PartnerCapacityView from './PartnerCapacityView';
 import { SubmitNeedModal } from './SubmitNeedModal';
 
@@ -473,29 +471,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               transition={{ delay: 0.3 }}
             >
               <WeeklyRhythm couple={couple} user={user} />
-            </motion.div>
-          )}
-
-          {/* Async Date Ideas - Always Show */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-          >
-            <AsyncDateIdeas />
-          </motion.div>
-
-          {/* Location-Based Date Suggestions - Show even without partner */}
-          {relationship && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <LocationDateSuggestions
-                couple={relationship}
-                partnerProfile={partnerProfile}
-              />
             </motion.div>
           )}
 
