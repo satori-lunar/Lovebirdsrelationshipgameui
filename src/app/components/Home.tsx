@@ -17,7 +17,6 @@ import {
   ChevronRight,
   ChevronDown,
   Flame,
-  TrendingUp,
   Settings,
   Lock,
   Bell
@@ -583,16 +582,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                         <Lock className="w-5 h-5 text-white" />
                       </div>
                       <h3 className="font-medium text-gray-900 text-xs">Vault</h3>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigate('insights')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <TrendingUp className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Insights</h3>
                     </button>
 
                     <button
