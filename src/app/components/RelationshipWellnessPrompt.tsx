@@ -70,7 +70,7 @@ export function RelationshipWellnessPrompt({
     {
       icon: Heart,
       title: 'Share Your Capacity',
-      description: 'Let them know how you're doing today',
+      description: "Let them know how you're doing today",
       color: 'from-rose-500 to-pink-500',
       action: () => onNavigate('capacity-checkin'),
     },
