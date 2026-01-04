@@ -41,10 +41,23 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
   } = useCoupleGoals(relationship?.id);
 
   // Fetch dates from database
-  const { data: dates = [], isLoading: datesLoading } = useQuery({
+  const { data: dates = [], isLoading: datesLoading, error: datesError } = useQuery({
     queryKey: ['important-dates', relationship?.id],
-    queryFn: () => trackerService.getImportantDates(relationship!.id),
+    queryFn: async () => {
+      console.log('🔍 [RelationshipTracker] Fetching important dates for relationship:', relationship?.id);
+      const result = await trackerService.getImportantDates(relationship!.id);
+      console.log('✅ [RelationshipTracker] Important dates fetched:', result);
+      return result;
+    },
     enabled: !!relationship?.id,
+  });
+
+  console.log('📅 [RelationshipTracker] State:', {
+    relationshipId: relationship?.id,
+    datesCount: dates?.length,
+    datesLoading,
+    datesError,
+    activeTab
   });
 
   // Create date mutation
