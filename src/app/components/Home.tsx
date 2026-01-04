@@ -19,7 +19,8 @@ import {
   Flame,
   Settings,
   Lock,
-  Calendar
+  Calendar,
+  Bookmark
 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Progress } from './ui/progress';
@@ -639,6 +640,16 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                   className="overflow-hidden"
                 >
                   <div className="grid grid-cols-3 gap-3 pt-4">
+                    <button
+                      onClick={() => onNavigate('things-to-remember')}
+                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-md">
+                        <Bookmark className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="font-medium text-gray-900 text-xs">Remember</h3>
+                    </button>
+
                     <button
                       onClick={() => onNavigate('vault')}
                       className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"

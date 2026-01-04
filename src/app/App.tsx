@@ -21,6 +21,7 @@ import { Memories } from './components/Memories';
 import { Settings } from './components/Settings';
 import { DragonPet } from './components/DragonPet';
 import { DragonEvolutionDemo } from './components/DragonEvolutionDemo';
+import { ThingsToRemember } from './components/ThingsToRemember';
 import { CreateLockscreenGift } from './components/CreateLockscreenGift';
 import { ViewLockscreenGift } from './components/ViewLockscreenGift';
 import { WeeklySuggestions } from './components/WeeklySuggestions';
@@ -38,7 +39,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -281,6 +282,10 @@ export default function App() {
 
       {currentView === 'memories' && (
         <Memories onBack={handleBack} />
+      )}
+
+      {currentView === 'things-to-remember' && (
+        <ThingsToRemember onBack={handleBack} />
       )}
 
       {currentView === 'create-lockscreen-gift' && (
