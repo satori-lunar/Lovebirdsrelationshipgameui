@@ -38,6 +38,7 @@ import WeeklyRhythm from './WeeklyRhythm';
 import PartnerCapacityView from './PartnerCapacityView';
 import { SubmitNeedModal } from './SubmitNeedModal';
 import { RelationshipWellnessPrompt } from './RelationshipWellnessPrompt';
+import { PartnerNeedsView } from './PartnerNeedsView';
 
 interface HomeProps {
   userName: string;
@@ -485,6 +486,20 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                 checkin={partnerCapacity}
                 partnerName={partnerName}
                 isLongDistance={couple?.is_long_distance || false}
+              />
+            </motion.div>
+          )}
+
+          {/* Partner Needs - What they need from you */}
+          {user && relationship?.partner_b_id && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.20 }}
+            >
+              <PartnerNeedsView
+                userId={user.id}
+                partnerName={partnerName}
               />
             </motion.div>
           )}
