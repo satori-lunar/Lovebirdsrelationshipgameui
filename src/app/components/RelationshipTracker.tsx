@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Calendar, Plus, Heart, Gift, Cake, PartyPopper, Target, Sparkles, Users, Zap } from 'lucide-react';
+import { ChevronLeft, Calendar, Plus, Heart, Gift, Cake, PartyPopper, Target, Sparkles, Users, Zap, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -13,31 +13,20 @@ import { usePartner } from '../hooks/usePartner';
 import { useCoupleGoals } from '../hooks/useCoupleGoals';
 import type { AISuggestion } from '../services/aiSuggestionService';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { trackerService } from '../services/trackerService';
+import type { ImportantDate as DBImportantDate } from '../services/trackerService';
 
 interface RelationshipTrackerProps {
   onBack: () => void;
   partnerName: string;
 }
 
-interface ImportantDate {
-  id: number;
-  title: string;
-  date: string;
-  type: 'anniversary' | 'birthday' | 'custom';
-  recurring: boolean;
-}
-
-interface Goal {
-  id: number;
-  title: string;
-  category?: string;
-  completed: boolean;
-}
-
 export function RelationshipTracker({ onBack, partnerName }: RelationshipTrackerProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
+  const queryClient = useQueryClient();
 
   // Use database for goals
   const {
@@ -51,7 +40,39 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     isDeleting
   } = useCoupleGoals(relationship?.id);
 
-  const [dates, setDates] = useState<ImportantDate[]>([]);
+  // Fetch dates from database
+  const { data: dates = [], isLoading: datesLoading } = useQuery({
+    queryKey: ['important-dates', relationship?.id],
+    queryFn: () => trackerService.getImportantDates(relationship!.id),
+    enabled: !!relationship?.id,
+  });
+
+  // Create date mutation
+  const createDateMutation = useMutation({
+    mutationFn: (data: { title: string; date: string; type: 'anniversary' | 'birthday' | 'custom' }) =>
+      trackerService.createImportantDate(relationship!.id, { ...data, userId: user?.id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['important-dates', relationship?.id] });
+      toast.success('Date added!');
+    },
+    onError: (error) => {
+      console.error('Failed to create date:', error);
+      toast.error('Failed to add date');
+    },
+  });
+
+  // Delete date mutation
+  const deleteDateMutation = useMutation({
+    mutationFn: (dateId: string) => trackerService.deleteImportantDate(dateId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['important-dates', relationship?.id] });
+      toast.success('Date removed');
+    },
+    onError: (error) => {
+      console.error('Failed to delete date:', error);
+      toast.error('Failed to remove date');
+    },
+  });
   const [activeTab, setActiveTab] = useState<'dates' | 'goals'>('dates');
   const [datePlanningMode, setDatePlanningMode] = useState<'swipe-together' | 'random-challenge' | null>(null);
 
@@ -102,11 +123,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
   };
 
   const getDaysUntil = (dateStr: string) => {
-    const target = new Date(dateStr);
-    const today = new Date();
-    const diffTime = target.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return trackerService.getDaysUntil(dateStr);
   };
 
   const getIcon = (type: string) => {
@@ -135,19 +152,16 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     return getDaysUntil(a.date) - getDaysUntil(b.date);
   });
 
-  const handleAddDate = () => {
-    if (newDate.title && newDate.date) {
-      setDates([
-        ...dates,
-        {
-          id: dates.length + 1,
-          ...newDate,
-          recurring: true
-        }
-      ]);
+  const handleAddDate = async () => {
+    if (newDate.title && newDate.date && relationship?.id) {
+      await createDateMutation.mutateAsync(newDate);
       setNewDate({ title: '', date: '', type: 'custom' });
       setIsAddingDate(false);
     }
+  };
+
+  const handleDeleteDate = async (dateId: string) => {
+    await deleteDateMutation.mutateAsync(dateId);
   };
 
   // If date planning mode is active, show DatePlanning component
@@ -304,8 +318,21 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
         {/* Upcoming Dates */}
         <div className="space-y-4">
           <h2 className="font-semibold">Upcoming</h2>
-          
-          {sortedDates.map((date) => {
+
+          {datesLoading ? (
+            <Card className="p-8 text-center border-0 shadow-lg">
+              <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-gray-600">Loading dates...</p>
+            </Card>
+          ) : sortedDates.filter(d => getDaysUntil(d.date) > 0).length === 0 ? (
+            <Card className="p-8 text-center border-0 shadow-lg">
+              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 mb-2">No upcoming dates</p>
+              <p className="text-sm text-gray-400">
+                Add important dates to never forget special moments!
+              </p>
+            </Card>
+          ) : sortedDates.map((date) => {
             const Icon = getIcon(date.type);
             const color = getColor(date.type);
             const daysUntil = getDaysUntil(date.date);
@@ -332,10 +359,10 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                   
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-2">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-semibold">{date.title}</h3>
                         <p className="text-sm text-gray-600">
-                          {dateObj.toLocaleDateString('en-US', { 
+                          {dateObj.toLocaleDateString('en-US', {
                             weekday: 'long',
                             year: 'numeric',
                             month: 'long',
@@ -343,7 +370,16 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                           })}
                         </p>
                       </div>
-                      <Icon className={`w-5 h-5 ${iconColor}`} />
+                      <div className="flex items-center gap-2">
+                        <Icon className={`w-5 h-5 ${iconColor}`} />
+                        <button
+                          onClick={() => handleDeleteDate(date.id)}
+                          disabled={deleteDateMutation.isPending}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
@@ -406,19 +442,28 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
             return (
               <Card key={date.id} className="p-4 border-0 bg-gray-50">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="font-semibold text-sm text-gray-700">{date.title}</h3>
                     <p className="text-xs text-gray-500">
-                      {dateObj.toLocaleDateString('en-US', { 
+                      {dateObj.toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric'
                       })}
                     </p>
                   </div>
-                  <span className="text-xs text-gray-500">
-                    {Math.abs(daysUntil)} days ago
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500">
+                      {Math.abs(daysUntil)} days ago
+                    </span>
+                    <button
+                      onClick={() => handleDeleteDate(date.id)}
+                      disabled={deleteDateMutation.isPending}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </Card>
             );
