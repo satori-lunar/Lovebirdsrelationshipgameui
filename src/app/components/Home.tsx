@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Heart,
   Sparkles,
-  Calendar,
   MessageCircleHeart,
   Gift,
   BookHeart,
@@ -19,7 +18,6 @@ import {
   ChevronDown,
   Flame,
   TrendingUp,
-  Target,
   Settings,
   Lock,
   Bell
@@ -504,26 +502,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               </button>
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <button
-                onClick={() => onNavigate('dates')}
-                className="w-full"
-              >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-rose-100 to-pink-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Calendar className="w-7 h-7 text-rose-500" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Plan a Date</h3>
-                    <p className="text-xs text-gray-500 mt-1">Curated experiences</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
 
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -627,15 +605,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                       <h3 className="font-medium text-gray-900 text-xs">Nudges</h3>
                     </button>
 
-                    <button
-                      onClick={() => onNavigate('tracker')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <Target className="w-5 h-5 text-indigo-500" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Goals</h3>
-                    </button>
 
                   </div>
                 </motion.div>
@@ -698,16 +667,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               <Sparkles className="w-5 h-5 text-gray-500" />
             </div>
             <span className="text-[10px] font-medium text-gray-400">Daily Q</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('dates')}
-            className="flex flex-col items-center gap-1 py-2"
-          >
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <Calendar className="w-5 h-5 text-gray-500" />
-            </div>
-            <span className="text-[10px] font-medium text-gray-400">Dates</span>
           </button>
 
           <button
