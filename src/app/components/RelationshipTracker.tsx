@@ -54,8 +54,8 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     enabled: !!relationship?.id,
   });
 
-  // Debug logging for dates
-  console.log('📅 Dates state:', { dates, datesLoading, datesError, relationshipId: relationship?.id });
+  // Debug logging for dates - v2
+  console.log('📅 [DB-Connected] Dates state:', { dates, datesLoading, datesError, relationshipId: relationship?.id });
 
   // Create date mutation
   const createDateMutation = useMutation({
