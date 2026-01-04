@@ -178,15 +178,40 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Calculate days together (mock - would come from relationship data)
-  const getDaysTogether = () => {
-    if (!relationship?.created_at) return null;
-    const start = new Date(relationship.created_at);
+  // Calculate time together - uses connected_at (when both joined the app)
+  const getTimeTogether = () => {
+    // Use connected_at if available (when both partners joined), otherwise created_at
+    const startDate = relationship?.connected_at || relationship?.created_at;
+    if (!startDate) return null;
+
+    const start = new Date(startDate);
     const now = new Date();
-    return Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const diffMs = now.getTime() - start.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    // Calculate years, months, days
+    const years = Math.floor(diffDays / 365);
+    const remainingDays = diffDays % 365;
+    const months = Math.floor(remainingDays / 30);
+    const days = remainingDays % 30;
+
+    // Format the display
+    if (years > 0) {
+      if (months > 0) {
+        return `${years} ${years === 1 ? 'year' : 'years'}, ${months} ${months === 1 ? 'month' : 'months'}`;
+      }
+      return `${years} ${years === 1 ? 'year' : 'years'}`;
+    } else if (months > 0) {
+      if (days > 0) {
+        return `${months} ${months === 1 ? 'month' : 'months'}, ${days} ${days === 1 ? 'day' : 'days'}`;
+      }
+      return `${months} ${months === 1 ? 'month' : 'months'}`;
+    } else {
+      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'}`;
+    }
   };
 
-  const daysTogether = getDaysTogether();
+  const timeTogether = getTimeTogether();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -283,10 +308,10 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             <h1 className="text-2xl font-bold text-gray-900">
               {getGreeting()}, {userName} 💕
             </h1>
-            {daysTogether && (
+            {timeTogether && (
               <p className="text-gray-600 mt-1 flex items-center justify-center gap-2">
                 <Flame className="w-4 h-4 text-orange-500" />
-                {daysTogether} days together
+                Together {timeTogether}
               </p>
             )}
           </motion.div>
@@ -689,10 +714,10 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                       <p className="text-xs text-gray-500 mt-1">Questions</p>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-                        {daysTogether || '—'}
+                      <div className="text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+                        {timeTogether || '—'}
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">Days</p>
+                      <p className="text-xs text-gray-500 mt-1">Together</p>
                     </div>
                   </div>
                 </CardContent>
