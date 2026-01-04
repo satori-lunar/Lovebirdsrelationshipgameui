@@ -545,7 +545,7 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
     if (swipeStage === 'matches') {
       // Get matched date ideas (use local likes if no relationship)
       const matchedDateIds = relationship?.id
-        ? dateMatches.map(match => match.date_idea_id)
+        ? dateMatches.map(match => Number(match.date_idea_id)) // Convert to number for comparison
         : Array.from(localLikes);
 
       const matchedDateIdeas = swipeDateIdeas.filter(idea =>
