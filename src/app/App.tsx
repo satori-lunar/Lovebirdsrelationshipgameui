@@ -20,7 +20,6 @@ import { WeeklyWishes } from './components/WeeklyWishes';
 import { RelationshipTracker } from './components/RelationshipTracker';
 import { Memories } from './components/Memories';
 import { Settings } from './components/Settings';
-import { PartnerInsights } from './components/PartnerInsights';
 import { DragonPet } from './components/DragonPet';
 import { DragonEvolutionDemo } from './components/DragonEvolutionDemo';
 import { CreateLockscreenGift } from './components/CreateLockscreenGift';
@@ -40,7 +39,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'insights' | 'dragon' | 'dragon-demo' | 'capacity-checkin';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'nudges' | 'vault' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -301,12 +300,6 @@ export default function App() {
         <ViewLockscreenGift onBack={handleBack} />
       )}
 
-      {currentView === 'insights' && userData && (
-        <PartnerInsights
-          partnerName={userData.partnerName || 'your partner'}
-          onNavigate={handleNavigate}
-        />
-      )}
 
       {currentView === 'dragon' && (
         <DragonPet onBack={handleBack} />
