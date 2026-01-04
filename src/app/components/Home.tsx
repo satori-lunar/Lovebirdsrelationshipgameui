@@ -19,7 +19,8 @@ import {
   Flame,
   Settings,
   Lock,
-  Calendar
+  Calendar,
+  Bookmark
 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Progress } from './ui/progress';
@@ -140,6 +141,41 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     },
     enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
     refetchInterval: 30000, // Refresh every 30 seconds to catch new check-ins quickly
+  });
+
+  // Query user's own latest capacity check-in
+  const { data: myCapacity } = useQuery({
+    queryKey: ['myCapacity', relationship?.id, user?.id],
+    queryFn: async () => {
+      if (!relationship?.id || !user?.id) return null;
+      try {
+        // Get user's latest capacity check-in from today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const { data, error } = await api.supabase
+          .from('capacity_checkins')
+          .select('*')
+          .eq('couple_id', relationship.id)
+          .eq('user_id', user.id) // Filter by current user's ID
+          .gte('created_at', today.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(); // Use maybeSingle to handle no results gracefully
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+          console.error('Failed to fetch my capacity:', error);
+          return null;
+        }
+
+        return data;
+      } catch (error) {
+        console.error('Failed to fetch my capacity:', error);
+        return null;
+      }
+    },
+    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   // Calculate days together (mock - would come from relationship data)
@@ -367,8 +403,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             </motion.div>
           )}
 
-          {/* My Capacity Today Prompt */}
-          {relationship?.partner_b_id && !partnerCapacity && (
+          {/* My Capacity Today - Always visible to allow updates throughout the day */}
+          {relationship?.partner_b_id && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -390,13 +426,23 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                       </motion.div>
                       <div className="flex-1">
                         <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">My Capacity Today</p>
-                        <h3 className="font-semibold text-gray-900 mt-1">Share how you're feeling</h3>
+                        <h3 className="font-semibold text-gray-900 mt-1">
+                          {myCapacity ? 'Update how you\'re feeling' : 'Share how you\'re feeling'}
+                        </h3>
                         <p className="text-sm text-gray-600 mt-1">
-                          Let {partnerName} know your mood and what you need - it helps them show up better for you
+                          {myCapacity
+                            ? `Moods change throughout the day - let ${partnerName} know how you're doing now`
+                            : `Let ${partnerName} know your mood and what you need - it helps them show up better for you`
+                          }
                         </p>
+                        {myCapacity && (
+                          <p className="text-xs text-purple-600 mt-2">
+                            Current: {myCapacity.mood_label || 'Shared earlier today'}
+                          </p>
+                        )}
                         <div className="mt-3">
                           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-sm font-medium rounded-xl shadow-md">
-                            <span>Share Your Capacity</span>
+                            <span>{myCapacity ? 'Update Your Capacity' : 'Share Your Capacity'}</span>
                             <ChevronRight className="w-4 h-4" />
                           </div>
                         </div>
@@ -594,6 +640,16 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                   className="overflow-hidden"
                 >
                   <div className="grid grid-cols-3 gap-3 pt-4">
+                    <button
+                      onClick={() => onNavigate('things-to-remember')}
+                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-md">
+                        <Bookmark className="w-5 h-5 text-white" />
+                      </div>
+                      <h3 className="font-medium text-gray-900 text-xs">Remember</h3>
+                    </button>
+
                     <button
                       onClick={() => onNavigate('vault')}
                       className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
