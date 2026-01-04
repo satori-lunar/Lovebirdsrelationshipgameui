@@ -28,6 +28,8 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
   const { partnerId } = usePartner(relationship);
   const queryClient = useQueryClient();
 
+  // Force cache bust - database-connected version
+
   // Use database for goals
   const {
     goals: dbGoals,
