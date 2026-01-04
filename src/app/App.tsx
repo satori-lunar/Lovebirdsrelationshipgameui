@@ -229,10 +229,10 @@ export default function App() {
         <WeeklySuggestions onBack={handleBack} />
       )}
 
-      {currentView === 'dates' && userData && (
+      {currentView === 'dates' && (
         <DatesWrapper
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'your partner'}
         />
       )}
 
