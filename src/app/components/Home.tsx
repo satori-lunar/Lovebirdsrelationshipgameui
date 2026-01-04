@@ -178,10 +178,10 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Calculate time together - uses connected_at (when both joined the app)
+  // Calculate time together - uses actual relationship start date from onboarding if available
   const getTimeTogether = () => {
-    // Use connected_at if available (when both partners joined), otherwise created_at
-    const startDate = relationship?.connected_at || relationship?.created_at;
+    // Use relationship_start_date (actual anniversary) if available, otherwise fall back to connected_at or created_at
+    const startDate = relationship?.relationship_start_date || relationship?.connected_at || relationship?.created_at;
     if (!startDate) return null;
 
     const start = new Date(startDate);
