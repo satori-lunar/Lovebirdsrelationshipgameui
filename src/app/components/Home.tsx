@@ -628,16 +628,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                     </button>
 
                     <button
-                      onClick={() => onNavigate('gifts')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <Gift className="w-5 h-5 text-purple-500" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Gifts</h3>
-                    </button>
-
-                    <button
                       onClick={() => onNavigate('tracker')}
                       className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
                     >
@@ -647,15 +637,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                       <h3 className="font-medium text-gray-900 text-xs">Goals</h3>
                     </button>
 
-                    <button
-                      onClick={() => onNavigate('dragon')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <span className="text-xl">🐉</span>
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Dragon</h3>
-                    </button>
                   </div>
                 </motion.div>
               )}
