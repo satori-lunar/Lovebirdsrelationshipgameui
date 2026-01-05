@@ -65,7 +65,7 @@ export default function App() {
   // Sync widget gifts when app becomes active
   useWidgetGiftSync(user?.id || null);
 
-  const { data: onboarding, error: onboardingError } = useQuery({
+  const { data: onboarding, error: onboardingError, refetch: refetchOnboarding } = useQuery({
     queryKey: ['onboarding', user?.id],
     queryFn: () => onboardingService.getOnboarding(user!.id),
     enabled: !!user && !!user.id && currentView !== 'sign-up' && currentView !== 'sign-in',
@@ -302,6 +302,7 @@ export default function App() {
           onBack={handleBack}
           partnerName={userData?.partnerName || 'your partner'}
           onNavigate={handleNavigate}
+          onPartnerNameUpdate={() => refetchOnboarding()}
         />
       )}
     </div>
