@@ -39,6 +39,7 @@ import PartnerCapacityView from './PartnerCapacityView';
 import { SubmitNeedModal } from './SubmitNeedModal';
 import { RelationshipWellnessPrompt } from './RelationshipWellnessPrompt';
 import { PartnerNeedsView } from './PartnerNeedsView';
+import { ProfilePhotos } from './ProfilePhotos';
 
 interface HomeProps {
   userName: string;
@@ -357,6 +358,15 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           </button>
         </div>
       </div>
+
+      {/* Profile Photos */}
+      <ProfilePhotos
+        userName={userName}
+        partnerName={partnerName}
+        onPhotosUpdated={() => {
+          // Optionally refetch any data that depends on photos
+        }}
+      />
 
       {/* Main Content */}
       <div className="relative z-10 px-6 pb-24">

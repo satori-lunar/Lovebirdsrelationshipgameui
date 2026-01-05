@@ -86,6 +86,11 @@ export const onboardingService = {
     if (data.wants_needs) upsertData.wants_needs = data.wants_needs;
     if (data.preferences) upsertData.preferences = data.preferences;
     if (data.consent) upsertData.consent = data.consent;
+    if (data.userPhotoUrl !== undefined) upsertData.user_photo_url = data.userPhotoUrl;
+    if (data.partnerPhotoUrl !== undefined) upsertData.partner_photo_url = data.partnerPhotoUrl;
+    if (data.relationshipStatus !== undefined) upsertData.relationship_status = data.relationshipStatus;
+    if (data.dateFrequency !== undefined) upsertData.date_frequency = data.dateFrequency;
+    if (data.wantMoreDates !== undefined) upsertData.want_more_dates = data.wantMoreDates;
 
     // Legacy fields for backward compatibility (optional)
     upsertData.partner_name = data.partnerName || ''; // Provide empty string for NOT NULL constraint
@@ -170,6 +175,11 @@ export const onboardingService = {
     if (data.wants_needs !== undefined) updateData.wants_needs = data.wants_needs;
     if (data.preferences !== undefined) updateData.preferences = data.preferences;
     if (data.consent !== undefined) updateData.consent = data.consent;
+    if (data.userPhotoUrl !== undefined) updateData.user_photo_url = data.userPhotoUrl;
+    if (data.partnerPhotoUrl !== undefined) updateData.partner_photo_url = data.partnerPhotoUrl;
+    if (data.relationshipStatus !== undefined) updateData.relationship_status = data.relationshipStatus;
+    if (data.dateFrequency !== undefined) updateData.date_frequency = data.dateFrequency;
+    if (data.wantMoreDates !== undefined) updateData.want_more_dates = data.wantMoreDates;
 
     // Legacy fields for backward compatibility
     if (data.partnerName !== undefined) updateData.partner_name = data.partnerName;

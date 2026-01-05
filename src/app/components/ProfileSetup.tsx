@@ -41,7 +41,7 @@ interface ProfileSetupProps {
   onComplete: () => void;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 const INTEREST_OPTIONS = [
   { id: 'music', label: 'Music', icon: Music },
@@ -88,6 +88,9 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
     partnerName: '',
     birthday: '',
     anniversaryDate: '',
+    relationshipStatus: '' as 'married' | 'cohabitating' | 'living_separately' | '',
+    dateFrequency: '' as 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'rarely' | 'never' | '',
+    wantMoreDates: null as boolean | null,
     interests: [] as string[],
     datePreferences: [] as string[],
     giftPreferences: [] as string[],
@@ -121,6 +124,20 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
       toast.error('Please enter your name');
       return;
     }
+    if (step === 2) {
+      if (!formData.relationshipStatus) {
+        toast.error('Please select your living situation');
+        return;
+      }
+      if (!formData.dateFrequency) {
+        toast.error('Please select how often you go on dates');
+        return;
+      }
+      if (formData.wantMoreDates === null) {
+        toast.error('Please indicate if you want to go on dates more often');
+        return;
+      }
+    }
     if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
@@ -144,6 +161,9 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
         name: formData.name,
         partnerName: formData.partnerName,
         birthday: formData.birthday || undefined,
+        relationshipStatus: formData.relationshipStatus || undefined,
+        dateFrequency: formData.dateFrequency || undefined,
+        wantMoreDates: formData.wantMoreDates,
         love_language: { primary: 'Quality Time' }, // Default, will be set in quiz
         wants_needs: {
           favorite_activities: formData.interests,
@@ -277,8 +297,135 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
             </motion.div>
           )}
 
-          {/* Step 2: Interests */}
+          {/* Step 2: Relationship Questions */}
           {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center mb-8">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring' }}
+                  className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-200"
+                >
+                  <Heart className="w-10 h-10 text-white" fill="white" />
+                </motion.div>
+                <h2 className="text-2xl font-bold text-gray-900">Tell us about your relationship</h2>
+                <p className="text-gray-600 mt-1">Help us personalize your experience</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label className="text-gray-700 font-medium">What's your living situation?</Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {[
+                      { value: 'married', label: 'Married', emoji: '💍' },
+                      { value: 'cohabitating', label: 'Living together', emoji: '🏠' },
+                      { value: 'living_separately', label: 'Living separately', emoji: '🏙️' },
+                    ].map((option) => (
+                      <motion.button
+                        key={option.value}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => updateField('relationshipStatus', option.value)}
+                        className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3 ${
+                          formData.relationshipStatus === option.value
+                            ? 'border-blue-400 bg-blue-50 shadow-md'
+                            : 'border-gray-200 bg-white hover:border-blue-200'
+                        }`}
+                      >
+                        <span className="text-2xl">{option.emoji}</span>
+                        <span className={`font-medium ${formData.relationshipStatus === option.value ? 'text-blue-600' : 'text-gray-700'}`}>
+                          {option.label}
+                        </span>
+                        {formData.relationshipStatus === option.value && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="ml-auto w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center"
+                          >
+                            <Check className="w-4 h-4 text-white" />
+                          </motion.div>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-gray-700 font-medium">How often do you go on dates?</Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {[
+                      { value: 'daily', label: 'Daily', emoji: '🌅' },
+                      { value: 'weekly', label: 'Weekly', emoji: '📅' },
+                      { value: 'bi-weekly', label: 'Every 2 weeks', emoji: '📆' },
+                      { value: 'monthly', label: 'Monthly', emoji: '🗓️' },
+                      { value: 'rarely', label: 'Rarely', emoji: '🌙' },
+                      { value: 'never', label: 'Never', emoji: '❄️' },
+                    ].map((option) => (
+                      <motion.button
+                        key={option.value}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => updateField('dateFrequency', option.value)}
+                        className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3 ${
+                          formData.dateFrequency === option.value
+                            ? 'border-indigo-400 bg-indigo-50 shadow-md'
+                            : 'border-gray-200 bg-white hover:border-indigo-200'
+                        }`}
+                      >
+                        <span className="text-2xl">{option.emoji}</span>
+                        <span className={`font-medium ${formData.dateFrequency === option.value ? 'text-indigo-600' : 'text-gray-700'}`}>
+                          {option.label}
+                        </span>
+                        {formData.dateFrequency === option.value && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="ml-auto w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center"
+                          >
+                            <Check className="w-4 h-4 text-white" />
+                          </motion.div>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-gray-700 font-medium">Would you like to go on dates more often?</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { value: true, label: 'Yes', emoji: '✅' },
+                      { value: false, label: 'No', emoji: '❌' },
+                    ].map((option) => (
+                      <motion.button
+                        key={option.value.toString()}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => updateField('wantMoreDates', option.value)}
+                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
+                          formData.wantMoreDates === option.value
+                            ? 'border-purple-400 bg-purple-50 shadow-md'
+                            : 'border-gray-200 bg-white hover:border-purple-200'
+                        }`}
+                      >
+                        <span className="text-2xl">{option.emoji}</span>
+                        <span className={`font-medium ${formData.wantMoreDates === option.value ? 'text-purple-600' : 'text-gray-700'}`}>
+                          {option.label}
+                        </span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 3: Interests */}
+          {step === 3 && (
             <motion.div
               key="step2"
               initial={{ opacity: 0, x: 20 }}
@@ -338,8 +485,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
             </motion.div>
           )}
 
-          {/* Step 3: Date Preferences */}
-          {step === 3 && (
+          {/* Step 4: Date Preferences */}
+          {step === 4 && (
             <motion.div
               key="step3"
               initial={{ opacity: 0, x: 20 }}
@@ -389,8 +536,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
             </motion.div>
           )}
 
-          {/* Step 4: Gift Preferences */}
-          {step === 4 && (
+          {/* Step 5: Gift Preferences */}
+          {step === 5 && (
             <motion.div
               key="step4"
               initial={{ opacity: 0, x: 20 }}
@@ -440,8 +587,8 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
             </motion.div>
           )}
 
-          {/* Step 5: Bio / Final */}
-          {step === 5 && (
+          {/* Step 6: Bio / Final */}
+          {step === 6 && (
             <motion.div
               key="step5"
               initial={{ opacity: 0, x: 20 }}
@@ -480,6 +627,23 @@ export function ProfileSetup({ onComplete }: ProfileSetupProps) {
                   <div className="space-y-2 text-sm">
                     <p><span className="text-gray-500">Name:</span> <span className="font-medium">{formData.name || '—'}</span></p>
                     <p><span className="text-gray-500">Partner:</span> <span className="font-medium">{formData.partnerName || '—'}</span></p>
+                    <p><span className="text-gray-500">Living situation:</span> <span className="font-medium">
+                      {formData.relationshipStatus === 'married' ? 'Married' :
+                       formData.relationshipStatus === 'cohabitating' ? 'Living together' :
+                       formData.relationshipStatus === 'living_separately' ? 'Living separately' : '—'}
+                    </span></p>
+                    <p><span className="text-gray-500">Date frequency:</span> <span className="font-medium">
+                      {formData.dateFrequency === 'daily' ? 'Daily' :
+                       formData.dateFrequency === 'weekly' ? 'Weekly' :
+                       formData.dateFrequency === 'bi-weekly' ? 'Every 2 weeks' :
+                       formData.dateFrequency === 'monthly' ? 'Monthly' :
+                       formData.dateFrequency === 'rarely' ? 'Rarely' :
+                       formData.dateFrequency === 'never' ? 'Never' : '—'}
+                    </span></p>
+                    <p><span className="text-gray-500">Wants more dates:</span> <span className="font-medium">
+                      {formData.wantMoreDates === true ? 'Yes' :
+                       formData.wantMoreDates === false ? 'No' : '—'}
+                    </span></p>
                     <p><span className="text-gray-500">Interests:</span> <span className="font-medium">{formData.interests.length} selected</span></p>
                     <p><span className="text-gray-500">Date ideas:</span> <span className="font-medium">{formData.datePreferences.length} selected</span></p>
                     <p><span className="text-gray-500">Gift style:</span> <span className="font-medium">{formData.giftPreferences.length} selected</span></p>

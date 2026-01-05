@@ -35,6 +35,13 @@ export interface OnboardingData {
   wants_needs?: WantsNeeds;
   preferences?: Preferences;
   consent?: Consent;
+  // New photo fields
+  userPhotoUrl?: string;
+  partnerPhotoUrl?: string;
+  // New relationship fields
+  relationshipStatus?: 'married' | 'cohabitating' | 'living_separately';
+  dateFrequency?: 'daily' | 'weekly' | 'bi-weekly' | 'monthly' | 'rarely' | 'never';
+  wantMoreDates?: boolean;
   // Legacy fields for backward compatibility
   partnerName?: string;
   livingTogether?: string;
@@ -65,6 +72,13 @@ export interface OnboardingResponse {
   is_private: boolean;
   created_at: string;
   updated_at: string;
+  // New photo fields
+  user_photo_url?: string | null;
+  partner_photo_url?: string | null;
+  // New relationship fields
+  relationship_status?: string | null;
+  date_frequency?: string | null;
+  want_more_dates?: boolean | null;
   // Legacy fields
   partner_name?: string | null;
   living_together?: string | null;
