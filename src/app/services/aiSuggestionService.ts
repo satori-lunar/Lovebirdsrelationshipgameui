@@ -114,36 +114,35 @@ class AISuggestionService {
 
       console.log('✨ Using:', { loveLanguage, communicationStyle, partnerName, type });
 
-      // Get template variations
-      const variations = getAllVariations(loveLanguage, type);
-      console.log('📝 Variations:', variations);
+      // Get ALL suggestion types to provide variety
+      const allTypes: SuggestionType[] = ['affection', 'appreciation', 'quality_time', 'support', 'celebration', 'reconnection', 'check_in', 'reassurance'];
 
-      if (!variations) {
-        console.error('❌ No variations found for:', { loveLanguage, type });
-        return [];
+      // Shuffle and pick 3 different types including the requested one
+      const typesToUse = this.shuffleArray([type, ...allTypes.filter(t => t !== type)]).slice(0, 3);
+
+      const suggestions: AISuggestion[] = [];
+
+      for (const suggestionType of typesToUse) {
+        const variations = getAllVariations(loveLanguage, suggestionType);
+
+        if (!variations) {
+          console.warn('⚠️ No variations for:', { loveLanguage, suggestionType });
+          continue;
+        }
+
+        // Randomly pick one of the communication styles
+        const styles: CommunicationStyle[] = ['gentle', 'playful', 'direct', 'reserved'];
+        const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+
+        const text = variations[randomStyle] || variations.gentle || 'No suggestion available';
+
+        suggestions.push({
+          id: this.generateId(),
+          text: text.replace('{name}', partnerName),
+          emoji: this.getEmojiForType(suggestionType),
+          category: suggestionType,
+        });
       }
-
-      // Convert to simple AISuggestion format
-      const suggestions: AISuggestion[] = [
-        {
-          id: this.generateId(),
-          text: (variations.gentle || 'No suggestion available').replace('{name}', partnerName),
-          emoji: this.getEmojiForType(type),
-          category: type,
-        },
-        {
-          id: this.generateId(),
-          text: (variations.playful || 'No suggestion available').replace('{name}', partnerName),
-          emoji: this.getEmojiForType(type),
-          category: type,
-        },
-        {
-          id: this.generateId(),
-          text: (variations.direct || 'No suggestion available').replace('{name}', partnerName),
-          emoji: this.getEmojiForType(type),
-          category: type,
-        },
-      ];
 
       console.log('✅ Generated suggestions:', suggestions);
       return suggestions;
@@ -604,18 +603,25 @@ class AISuggestionService {
     return `sug_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   private getEmojiForType(type: SuggestionType): string {
     const emojiMap: Record<SuggestionType, string> = {
       affection: '💕',
       appreciation: '🙏',
-      encouragement: '💪',
-      comfort: '🤗',
       celebration: '🎉',
-      playful: '😄',
-      romantic: '❤️',
       support: '🫂',
-      missing_you: '🥺',
-      thinking_of_you: '💭',
+      reassurance: '🤗',
+      quality_time: '⏰',
+      reconnection: '💞',
+      check_in: '💭',
     };
     return emojiMap[type] || '💌';
   }
