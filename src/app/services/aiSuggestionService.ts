@@ -164,7 +164,8 @@ class AISuggestionService {
     console.log('🤖 Generating AI need response:', {
       needCategory: need.needCategory,
       loveLanguage: partnerProfile.loveLanguage,
-      communicationStyle: partnerProfile.communicationStyle
+      communicationStyle: partnerProfile.communicationStyle,
+      context: need.context
     });
 
     // Special case: Space
@@ -172,35 +173,42 @@ class AISuggestionService {
       return this.generateSpaceResponse(need, partnerProfile);
     }
 
-    // Map need category to suggestion type
-    const suggestionType = NEED_TO_SUGGESTION_TYPE[need.needCategory];
-    console.log('📝 Mapped to suggestion type:', suggestionType);
+    // Extract preferences
+    const prefs = partnerProfile.customPreferences || {};
+    const favoriteActivities = prefs.favoriteActivities || [];
+    const partnerName = prefs.partnerName || 'them';
+    const budgetComfort = prefs.budgetComfort;
+    const energyLevel = prefs.energyLevel;
 
-    // Generate message suggestions
-    const context: SuggestionContext = {
-      triggerReason: `Partner expressed need for ${need.needCategory}`,
-      partnerLoveLanguage: partnerProfile.loveLanguage,
-      partnerCommunicationStyle: partnerProfile.communicationStyle,
-      customPreferences: partnerProfile.customPreferences
-    };
-
-    const messages = await this.generateMessageSuggestions(context, suggestionType);
-    console.log('💬 Generated messages:', messages);
-
-    // Generate action suggestions
-    const actions = this.generateActionSuggestions(
+    // Generate personalized, detailed suggestions based on context
+    const personalizedSuggestions = this.generatePersonalizedMessages(
       need,
-      partnerProfile.loveLanguage
+      partnerProfile,
+      favoriteActivities,
+      budgetComfort,
+      energyLevel
     );
 
-    // Create receiver message (gentle summary)
-    const receiverMessage = this.generateReceiverMessage(need, partnerProfile);
+    // Generate detailed action suggestions
+    const actions = this.generateDetailedActionSuggestions(
+      need,
+      partnerProfile,
+      favoriteActivities,
+      budgetComfort,
+      energyLevel
+    );
+
+    // Create detailed receiver message
+    const receiverMessage = this.generateDetailedReceiverMessage(need, partnerProfile);
+
+    // Generate detailed reasoning
+    const reasoning = this.generateDetailedReasoning(need, partnerProfile, favoriteActivities);
 
     const result = {
       receiverMessage,
-      suggestedMessages: messages.slice(0, 3), // Top 3
+      suggestedMessages: personalizedSuggestions,
       suggestedActions: actions,
-      reasoning: this.generateNeedReasoning(need, partnerProfile),
+      reasoning,
       safetyNote: need.urgency === 'important'
         ? "If this feels urgent, consider reaching out directly beyond the app."
         : undefined
@@ -277,6 +285,317 @@ class AISuggestionService {
 
     if (error) throw error;
     return data.id;
+  }
+
+  // ==================== PERSONALIZED SUGGESTION GENERATORS ====================
+
+  /**
+   * Generate personalized messages based on need context and partner preferences
+   */
+  private generatePersonalizedMessages(
+    need: RelationshipNeed,
+    partnerProfile: any,
+    favoriteActivities: string[],
+    budgetComfort: string,
+    energyLevel: string
+  ): MessageSuggestion[] {
+    const { needCategory, context } = need;
+    const { loveLanguage, communicationStyle } = partnerProfile;
+    const partnerName = partnerProfile.customPreferences?.partnerName || 'them';
+
+    const suggestions: MessageSuggestion[] = [];
+
+    // Create context-aware messages based on what they wrote
+    const hasContext = context && context.trim().length > 0;
+
+    switch (needCategory) {
+      case 'affection':
+        if (hasContext) {
+          // Use their specific context
+          if (loveLanguage === 'words') {
+            suggestions.push({
+              id: this.generateId(),
+              tone: communicationStyle,
+              message: `I hear you about ${context}. You mean the world to me, and I want you to feel loved every day. Let me show you better.`,
+              reasoning: `Acknowledges their specific concern while providing verbal affirmation`,
+              loveLanguageAlignment: loveLanguage,
+              suggestionType: 'affection',
+              confidence: 95
+            });
+          } else if (loveLanguage === 'touch') {
+            suggestions.push({
+              id: this.generateId(),
+              tone: communicationStyle,
+              message: `I understand you're feeling ${context}. I miss holding you close. Can we video call tonight? I want to feel closer to you.`,
+              reasoning: `Addresses their need while suggesting virtual closeness`,
+              loveLanguageAlignment: loveLanguage,
+              suggestionType: 'affection',
+              confidence: 95
+            });
+          } else if (loveLanguage === 'quality_time') {
+            suggestions.push({
+              id: this.generateId(),
+              tone: communicationStyle,
+              message: `You mentioned ${context}. Let's set aside real time together - just us, no distractions. You deserve my full attention.`,
+              reasoning: `Responds to their need with quality time commitment`,
+              loveLanguageAlignment: loveLanguage,
+              suggestionType: 'affection',
+              confidence: 95
+            });
+          }
+        } else {
+          // Generic affection messages
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: loveLanguage === 'words' ? `I love you more than I probably show. You're my person, and I want you to feel that every single day.` : `I want to make sure you feel loved. What would make you feel most cared for right now?`,
+            reasoning: `Provides affirmation and opens dialogue`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 85
+          });
+        }
+        break;
+
+      case 'quality_time':
+        const activity = favoriteActivities.length > 0 ? favoriteActivities[0] : 'something together';
+        if (hasContext) {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I hear you - ${context}. Let's plan some real, intentional time together. How about we ${activity === 'something together' ? 'do something you love' : activity.toLowerCase()}? You have my full focus.`,
+            reasoning: `Uses their favorite activity and addresses their specific concern`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'quality_time',
+            confidence: 95
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I want to give you more quality time. How about we plan ${activity === 'something together' ? 'a date night' : 'to ' + activity.toLowerCase()}? Just us, fully present.`,
+            reasoning: `Suggests their favorite activity for quality time`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'quality_time',
+            confidence: 90
+          });
+        }
+        break;
+
+      case 'communication':
+        if (hasContext) {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `You're right - ${context}. I want to be better at checking in and really talking. Can we set aside time tonight to connect? I want to hear everything.`,
+            reasoning: `Acknowledges their specific communication need`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'reconnection',
+            confidence: 95
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I feel like we haven't been connecting deeply lately. Can we talk tonight? I miss our real conversations.`,
+            reasoning: `Opens dialogue for deeper connection`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'reconnection',
+            confidence: 88
+          });
+        }
+        break;
+
+      case 'appreciation':
+        if (hasContext) {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I'm so sorry - ${context}. You do so much and I haven't been showing my appreciation. Everything you do means the world to me.`,
+            reasoning: `Specifically acknowledges what they mentioned`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'appreciation',
+            confidence: 95
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I don't say it enough, but I see everything you do. You're amazing, and I appreciate you more than I show.`,
+            reasoning: `General appreciation message`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'appreciation',
+            confidence: 85
+          });
+        }
+        break;
+    }
+
+    // Add 2 more alternative style messages
+    const alternativeStyles = this.getAlternativeStyles(communicationStyle).slice(0, 2);
+    alternativeStyles.forEach(style => {
+      const baseTemplate = getAllVariations(loveLanguage, NEED_TO_SUGGESTION_TYPE[needCategory]);
+      if (baseTemplate && baseTemplate[style]) {
+        suggestions.push({
+          id: this.generateId(),
+          tone: style,
+          message: baseTemplate[style].replace('{name}', partnerName),
+          reasoning: `Alternative ${style} communication style`,
+          loveLanguageAlignment: loveLanguage,
+          suggestionType: NEED_TO_SUGGESTION_TYPE[needCategory],
+          confidence: 75
+        });
+      }
+    });
+
+    return suggestions.slice(0, 3);
+  }
+
+  /**
+   * Generate detailed action suggestions based on preferences
+   */
+  private generateDetailedActionSuggestions(
+    need: RelationshipNeed,
+    partnerProfile: any,
+    favoriteActivities: string[],
+    budgetComfort: string,
+    energyLevel: string
+  ): ActionSuggestion[] {
+    const { needCategory } = need;
+    const { loveLanguage } = partnerProfile;
+    const actions: ActionSuggestion[] = [];
+
+    switch (needCategory) {
+      case 'quality_time':
+        if (favoriteActivities.length > 0) {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan to ${favoriteActivities[0].toLowerCase()} together - it's something they love`,
+            reasoning: `Based on their favorite activity: ${favoriteActivities[0]}`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
+        if (energyLevel === 'low_energy' || energyLevel === 'varies') {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan a low-key activity like watching their favorite show together or a cozy video call`,
+            reasoning: `Matches their energy level preference`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan something engaging - maybe try one of their interests or explore something new together`,
+            reasoning: `They have good energy for active connection`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
+        break;
+
+      case 'affection':
+        if (loveLanguage === 'words') {
+          actions.push({
+            type: 'send_message',
+            description: `Send a heartfelt message right now telling them exactly why they matter to you`,
+            reasoning: `Their love language is words of affirmation`,
+            loveLanguageAlignment: 'words'
+          });
+        } else if (loveLanguage === 'gifts') {
+          if (budgetComfort === 'budget_friendly') {
+            actions.push({
+              type: 'send_gift',
+              description: `Create a thoughtful lockscreen message or playlist - it's the thought that counts`,
+              reasoning: `Budget-friendly but meaningful gesture`,
+              loveLanguageAlignment: 'gifts'
+            });
+          } else {
+            actions.push({
+              type: 'send_gift',
+              description: `Order their favorite treat or small gift to be delivered`,
+              reasoning: `Small gift to show you're thinking of them`,
+              loveLanguageAlignment: 'gifts'
+            });
+          }
+        }
+        break;
+
+      case 'appreciation':
+        actions.push({
+          type: 'send_message',
+          description: `List 3 specific things they've done recently that made your life better`,
+          reasoning: `Specific appreciation is more meaningful than general thanks`,
+          loveLanguageAlignment: 'words'
+        });
+        if (loveLanguage === 'acts') {
+          actions.push({
+            type: 'send_message',
+            description: `Offer to take something off their plate this week`,
+            reasoning: `Show appreciation through acts of service`,
+            loveLanguageAlignment: 'acts'
+          });
+        }
+        break;
+
+      case 'communication':
+        actions.push({
+          type: 'schedule_date',
+          description: `Set up a dedicated check-in time - maybe after dinner or before bed`,
+          reasoning: `Regular check-ins build consistent communication`,
+          loveLanguageAlignment: 'quality_time'
+          });
+        actions.push({
+          type: 'send_message',
+          description: `Ask them "How's your heart?" - open the door for real conversation`,
+          reasoning: `Invites deeper, emotional connection`,
+          loveLanguageAlignment: 'words'
+        });
+        break;
+    }
+
+    return actions.slice(0, 3);
+  }
+
+  /**
+   * Generate detailed receiver message
+   */
+  private generateDetailedReceiverMessage(need: RelationshipNeed, partnerProfile: any): string {
+    const { needCategory, context } = need;
+    const { communicationStyle } = partnerProfile;
+
+    if (context && context.trim().length > 0) {
+      // Include their specific context
+      const contextPreview = context.length > 50 ? context.substring(0, 50) + '...' : context;
+      return `They shared: "${contextPreview}" - They're looking for ${needCategory.replace('_', ' ')} right now.`;
+    }
+
+    // Use the existing receiver messages as fallback
+    return this.generateReceiverMessage(need, partnerProfile);
+  }
+
+  /**
+   * Generate detailed reasoning
+   */
+  private generateDetailedReasoning(
+    need: RelationshipNeed,
+    partnerProfile: any,
+    favoriteActivities: string[]
+  ): string {
+    const { loveLanguage } = partnerProfile;
+    const prefs = partnerProfile.customPreferences || {};
+
+    let reasoning = `Your partner values ${loveLanguage.replace('_', ' ')}. `;
+
+    if (favoriteActivities.length > 0) {
+      reasoning += `They especially enjoy ${favoriteActivities.slice(0, 2).join(' and ')}. `;
+    }
+
+    if (need.context && need.context.trim().length > 0) {
+      reasoning += `They specifically mentioned feeling this way, so acknowledging what they shared will mean a lot. `;
+    }
+
+    reasoning += `These suggestions are tailored to help you respond in a way that resonates with them.`;
+
+    return reasoning;
   }
 
   // ==================== PRIVATE HELPERS ====================

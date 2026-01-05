@@ -40,16 +40,16 @@ class NeedsService {
 
     console.log('👥 Receiver ID:', receiverId);
 
-    // Try to get partner's onboarding data for personalization (optional)
+    // Try to get partner's onboarding data for personalization
     const { data: partnerOnboarding } = await api.supabase
       .from('onboarding_responses')
-      .select('love_language_primary, communication_style')
+      .select('love_language_primary, communication_style, favorite_activities, budget_comfort, energy_level, name, wish_happened')
       .eq('user_id', receiverId)
       .maybeSingle();
 
     console.log('💑 Partner onboarding data:', partnerOnboarding);
 
-    // Generate AI suggestion with partner's preferences if available
+    // Generate AI suggestion with partner's full profile
     const aiSuggestion = await aiSuggestionService.generateNeedResponse(
       {
         id: '',
@@ -67,7 +67,13 @@ class NeedsService {
       {
         loveLanguage: partnerOnboarding?.love_language_primary || 'quality_time',
         communicationStyle: partnerOnboarding?.communication_style || 'gentle',
-        customPreferences: {}
+        customPreferences: {
+          favoriteActivities: partnerOnboarding?.favorite_activities || [],
+          budgetComfort: partnerOnboarding?.budget_comfort,
+          energyLevel: partnerOnboarding?.energy_level,
+          partnerName: partnerOnboarding?.name,
+          wishesPartnerWould: partnerOnboarding?.wish_happened
+        }
       }
     );
 
