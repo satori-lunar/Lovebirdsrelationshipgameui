@@ -85,8 +85,8 @@ const getSuggestions = (mood: string, needs: string[], isLongDistance: boolean) 
       suggestions.push('Send a care package or order comfort food delivery');
       suggestions.push('Watch the same movie together on video call');
     } else {
-      suggestions.push('Bring their favorite comfort food');
-      suggestions.push('Movie night in bed with snacks');
+      suggestions.push('Bring or send their favorite comfort food when you can');
+      suggestions.push('Plan a cozy movie or show watch together - in person or video call');
     }
   }
 
@@ -103,20 +103,20 @@ const getSuggestions = (mood: string, needs: string[], isLongDistance: boolean) 
   if (needs.includes('no_talk')) {
     if (isLongDistance) {
       suggestions.push('Send a care text: "No need to reply, just thinking of you"');
-      suggestions.push('Be on FaceTime together doing your own things');
+      suggestions.push('Offer to be on FaceTime together doing your own things');
     } else {
-      suggestions.push('Sit together quietly - no pressure to talk');
-      suggestions.push('Gentle physical affection without asking questions');
+      suggestions.push('Offer to be together quietly when you both have time - no pressure to talk');
+      suggestions.push('Send a supportive message with no expectation of response');
     }
   }
 
   if (needs.includes('be_close') || needs.includes('be_present_virtual')) {
     if (isLongDistance) {
-      suggestions.push('Set up a long FaceTime/video call - just being there');
+      suggestions.push('Set up a video call when you both have time - just being there');
       suggestions.push('Send a voice note instead of text');
     } else {
-      suggestions.push('Offer a hug or physical closeness');
-      suggestions.push('Do an activity side-by-side quietly');
+      suggestions.push('Make time to see them soon - even brief quality time helps');
+      suggestions.push('Stay connected through the day with texts, voice notes, photos');
     }
   }
 

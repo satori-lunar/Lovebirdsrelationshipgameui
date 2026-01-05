@@ -481,15 +481,15 @@ class AISuggestionService {
         if (energyLevel === 'low_energy' || energyLevel === 'varies') {
           actions.push({
             type: 'schedule_date',
-            description: `Set up a cozy evening together - order their favorite food, queue up a show you both enjoy, and just be present together. Low pressure, high connection.`,
-            reasoning: `They appreciate low-key quality time, so this removes pressure while maximizing closeness`,
+            description: `Plan low-key quality time - even 30-60 minutes works. Order food, watch something together (in person or virtually), or just be in the same space. Low pressure, high connection.`,
+            reasoning: `They appreciate low-key quality time, and even brief focused time together matters more than long elaborate dates`,
             loveLanguageAlignment: 'quality_time'
           });
         } else {
           actions.push({
             type: 'schedule_date',
-            description: `Plan an engaging activity - try that thing they've been wanting to do, or surprise them with tickets/plans for something new you can experience together.`,
-            reasoning: `They have energy for adventure, so meaningful shared experiences will resonate`,
+            description: `Plan an engaging activity when you both have time - try that thing they've been wanting to do, grab tickets for something new, or explore together. Even a few hours creates memories.`,
+            reasoning: `They have energy for adventure, so meaningful shared experiences will resonate - duration matters less than engagement`,
             loveLanguageAlignment: 'quality_time'
           });
         }
@@ -552,8 +552,8 @@ class AISuggestionService {
         } else if (loveLanguage === 'quality_time') {
           actions.push({
             type: 'schedule_date',
-            description: `Block out 2-3 hours this week where it's just the two of you - no multitasking, no half-attention. Give them the gift of your full, undivided focus.`,
-            reasoning: `For them, quality time IS affection - your presence is how they feel loved`,
+            description: `Schedule focused time together this week - even 1 hour of no multitasking, no half-attention matters. Coffee, a meal, a walk. Give them the gift of your full, undivided focus.`,
+            reasoning: `For them, quality time IS affection - your presence is how they feel loved, and quality beats quantity`,
             loveLanguageAlignment: 'quality_time'
           });
         } else if (loveLanguage === 'acts') {
@@ -912,7 +912,7 @@ class AISuggestionService {
         if (isLongDistance) {
           suggestions.push(`Set up a long video call tonight - pick the same movie or show, press play together, and just be there. Low pressure, high comfort.`);
         } else {
-          suggestions.push(`Clear your schedule and have a cozy movie marathon together in bed - their choice of movies, their favorite snacks, phones off. Just be present.`);
+          suggestions.push(`Schedule quality time together - even 30-60 minutes works. Watch something together, grab a meal, or just be in the same space. Presence matters more than duration.`);
         }
       } else if (loveLanguage === 'words') {
         suggestions.push(`Send them a voice message telling them specifically why they're going to get through this, referencing times they've been strong before. Make it personal, not generic.`);
@@ -920,7 +920,7 @@ class AISuggestionService {
         if (isLongDistance) {
           suggestions.push(`Plan your next visit together RIGHT NOW - even if it's weeks away. Having a countdown to the next hug will help. Send the calendar invite.`);
         } else {
-          suggestions.push(`Offer physical comfort - a long hug, lying together, gentle back rub. Sometimes touch says more than words can.`);
+          suggestions.push(`When you see them next, offer physical comfort - a long hug, holding hands, or just sitting close. Even brief physical connection helps when schedules are busy.`);
         }
       }
     }
@@ -931,13 +931,13 @@ class AISuggestionService {
         if (isLongDistance) {
           suggestions.push(`Get them out of their head - if they love ${activity.toLowerCase()}, find a way to do it virtually together, or send them something related to it with a "thinking of you" note.`);
         } else {
-          suggestions.push(`Take them to do ${activity.toLowerCase()} - something engaging that gets them out of their head. Make the plan, handle the details, just tell them when to be ready.`);
+          suggestions.push(`Suggest doing ${activity.toLowerCase()} together when you both have time, or send them something fun related to it. Even planning it gives them something positive to think about.`);
         }
       } else {
         if (isLongDistance) {
           suggestions.push(`Play an online game together or start a funny show simultaneously over video. Keep it light, keep them engaged, give their brain a break.`);
         } else {
-          suggestions.push(`Plan something engaging and fun - try that new place they mentioned, go to a comedy show, anything that shifts their energy. You handle the planning.`);
+          suggestions.push(`Suggest a quick distraction activity - coffee date, short walk, or trying something new. Even 30 minutes of fun together can shift their energy.`);
         }
       }
     }
@@ -963,10 +963,10 @@ class AISuggestionService {
     if (needs.includes('no_talk')) {
       if (isLongDistance) {
         suggestions.push(`Send a no-pressure care message: "No need to respond. Just want you to know I'm thinking of you and you don't have to be 'on' right now." Then don't expect a reply.`);
-        suggestions.push(`Be on FaceTime/video together doing your own things - working, watching stuff, just existing in the same virtual space. No talking required.`);
+        suggestions.push(`Offer to be on FaceTime/video together doing your own things if they want company - working, watching stuff, just existing in the same virtual space. No talking required.`);
       } else {
-        suggestions.push(`Just sit with them quietly - same couch, same room, doing your own thing. Gentle physical touch (hand holding, head on shoulder) but zero pressure to talk.`);
-        suggestions.push(`Put on their comfort show/movie and just be there together. Sometimes presence > conversation.`);
+        suggestions.push(`If you get time together, offer to just be in the same space quietly - no pressure to talk. Even parallel activities (both reading, working, relaxing) provide comfort.`);
+        suggestions.push(`Send them a simple "I'm here if you need me, no pressure to talk" message. Sometimes knowing someone's available is enough.`);
       }
     }
 
@@ -990,11 +990,11 @@ class AISuggestionService {
 
     if (needs.includes('be_close') || needs.includes('be_present_virtual')) {
       if (isLongDistance) {
-        suggestions.push(`Set up a long, pressure-free video call - fall asleep on FaceTime together, eat meals together virtually, just be in each other's presence even from far away.`);
+        suggestions.push(`Set up a video call when you both have time - even 30 minutes of face-to-face connection helps. Or fall asleep on FaceTime together if that works for your schedules.`);
         suggestions.push(`Send them your presence in other ways - voice messages throughout the day, photos of what you're doing, make them feel like they're part of your day even from a distance.`);
       } else {
-        suggestions.push(`Clear your schedule and just BE with them - full attention, no phone, no distractions. Physical closeness and emotional presence, nothing else.`);
-        suggestions.push(`Do something side-by-side quietly - cook together, watch something, take a walk. Sometimes closeness doesn't need conversation, just proximity.`);
+        suggestions.push(`Make time to be together soon - even an hour of focused attention matters. Coffee, a meal, a walk, or just being in the same space. Quality over quantity.`);
+        suggestions.push(`Until you can meet up, stay connected through the day - quick texts, voice notes, share little moments. Consistent small touchpoints bridge the gap between visits.`);
       }
     }
 
