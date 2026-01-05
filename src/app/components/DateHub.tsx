@@ -46,9 +46,9 @@ export function DateHub({ onBack, onSelectMode, partnerName }: DateHubProps) {
               <Sparkles className="w-6 h-6 text-purple-600" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1 text-lg">Personalized Suggestions</h3>
+              <h3 className="font-semibold mb-1 text-lg">Plan a Date</h3>
               <p className="text-sm text-gray-600 mb-3">
-                Browse date ideas tailored to {partnerName}'s preferences and interests
+                Get personalized date suggestions based on your preferences
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
@@ -72,7 +72,7 @@ export function DateHub({ onBack, onSelectMode, partnerName }: DateHubProps) {
               <Users className="w-6 h-6 text-pink-600" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1 text-lg">Choose Together</h3>
+              <h3 className="font-semibold mb-1 text-lg">Choosing Together</h3>
               <p className="text-sm text-gray-600 mb-3">
                 Swipe on date ideas together and find your perfect match
               </p>
@@ -99,11 +99,11 @@ export function DateHub({ onBack, onSelectMode, partnerName }: DateHubProps) {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold mb-1 text-lg flex items-center gap-2">
-                Challenge Us
+                Random Challenge
                 <span className="text-xs px-2 py-1 bg-orange-200 text-orange-700 rounded-full">NEW</span>
               </h3>
               <p className="text-sm text-gray-600 mb-3">
-                Feeling adventurous? We'll pick a random date you HAVE to do!
+                Take on a spontaneous date challenge that you can't back out of!
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">

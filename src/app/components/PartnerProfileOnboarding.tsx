@@ -43,7 +43,11 @@ import type {
   CommunicationStyle,
   FrequencyPreference,
   StressNeed,
-  CheckinTime
+  CheckinTime,
+  RelationshipStatus,
+  CohabitationStatus,
+  ProximityStatus,
+  SeeingFrequency
 } from '../types/partnerProfile';
 import { partnerProfileService } from '../services/partnerProfileService';
 import { PartnerProfileComparison } from './PartnerProfileComparison';
@@ -58,6 +62,7 @@ interface PartnerProfileOnboardingProps {
 
 type Step =
   | 'welcome'
+  | 'relationship_details'
   | 'basic_info'
   | 'love_language_quiz'
   | 'hobbies'
@@ -262,6 +267,96 @@ const FREQUENCY_OPTIONS: { value: FrequencyPreference; label: string; descriptio
   }
 ];
 
+const RELATIONSHIP_STATUS_OPTIONS: { value: RelationshipStatus; label: string; description: string; icon: string }[] = [
+  {
+    value: 'dating',
+    label: 'Dating',
+    description: 'Currently dating, not married',
+    icon: '💕'
+  },
+  {
+    value: 'married',
+    label: 'Married',
+    description: 'Married or in a committed marriage',
+    icon: '💍'
+  }
+];
+
+const COHABITATION_STATUS_OPTIONS: { value: CohabitationStatus; label: string; description: string; icon: string }[] = [
+  {
+    value: 'living_together',
+    label: 'Living Together',
+    description: 'We share the same home',
+    icon: '🏠'
+  },
+  {
+    value: 'living_apart',
+    label: 'Living Apart',
+    description: 'We have separate living arrangements',
+    icon: '🏘️'
+  }
+];
+
+const PROXIMITY_STATUS_OPTIONS: { value: ProximityStatus; label: string; description: string; icon: string }[] = [
+  {
+    value: 'same_city',
+    label: 'Same City/Area',
+    description: 'We live in the same city or nearby',
+    icon: '🏙️'
+  },
+  {
+    value: 'different_cities',
+    label: 'Different Cities',
+    description: 'Different cities, same state/country',
+    icon: '🚗'
+  },
+  {
+    value: 'long_distance',
+    label: 'Long Distance',
+    description: 'Long distance relationship',
+    icon: '✈️'
+  }
+];
+
+const SEEING_FREQUENCY_OPTIONS: { value: SeeingFrequency; label: string; description: string; icon: string }[] = [
+  {
+    value: 'daily',
+    label: 'Daily',
+    description: 'We see each other every day',
+    icon: '📅'
+  },
+  {
+    value: 'few_times_week',
+    label: 'Few Times a Week',
+    description: 'Several times per week',
+    icon: '🗓️'
+  },
+  {
+    value: 'once_week',
+    label: 'Once a Week',
+    description: 'About once per week',
+    icon: '📅'
+  },
+  {
+    value: 'few_times_month',
+    label: 'Few Times a Month',
+    description: 'Several times per month',
+    icon: '🗓️'
+  },
+  {
+    value: 'once_month',
+    label: 'Once a Month',
+    description: 'About once per month',
+    icon: '📅'
+  },
+  {
+    value: 'rarely',
+    label: 'Rarely',
+    description: 'We rarely see each other',
+    icon: '🌙'
+  }
+];
+
 export function PartnerProfileOnboarding({
   userId,
   coupleId,
@@ -271,6 +366,12 @@ export function PartnerProfileOnboarding({
   const [step, setStep] = useState<Step>('welcome');
   const [saving, setSaving] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+
+  // Relationship details
+  const [relationshipStatus, setRelationshipStatus] = useState<RelationshipStatus | null>(null);
+  const [cohabitationStatus, setCohabitationStatus] = useState<CohabitationStatus | null>(null);
+  const [proximityStatus, setProximityStatus] = useState<ProximityStatus | null>(null);
+  const [seeingFrequency, setSeeingFrequency] = useState<SeeingFrequency | null>(null);
 
   // Basic info
   const [displayName, setDisplayName] = useState('');
@@ -409,6 +510,10 @@ export function PartnerProfileOnboarding({
       const profileData = {
         user_id: userId,
         couple_id: null, // Will be set when they join/create a couple
+        relationship_status: relationshipStatus,
+        cohabitation_status: cohabitationStatus,
+        proximity_status: proximityStatus,
+        seeing_frequency: seeingFrequency,
         love_language_primary: loveLanguagePrimary,
         love_language_secondary: loveLanguageSecondary || null,
         communication_style: communicationStyle,
@@ -466,6 +571,10 @@ export function PartnerProfileOnboarding({
         user_id: userId,
         name: displayName,
         birthday: birthday || null,
+        relationship_status: relationshipStatus,
+        cohabitation_status: cohabitationStatus,
+        proximity_status: proximityStatus,
+        seeing_frequency: seeingFrequency,
         love_language_primary: loveLanguagePrimary,
         love_language_secondary: loveLanguageSecondary || null,
         preferences: {
@@ -533,7 +642,7 @@ export function PartnerProfileOnboarding({
   };
 
   const getStepProgress = () => {
-    const steps = ['welcome', 'basic_info', 'love_language_quiz', 'hobbies', 'favorites', 'likes_dislikes', 'communication_style', 'stress_needs', 'frequency'];
+    const steps = ['welcome', 'relationship_details', 'basic_info', 'love_language_quiz', 'hobbies', 'favorites', 'likes_dislikes', 'communication_style', 'stress_needs', 'frequency'];
     const currentIndex = steps.indexOf(step);
     return currentIndex >= 0 ? ((currentIndex + 1) / steps.length) * 100 : 0;
   };
@@ -648,12 +757,183 @@ export function PartnerProfileOnboarding({
                 </Card>
 
                 <Button
-                  onClick={() => setStep('basic_info')}
+                  onClick={() => setStep('relationship_details')}
                   className="px-8 py-6 text-lg bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white rounded-2xl shadow-lg shadow-rose-200"
                 >
                   Let's Begin
                   <ChevronRight className="w-5 h-5 ml-2" />
                 </Button>
+              </motion.div>
+            )}
+
+            {/* Relationship Details */}
+            {step === 'relationship_details' && (
+              <motion.div
+                key="relationship_details"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+              >
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center">
+                    <Heart className="w-8 h-8 text-white" />
+                  </div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">About Your Relationship</h1>
+                  <p className="text-gray-600">Help us understand your situation</p>
+                </div>
+
+                <div className="space-y-8 bg-white rounded-2xl p-6 shadow-xl">
+                  {/* Relationship Status */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                      Are you married or dating?
+                    </h3>
+                    <div className="grid gap-4">
+                      {RELATIONSHIP_STATUS_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => setRelationshipStatus(option.value)}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            relationshipStatus === option.value
+                              ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-200'
+                              : 'border-gray-200 hover:border-blue-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="text-3xl">{option.icon}</div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 text-lg mb-1">
+                                {option.label}
+                              </h4>
+                              <p className="text-sm text-gray-600">{option.description}</p>
+                            </div>
+                            {relationshipStatus === option.value && (
+                              <CheckCircle className="w-6 h-6 text-blue-500 flex-shrink-0 mt-1" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Cohabitation Status */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                      Do you live together?
+                    </h3>
+                    <div className="grid gap-4">
+                      {COHABITATION_STATUS_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => setCohabitationStatus(option.value)}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            cohabitationStatus === option.value
+                              ? 'border-green-500 bg-green-50 shadow-lg shadow-green-200'
+                              : 'border-gray-200 hover:border-green-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="text-3xl">{option.icon}</div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 text-lg mb-1">
+                                {option.label}
+                              </h4>
+                              <p className="text-sm text-gray-600">{option.description}</p>
+                            </div>
+                            {cohabitationStatus === option.value && (
+                              <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Proximity Status */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                      How close do you live to each other?
+                    </h3>
+                    <div className="grid gap-4">
+                      {PROXIMITY_STATUS_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => setProximityStatus(option.value)}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            proximityStatus === option.value
+                              ? 'border-purple-500 bg-purple-50 shadow-lg shadow-purple-200'
+                              : 'border-gray-200 hover:border-purple-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="text-3xl">{option.icon}</div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 text-lg mb-1">
+                                {option.label}
+                              </h4>
+                              <p className="text-sm text-gray-600">{option.description}</p>
+                            </div>
+                            {proximityStatus === option.value && (
+                              <CheckCircle className="w-6 h-6 text-purple-500 flex-shrink-0 mt-1" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Seeing Frequency */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                      How often do you see each other?
+                    </h3>
+                    <div className="grid gap-3">
+                      {SEEING_FREQUENCY_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => setSeeingFrequency(option.value)}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            seeingFrequency === option.value
+                              ? 'border-orange-500 bg-orange-50 shadow-lg shadow-orange-200'
+                              : 'border-gray-200 hover:border-orange-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="text-3xl">{option.icon}</div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 text-lg mb-1">
+                                {option.label}
+                              </h4>
+                              <p className="text-sm text-gray-600">{option.description}</p>
+                            </div>
+                            {seeingFrequency === option.value && (
+                              <CheckCircle className="w-6 h-6 text-orange-500 flex-shrink-0 mt-1" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep('welcome')}
+                    className="flex-1 h-12"
+                  >
+                    <ChevronLeft className="w-5 h-5 mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={() => setStep('basic_info')}
+                    disabled={!relationshipStatus || !cohabitationStatus || !proximityStatus || !seeingFrequency}
+                    className="flex-1 h-12 bg-gradient-to-r from-rose-500 to-pink-500 text-white"
+                  >
+                    Continue
+                    <ChevronRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
               </motion.div>
             )}
 
@@ -711,7 +991,7 @@ export function PartnerProfileOnboarding({
                 <div className="flex gap-3 mt-6">
                   <Button
                     variant="outline"
-                    onClick={() => setStep('welcome')}
+                    onClick={() => setStep('relationship_details')}
                     className="flex-1 h-12"
                   >
                     <ChevronLeft className="w-5 h-5 mr-2" />

@@ -42,6 +42,7 @@ import AsyncDateIdeas from './AsyncDateIdeas';
 import LocationDateSuggestions from './LocationDateSuggestions';
 import PartnerCapacityView from './PartnerCapacityView';
 import { SubmitNeedModal } from './SubmitNeedModal';
+import { useAllSuggestions } from '../hooks/useSuggestions';
 
 interface HomeProps {
   userName: string;
@@ -57,6 +58,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const { partnerName: partnerNameFromOnboarding } = usePartnerOnboarding();
   const { unreadCount } = useUnreadMessages();
   const { pendingCount } = useUnreadRequests();
+  const { dateSuggestions } = useAllSuggestions();
   const hasCompletedDailyQuestion = hasAnswered && hasGuessed;
 
   const partnerName = partnerNameFromOnboarding || partnerNameProp;
@@ -315,7 +317,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-          >
+          > (fix: resolve homepage dates display and date tab functionality)
             <button
               onClick={() => onNavigate('daily-question')}
               className="w-full text-left"
