@@ -467,49 +467,55 @@ class AISuggestionService {
 
     switch (needCategory) {
       case 'quality_time':
-        // Specific, actionable quality time suggestions
-        if (favoriteActivities.length > 0) {
-          const activity = favoriteActivities[0];
-          actions.push({
-            type: 'schedule_date',
-            description: `Schedule a specific time this week to ${activity.toLowerCase()} together. Put it in your calendar with a reminder, and protect that time - no phones, no distractions.`,
-            reasoning: `You know they love ${activity}, so suggesting this shows you remember what matters to them`,
-            loveLanguageAlignment: 'quality_time'
-          });
-        }
-
-        if (energyLevel === 'low_energy' || energyLevel === 'varies') {
-          actions.push({
-            type: 'schedule_date',
-            description: `Plan low-key quality time - even 30-60 minutes works. Order food, watch something together (in person or virtually), or just be in the same space. Low pressure, high connection.`,
-            reasoning: `They appreciate low-key quality time, and even brief focused time together matters more than long elaborate dates`,
-            loveLanguageAlignment: 'quality_time'
-          });
-        } else {
-          actions.push({
-            type: 'schedule_date',
-            description: `Plan an engaging activity when you both have time - try that thing they've been wanting to do, grab tickets for something new, or explore together. Even a few hours creates memories.`,
-            reasoning: `They have energy for adventure, so meaningful shared experiences will resonate - duration matters less than engagement`,
-            loveLanguageAlignment: 'quality_time'
-          });
-        }
-
-        // Add a "right now" action for urgent needs
+        // Prioritize immediate, virtual quality time
         if (urgency === 'important') {
           actions.push({
             type: 'send_message',
             description: `Call or video call them today. Don't wait. Let them hear your voice and see your face. Make it happen within the next few hours.`,
-            reasoning: `They marked this as important - immediate action shows you're taking it seriously`,
+            reasoning: `They marked this as important - immediate virtual connection shows you're taking it seriously`,
             loveLanguageAlignment: 'quality_time'
           });
         } else {
           actions.push({
             type: 'send_message',
-            description: `Start a daily 15-minute ritual - a morning coffee video call, an evening debrief, or just texting throughout the day. Consistency builds connection.`,
-            reasoning: `Small, consistent touchpoints often mean more than occasional big gestures`,
+            description: `Start a daily 15-minute video call ritual - morning coffee check-in or evening debrief. Virtual but consistent quality time builds deep connection.`,
+            reasoning: `Small, consistent touchpoints often mean more than occasional big gestures - and video calls work anytime`,
             loveLanguageAlignment: 'quality_time'
           });
         }
+
+        // Virtual activity together
+        if (favoriteActivities.length > 0) {
+          const activity = favoriteActivities[0];
+          actions.push({
+            type: 'schedule_date',
+            description: `Schedule virtual ${activity.toLowerCase()} time - watch it together over video, share screens, or find an online version you can both do simultaneously.`,
+            reasoning: `You know they love ${activity}, and doing it together virtually shows you're making an effort despite distance or busy schedules`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else if (energyLevel === 'low_energy' || energyLevel === 'varies') {
+          actions.push({
+            type: 'schedule_date',
+            description: `Set up a cozy virtual date - order food to their place and yours, press play on the same movie, and video call. Low energy, high connection.`,
+            reasoning: `They appreciate low-key quality time, and virtual dates remove the commute/prep stress while maximizing presence`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan an engaging virtual experience - online escape room, virtual museum tour, or cook the same recipe together over video. Creative digital dates create memories too.`,
+            reasoning: `They have energy for adventure, and virtual experiences can be just as engaging while being schedule-friendly`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
+
+        // Optional in-person if time allows
+        actions.push({
+          type: 'schedule_date',
+          description: `When schedules align, plan in-person time too - but don't let "finding the perfect time" delay virtual connection now.`,
+          reasoning: `In-person is great, but waiting for it can mean missing opportunities for connection today`,
+          loveLanguageAlignment: 'quality_time'
+        });
         break;
 
       case 'affection':
@@ -544,16 +550,16 @@ class AISuggestionService {
           }
         } else if (loveLanguage === 'touch') {
           actions.push({
-            type: 'schedule_date',
-            description: `Plan your next in-person time together NOW - even if it's weeks away. Having something to count down to helps. Until then, send them photos/videos showing your affection.`,
-            reasoning: `Physical touch is their language, so planning the next hug matters immensely`,
+            type: 'send_message',
+            description: `Send them something tactile that bridges the distance - mail them a hoodie/shirt you've worn, a handwritten letter they can hold, or order a weighted blanket/comfort item with a note saying "until I can hug you myself."`,
+            reasoning: `Physical touch is their language - when you can't be there physically, sending something tangible they can touch helps. Then plan your next in-person visit.`,
             loveLanguageAlignment: 'touch'
           });
         } else if (loveLanguage === 'quality_time') {
           actions.push({
             type: 'schedule_date',
-            description: `Schedule focused time together this week - even 1 hour of no multitasking, no half-attention matters. Coffee, a meal, a walk. Give them the gift of your full, undivided focus.`,
-            reasoning: `For them, quality time IS affection - your presence is how they feel loved, and quality beats quantity`,
+            description: `Schedule a video date this week - even 30-60 minutes of focused, phone-down, camera-on time. Virtual coffee, meal together, or just talking. Full attention matters more than location.`,
+            reasoning: `For them, quality time IS affection - your undivided presence (even virtual) is how they feel loved. Don't wait for the "perfect" in-person moment.`,
             loveLanguageAlignment: 'quality_time'
           });
         } else if (loveLanguage === 'acts') {
@@ -899,46 +905,39 @@ class AISuggestionService {
     // Generate suggestions based on needs
     if (needs.includes('comfort')) {
       if (loveLanguage === 'gifts' || loveLanguage === 'acts') {
-        if (isLongDistance) {
-          if (budgetComfort === 'budget_friendly') {
-            suggestions.push(`Send them a heartfelt care package - handwrite a letter, include their favorite tea or snacks you know they love, maybe photos of you two. Personal > expensive.`);
-          } else {
-            suggestions.push(`Order delivery of their ultimate comfort meal from their favorite restaurant TODAY - don't ask, just surprise them with exactly what they'd want right now.`);
-          }
+        if (budgetComfort === 'budget_friendly') {
+          suggestions.push(`Send them a heartfelt digital message or create something for them - a playlist of comforting songs, a photo collage of happy memories, or a handwritten letter (photo and text it). Personal > expensive.`);
         } else {
-          suggestions.push(`Show up with their favorite comfort food - the specific thing they always crave when they're down. Bring it over, no grand gestures needed, just "I brought this for you."`);
+          suggestions.push(`Order delivery of their comfort meal from their favorite restaurant TODAY - don't ask, just surprise them. Include a note: "Thought you could use this right now."`);
         }
       } else if (loveLanguage === 'quality_time') {
-        if (isLongDistance) {
-          suggestions.push(`Set up a long video call tonight - pick the same movie or show, press play together, and just be there. Low pressure, high comfort.`);
-        } else {
-          suggestions.push(`Schedule quality time together - even 30-60 minutes works. Watch something together, grab a meal, or just be in the same space. Presence matters more than duration.`);
-        }
+        suggestions.push(`Set up a video call tonight - pick the same movie or show, press play together, and just be there. Low pressure, high comfort. Even 30-60 minutes helps.`);
       } else if (loveLanguage === 'words') {
         suggestions.push(`Send them a voice message telling them specifically why they're going to get through this, referencing times they've been strong before. Make it personal, not generic.`);
       } else if (loveLanguage === 'touch') {
-        if (isLongDistance) {
-          suggestions.push(`Plan your next visit together RIGHT NOW - even if it's weeks away. Having a countdown to the next hug will help. Send the calendar invite.`);
-        } else {
-          suggestions.push(`When you see them next, offer physical comfort - a long hug, holding hands, or just sitting close. Even brief physical connection helps when schedules are busy.`);
-        }
+        suggestions.push(`Send them something physical that represents closeness - mail them something you've worn (like a hoodie that smells like you), or plan your next visit RIGHT NOW so you both have a hug to count down to.`);
+      }
+
+      // Add one optional in-person suggestion if applicable
+      if (!isLongDistance && suggestions.length < 4) {
+        suggestions.push(`If you can meet up soon, bring their favorite comfort item in person - but don't wait to reach out digitally first.`);
       }
     }
 
     if (needs.includes('distraction')) {
+      // Prioritize immediate, non-proximity distractions
+      suggestions.push(`Send them something funny RIGHT NOW - memes, TikToks, or videos that match your shared humor. Laughter is instant relief.`);
+
       if (favoriteActivities.length > 0) {
         const activity = favoriteActivities[0];
-        if (isLongDistance) {
-          suggestions.push(`Get them out of their head - if they love ${activity.toLowerCase()}, find a way to do it virtually together, or send them something related to it with a "thinking of you" note.`);
-        } else {
-          suggestions.push(`Suggest doing ${activity.toLowerCase()} together when you both have time, or send them something fun related to it. Even planning it gives them something positive to think about.`);
-        }
+        suggestions.push(`Send them something related to ${activity.toLowerCase()} to give them something positive to focus on - an article, video, or "this made me think of you" message.`);
       } else {
-        if (isLongDistance) {
-          suggestions.push(`Play an online game together or start a funny show simultaneously over video. Keep it light, keep them engaged, give their brain a break.`);
-        } else {
-          suggestions.push(`Suggest a quick distraction activity - coffee date, short walk, or trying something new. Even 30 minutes of fun together can shift their energy.`);
-        }
+        suggestions.push(`Play an online game together or start a funny show at the same time over video/FaceTime. Keep it light, give their brain a break.`);
+      }
+
+      // Optional in-person suggestion only if not long distance
+      if (!isLongDistance && suggestions.length < 4) {
+        suggestions.push(`When you both have time, do something engaging together in person - but start with virtual connection now.`);
       }
     }
 
@@ -961,12 +960,12 @@ class AISuggestionService {
     }
 
     if (needs.includes('no_talk')) {
-      if (isLongDistance) {
-        suggestions.push(`Send a no-pressure care message: "No need to respond. Just want you to know I'm thinking of you and you don't have to be 'on' right now." Then don't expect a reply.`);
-        suggestions.push(`Offer to be on FaceTime/video together doing your own things if they want company - working, watching stuff, just existing in the same virtual space. No talking required.`);
-      } else {
-        suggestions.push(`If you get time together, offer to just be in the same space quietly - no pressure to talk. Even parallel activities (both reading, working, relaxing) provide comfort.`);
-        suggestions.push(`Send them a simple "I'm here if you need me, no pressure to talk" message. Sometimes knowing someone's available is enough.`);
+      suggestions.push(`Send a no-pressure care message: "No need to respond. Just want you to know I'm thinking of you and you don't have to be 'on' right now." Then don't expect a reply.`);
+      suggestions.push(`Offer to be on FaceTime/video together doing your own things if they want company - working, watching stuff, just existing in the same virtual space. No talking required.`);
+
+      // Optional in-person suggestion
+      if (!isLongDistance && suggestions.length < 4) {
+        suggestions.push(`If you get time together, you can offer to just be in the same space quietly - but respect if they need solo space too.`);
       }
     }
 
@@ -989,12 +988,12 @@ class AISuggestionService {
     }
 
     if (needs.includes('be_close') || needs.includes('be_present_virtual')) {
-      if (isLongDistance) {
-        suggestions.push(`Set up a video call when you both have time - even 30 minutes of face-to-face connection helps. Or fall asleep on FaceTime together if that works for your schedules.`);
-        suggestions.push(`Send them your presence in other ways - voice messages throughout the day, photos of what you're doing, make them feel like they're part of your day even from a distance.`);
-      } else {
-        suggestions.push(`Make time to be together soon - even an hour of focused attention matters. Coffee, a meal, a walk, or just being in the same space. Quality over quantity.`);
-        suggestions.push(`Until you can meet up, stay connected through the day - quick texts, voice notes, share little moments. Consistent small touchpoints bridge the gap between visits.`);
+      suggestions.push(`Set up a video call when you both have time - even 30 minutes of face-to-face connection helps. Or fall asleep on FaceTime together if your schedules allow.`);
+      suggestions.push(`Send them your presence throughout today - voice messages, photos of what you're doing, share little moments. Make them feel part of your day even when apart.`);
+
+      // Optional in-person suggestion
+      if (!isLongDistance && suggestions.length < 4) {
+        suggestions.push(`When you can meet up, prioritize quality time together - but start with digital closeness now rather than waiting.`);
       }
     }
 

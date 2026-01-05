@@ -81,42 +81,34 @@ const getSuggestions = (mood: string, needs: string[], isLongDistance: boolean) 
   const suggestions: string[] = [];
 
   if (needs.includes('comfort')) {
-    if (isLongDistance) {
-      suggestions.push('Send a care package or order comfort food delivery');
-      suggestions.push('Watch the same movie together on video call');
-    } else {
-      suggestions.push('Bring or send their favorite comfort food when you can');
-      suggestions.push('Plan a cozy movie or show watch together - in person or video call');
+    suggestions.push('Order delivery of their comfort food TODAY with a sweet note');
+    suggestions.push('Watch the same movie together on video call - press play at the same time');
+    if (!isLongDistance) {
+      suggestions.push('When you can meet up, bring their favorite comfort item in person');
     }
   }
 
   if (needs.includes('distraction')) {
-    if (isLongDistance) {
-      suggestions.push('Play an online game together');
-      suggestions.push('Send funny memes or videos');
-    } else {
-      suggestions.push('Suggest a fun activity or outing');
-      suggestions.push('Watch a comedy together');
+    suggestions.push('Send them funny content RIGHT NOW - memes, videos, TikToks');
+    suggestions.push('Play an online game together or watch a comedy at the same time');
+    if (!isLongDistance) {
+      suggestions.push('Suggest a quick fun outing when you both have time');
     }
   }
 
   if (needs.includes('no_talk')) {
-    if (isLongDistance) {
-      suggestions.push('Send a care text: "No need to reply, just thinking of you"');
-      suggestions.push('Offer to be on FaceTime together doing your own things');
-    } else {
-      suggestions.push('Offer to be together quietly when you both have time - no pressure to talk');
-      suggestions.push('Send a supportive message with no expectation of response');
+    suggestions.push('Send a care text: "No need to reply, just thinking of you"');
+    suggestions.push('Offer to be on FaceTime doing your own things - no talking required');
+    if (!isLongDistance) {
+      suggestions.push('When together, offer to just sit quietly in the same space');
     }
   }
 
   if (needs.includes('be_close') || needs.includes('be_present_virtual')) {
-    if (isLongDistance) {
-      suggestions.push('Set up a video call when you both have time - just being there');
-      suggestions.push('Send a voice note instead of text');
-    } else {
-      suggestions.push('Make time to see them soon - even brief quality time helps');
-      suggestions.push('Stay connected through the day with texts, voice notes, photos');
+    suggestions.push('Set up a video call - even 30 minutes of face time helps');
+    suggestions.push('Send voice notes and photos throughout the day to stay connected');
+    if (!isLongDistance) {
+      suggestions.push('Plan to meet up soon for quality time together');
     }
   }
 
