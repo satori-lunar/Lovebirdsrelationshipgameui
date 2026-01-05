@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Heart, Lightbulb, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { api } from '../services/api';
+import { aiSuggestionService } from '../services/aiSuggestionService';
 
 const moods = {
   energized: {
@@ -141,6 +142,7 @@ const getSuggestions = (mood: string, needs: string[], isLongDistance: boolean) 
 interface PartnerCapacityViewProps {
   checkin: {
     id: string;
+    user_id: string;
     mood: string;
     needs: string[];
     context?: string;
@@ -157,7 +159,35 @@ export default function PartnerCapacityView({
   isLongDistance = false
 }: PartnerCapacityViewProps) {
   const mood = moods[checkin.mood as keyof typeof moods];
-  const suggestions = getSuggestions(checkin.mood, checkin.needs, isLongDistance);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
+
+  // Fetch AI-generated suggestions
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        setIsLoadingSuggestions(true);
+        const suggestions = await aiSuggestionService.generateCapacityCheckInSuggestions(
+          checkin.mood,
+          checkin.needs,
+          checkin.context,
+          checkin.user_id,
+          isLongDistance
+        );
+        setAiSuggestions(suggestions);
+      } catch (error) {
+        console.error('Error fetching capacity suggestions:', error);
+        // Fallback to hardcoded suggestions
+        setAiSuggestions(getSuggestions(checkin.mood, checkin.needs, isLongDistance));
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, [checkin.id, checkin.mood, checkin.needs, checkin.context, checkin.user_id, isLongDistance]);
+
+  const suggestions = aiSuggestions.length > 0 ? aiSuggestions : getSuggestions(checkin.mood, checkin.needs, isLongDistance);
 
   useEffect(() => {
     // Mark as viewed when component mounts
@@ -251,14 +281,21 @@ export default function PartnerCapacityView({
           </div>
 
           <div className="space-y-3">
-            {suggestions.map((suggestion, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Heart className="w-4 h-4 text-white" fill="white" />
-                </div>
-                <p className="text-gray-700">{suggestion}</p>
+            {isLoadingSuggestions ? (
+              <div className="flex items-center gap-3 text-gray-500">
+                <div className="w-6 h-6 rounded-full bg-purple-200 animate-pulse flex-shrink-0"></div>
+                <p className="italic">Generating personalized suggestions...</p>
               </div>
-            ))}
+            ) : (
+              suggestions.map((suggestion, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Heart className="w-4 h-4 text-white" fill="white" />
+                  </div>
+                  <p className="text-gray-700">{suggestion}</p>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">

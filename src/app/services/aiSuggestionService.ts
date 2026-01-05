@@ -849,6 +849,183 @@ class AISuggestionService {
     return reasoning;
   }
 
+  /**
+   * Generate detailed suggestions for capacity check-ins
+   */
+  async generateCapacityCheckInSuggestions(
+    mood: string,
+    needs: string[],
+    context: string | undefined,
+    partnerId: string,
+    isLongDistance: boolean
+  ): Promise<string[]> {
+    console.log('[aiSuggestionService] Generating capacity check-in suggestions', {
+      mood,
+      needs,
+      hasContext: !!context,
+      partnerId
+    });
+
+    // Fetch partner's profile for personalization
+    const { data: partnerProfile } = await api.supabase
+      .from('onboarding_responses')
+      .select('love_language_primary, communication_style, favorite_activities, budget_comfort, energy_level, name')
+      .eq('user_id', partnerId)
+      .maybeSingle();
+
+    const loveLanguage = partnerProfile?.love_language_primary || 'quality_time';
+    const favoriteActivities = partnerProfile?.favorite_activities || [];
+    const budgetComfort = partnerProfile?.budget_comfort || 'moderate';
+    const partnerName = partnerProfile?.name || 'your partner';
+
+    const suggestions: string[] = [];
+    const hasContext = context && context.trim().length > 0;
+
+    // Map mood to capacity level
+    const moodCapacity = {
+      energized: 95,
+      good: 80,
+      okay: 60,
+      stretched: 40,
+      low: 25,
+      overwhelmed: 15,
+      struggling: 10,
+      numb: 5
+    }[mood] || 50;
+
+    const isLowCapacity = moodCapacity < 40;
+    const isCritical = moodCapacity < 20;
+
+    // Generate suggestions based on needs
+    if (needs.includes('comfort')) {
+      if (loveLanguage === 'gifts' || loveLanguage === 'acts') {
+        if (isLongDistance) {
+          if (budgetComfort === 'budget_friendly') {
+            suggestions.push(`Send them a heartfelt care package - handwrite a letter, include their favorite tea or snacks you know they love, maybe photos of you two. Personal > expensive.`);
+          } else {
+            suggestions.push(`Order delivery of their ultimate comfort meal from their favorite restaurant TODAY - don't ask, just surprise them with exactly what they'd want right now.`);
+          }
+        } else {
+          suggestions.push(`Show up with their favorite comfort food - the specific thing they always crave when they're down. Bring it over, no grand gestures needed, just "I brought this for you."`);
+        }
+      } else if (loveLanguage === 'quality_time') {
+        if (isLongDistance) {
+          suggestions.push(`Set up a long video call tonight - pick the same movie or show, press play together, and just be there. Low pressure, high comfort.`);
+        } else {
+          suggestions.push(`Clear your schedule and have a cozy movie marathon together in bed - their choice of movies, their favorite snacks, phones off. Just be present.`);
+        }
+      } else if (loveLanguage === 'words') {
+        suggestions.push(`Send them a voice message telling them specifically why they're going to get through this, referencing times they've been strong before. Make it personal, not generic.`);
+      } else if (loveLanguage === 'touch') {
+        if (isLongDistance) {
+          suggestions.push(`Plan your next visit together RIGHT NOW - even if it's weeks away. Having a countdown to the next hug will help. Send the calendar invite.`);
+        } else {
+          suggestions.push(`Offer physical comfort - a long hug, lying together, gentle back rub. Sometimes touch says more than words can.`);
+        }
+      }
+    }
+
+    if (needs.includes('distraction')) {
+      if (favoriteActivities.length > 0) {
+        const activity = favoriteActivities[0];
+        if (isLongDistance) {
+          suggestions.push(`Get them out of their head - if they love ${activity.toLowerCase()}, find a way to do it virtually together, or send them something related to it with a "thinking of you" note.`);
+        } else {
+          suggestions.push(`Take them to do ${activity.toLowerCase()} - something engaging that gets them out of their head. Make the plan, handle the details, just tell them when to be ready.`);
+        }
+      } else {
+        if (isLongDistance) {
+          suggestions.push(`Play an online game together or start a funny show simultaneously over video. Keep it light, keep them engaged, give their brain a break.`);
+        } else {
+          suggestions.push(`Plan something engaging and fun - try that new place they mentioned, go to a comedy show, anything that shifts their energy. You handle the planning.`);
+        }
+      }
+    }
+
+    if (needs.includes('encouragement')) {
+      if (loveLanguage === 'words') {
+        if (hasContext) {
+          const contextSnippet = context.substring(0, 40);
+          suggestions.push(`Address what they shared specifically: "${contextSnippet}..." - remind them of the last time they faced something hard and crushed it. Be specific, not generic.`);
+        } else {
+          suggestions.push(`Text them 3 specific things they're handling well right now, even if they can't see it. Point out their strengths with real examples from this week.`);
+        }
+      } else {
+        suggestions.push(`Remind them of their wins - "Remember when you [specific past accomplishment]? You've got that same strength now." Make it real, not motivational-poster vague.`);
+      }
+    }
+
+    if (needs.includes('space')) {
+      suggestions.push(`Give them breathing room, but send one simple text: "Take all the time you need. I'm here whenever you're ready - no pressure." Then actually give them space.`);
+      suggestions.push(`Don't force conversation, but do something thoughtful in the background - order them food for later, handle something on their to-do list quietly, show care through action not words.`);
+    }
+
+    if (needs.includes('no_talk')) {
+      if (isLongDistance) {
+        suggestions.push(`Send a no-pressure care message: "No need to respond. Just want you to know I'm thinking of you and you don't have to be 'on' right now." Then don't expect a reply.`);
+        suggestions.push(`Be on FaceTime/video together doing your own things - working, watching stuff, just existing in the same virtual space. No talking required.`);
+      } else {
+        suggestions.push(`Just sit with them quietly - same couch, same room, doing your own thing. Gentle physical touch (hand holding, head on shoulder) but zero pressure to talk.`);
+        suggestions.push(`Put on their comfort show/movie and just be there together. Sometimes presence > conversation.`);
+      }
+    }
+
+    if (needs.includes('open_to_talk')) {
+      if (hasContext) {
+        suggestions.push(`Reference what they shared and go deeper: "You mentioned ${context.substring(0, 30)}... want to talk about that more? I'm listening, no judgment, no fixing."`);
+      } else {
+        suggestions.push(`Open the door gently: "I'm here if you want to talk about what's going on. And if you don't, that's okay too. What do you need from me right now?"`);
+      }
+      suggestions.push(`Ask them the right question: "How are you REALLY doing?" Then actually listen without trying to solve or minimize. Just hear them.`);
+    }
+
+    if (needs.includes('check_in')) {
+      if (isCritical) {
+        suggestions.push(`Check in RIGHT NOW - call them, don't text. At ${moodCapacity}% capacity, they need to hear your voice. Ask how they're holding up and actually stay on the line.`);
+      } else {
+        suggestions.push(`Check in daily with something simple: "How's your heart today?" or "What's your energy at right now?" Show consistent presence, not just one big check-in.`);
+      }
+      suggestions.push(`Don't just ask how they are - ask what would actually help: "What's one thing I could do today that would make this easier for you?" Then do it.`);
+    }
+
+    if (needs.includes('be_close') || needs.includes('be_present_virtual')) {
+      if (isLongDistance) {
+        suggestions.push(`Set up a long, pressure-free video call - fall asleep on FaceTime together, eat meals together virtually, just be in each other's presence even from far away.`);
+        suggestions.push(`Send them your presence in other ways - voice messages throughout the day, photos of what you're doing, make them feel like they're part of your day even from a distance.`);
+      } else {
+        suggestions.push(`Clear your schedule and just BE with them - full attention, no phone, no distractions. Physical closeness and emotional presence, nothing else.`);
+        suggestions.push(`Do something side-by-side quietly - cook together, watch something, take a walk. Sometimes closeness doesn't need conversation, just proximity.`);
+      }
+    }
+
+    // Add context-specific suggestion if they shared details
+    if (hasContext && suggestions.length < 3) {
+      suggestions.push(`Acknowledge what they're going through: "I hear that ${context.substring(0, 40).toLowerCase()}... I see you. How can I support you best right now?"`);
+    }
+
+    // Add low-capacity specific suggestions
+    if (isLowCapacity && !suggestions.some(s => s.includes('take care of'))) {
+      if (loveLanguage === 'acts') {
+        suggestions.push(`They're at ${moodCapacity}% capacity - take something off their plate. Offer to handle a specific task they're stressed about. "Let me take care of [specific thing]." Then do it.`);
+      }
+    }
+
+    // Critical mood - add urgent support
+    if (isCritical && !suggestions.some(s => s.includes('RIGHT NOW') || s.includes('TODAY'))) {
+      suggestions.push(`At ${moodCapacity}% capacity, this is serious. Don't wait - reach out TODAY with real support. Check if they need you to come over or just need to know someone's there.`);
+    }
+
+    // Ensure we have at least 3-4 suggestions
+    if (suggestions.length === 0) {
+      suggestions.push(`Ask them directly: "What would help most right now - company, distraction, space, or something else?" Then honor whatever they say.`);
+      suggestions.push(`Show up however they need - be flexible and responsive to what they're asking for, even if it's not what you'd want in their situation.`);
+      suggestions.push(`Stay consistent - check in tomorrow too. One gesture is nice, sustained support is what matters when capacity is low.`);
+    }
+
+    console.log('[aiSuggestionService] Generated capacity suggestions:', suggestions.length);
+    return suggestions.slice(0, 4);
+  }
+
   // ==================== PRIVATE HELPERS ====================
 
   private generateId(): string {
