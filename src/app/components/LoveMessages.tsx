@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Heart, Send, MessageCircle, Sparkles, Check, X } from 'lucide-react';
+import { ChevronLeft, Heart, Send, MessageCircle, Sparkles, Check, X, Reply, ThumbsUp, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Textarea } from './ui/textarea';
@@ -29,6 +29,17 @@ interface PartnerMessage {
   read: boolean;
   created_at: string;
   read_at?: string;
+  reply_to_id?: string | null;
+  is_saved?: boolean;
+  saved_at?: string | null;
+}
+
+interface MessageReaction {
+  id: string;
+  message_id: string;
+  user_id: string;
+  reaction_type: 'love' | 'like' | 'laugh' | 'celebrate' | 'support';
+  created_at: string;
 }
 
 const MESSAGE_TEMPLATES = {
@@ -68,6 +79,8 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
   const [selectedType, setSelectedType] = useState<'custom' | keyof typeof MESSAGE_TEMPLATES>('custom');
   const [showTemplates, setShowTemplates] = useState(false);
   const [activeTab, setActiveTab] = useState<'send' | 'received' | 'sent'>('send');
+  const [replyingTo, setReplyingTo] = useState<PartnerMessage | null>(null);
+  const [messageReactions, setMessageReactions] = useState<Record<string, MessageReaction[]>>({});
 
   // Fetch messages
   const { data: receivedMessages = [], isLoading: loadingReceived } = useQuery({
@@ -104,9 +117,36 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
     enabled: !!user?.id,
   });
 
+  // Fetch reactions for all messages
+  const { data: reactions = [] } = useQuery({
+    queryKey: ['message-reactions', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data, error } = await api.supabase
+        .from('message_reactions')
+        .select('*')
+        .or(`user_id.eq.${user.id},message_id.in.(${[...receivedMessages, ...sentMessages].map(m => m.id).join(',')})`);
+
+      if (error) throw error;
+
+      // Group reactions by message_id
+      const grouped: Record<string, MessageReaction[]> = {};
+      (data || []).forEach((reaction: MessageReaction) => {
+        if (!grouped[reaction.message_id]) {
+          grouped[reaction.message_id] = [];
+        }
+        grouped[reaction.message_id].push(reaction);
+      });
+      setMessageReactions(grouped);
+      return data || [];
+    },
+    enabled: !!user?.id && (receivedMessages.length > 0 || sentMessages.length > 0),
+  });
+
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ text, type }: { text: string; type: string }) => {
+    mutationFn: async ({ text, type, replyToId }: { text: string; type: string; replyToId?: string }) => {
       if (!user?.id || !partnerId) throw new Error('Not authenticated');
 
       const { data, error } = await api.supabase
@@ -116,6 +156,7 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
           receiver_id: partnerId,
           message_text: text,
           message_type: type,
+          reply_to_id: replyToId || null,
         })
         .select()
         .single();
@@ -128,6 +169,7 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
       setMessageText('');
       setSelectedType('custom');
       setShowTemplates(false);
+      setReplyingTo(null);
       toast.success('Message sent! 💌');
 
       // Award dragon XP for sending message
@@ -177,6 +219,69 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
     },
   });
 
+  // Add reaction mutation
+  const addReactionMutation = useMutation({
+    mutationFn: async ({ messageId, reactionType }: { messageId: string; reactionType: string }) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      // Check if user already reacted
+      const existingReaction = messageReactions[messageId]?.find(r => r.user_id === user.id);
+
+      if (existingReaction) {
+        // If same reaction, remove it
+        if (existingReaction.reaction_type === reactionType) {
+          const { error } = await api.supabase
+            .from('message_reactions')
+            .delete()
+            .eq('id', existingReaction.id);
+          if (error) throw error;
+          return;
+        } else {
+          // Update to new reaction
+          const { error } = await api.supabase
+            .from('message_reactions')
+            .update({ reaction_type: reactionType })
+            .eq('id', existingReaction.id);
+          if (error) throw error;
+          return;
+        }
+      }
+
+      // Add new reaction
+      const { error } = await api.supabase
+        .from('message_reactions')
+        .insert({
+          message_id: messageId,
+          user_id: user.id,
+          reaction_type: reactionType,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['message-reactions'] });
+    },
+  });
+
+  // Save/unsave message mutation
+  const saveMessageMutation = useMutation({
+    mutationFn: async ({ messageId, save }: { messageId: string; save: boolean }) => {
+      const { error } = await api.supabase
+        .from('partner_messages')
+        .update({
+          is_saved: save,
+          saved_at: save ? new Date().toISOString() : null,
+        })
+        .eq('id', messageId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      toast.success('Message saved!');
+    },
+  });
+
   const handleSendMessage = () => {
     if (!messageText.trim()) {
       toast.error('Please write a message');
@@ -186,7 +291,41 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
     sendMessageMutation.mutate({
       text: messageText,
       type: selectedType === 'custom' ? 'message' : selectedType,
+      replyToId: replyingTo?.id,
     });
+  };
+
+  const handleReply = (message: PartnerMessage) => {
+    setReplyingTo(message);
+    setActiveTab('send');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleReaction = (messageId: string, reactionType: 'love' | 'like') => {
+    addReactionMutation.mutate({ messageId, reactionType });
+  };
+
+  const handleSaveMessage = (messageId: string, currentlySaved: boolean) => {
+    saveMessageMutation.mutate({ messageId, save: !currentlySaved });
+  };
+
+  const getReactionEmoji = (type: string) => {
+    switch (type) {
+      case 'love': return '❤️';
+      case 'like': return '👍';
+      case 'laugh': return '😄';
+      case 'celebrate': return '🎉';
+      case 'support': return '🫂';
+      default: return '👍';
+    }
+  };
+
+  const getMessageReactions = (messageId: string) => {
+    return messageReactions[messageId] || [];
+  };
+
+  const hasUserReacted = (messageId: string, reactionType: string) => {
+    return getMessageReactions(messageId).some(r => r.user_id === user?.id && r.reaction_type === reactionType);
   };
 
   const handleTemplateSelect = (template: string) => {
@@ -286,6 +425,27 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
         {/* Send Tab */}
         {activeTab === 'send' && (
           <div className="space-y-4">
+            {/* Replying To Indicator */}
+            {replyingTo && (
+              <Card className="p-4 border-0 shadow-lg bg-blue-50">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Reply className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900">Replying to:</span>
+                    </div>
+                    <p className="text-sm text-gray-700 italic line-clamp-2">{replyingTo.message_text}</p>
+                  </div>
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="p-1 hover:bg-blue-100 rounded-full transition-colors"
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+              </Card>
+            )}
+
             {/* AI Suggestions */}
             <AISuggestions
               type="message"
@@ -406,39 +566,105 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
                 </p>
               </Card>
             ) : (
-              receivedMessages.map((message) => (
-                <Card
-                  key={message.id}
-                  className={`p-4 border-0 shadow-lg transition-all ${
-                    !message.read ? 'bg-pink-50 border-l-4 border-pink-500' : 'bg-white'
-                  }`}
-                  onClick={() => {
-                    if (!message.read) {
-                      markAsReadMutation.mutate(message.id);
-                    }
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="text-2xl">{getMessageIcon(message.message_type)}</div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-gray-600">
-                          From {partnerName || 'Your partner'}
+              receivedMessages.map((message) => {
+                const reactions = getMessageReactions(message.id);
+                const userLoved = hasUserReacted(message.id, 'love');
+                const userLiked = hasUserReacted(message.id, 'like');
+
+                return (
+                  <Card
+                    key={message.id}
+                    className={`p-4 border-0 shadow-lg transition-all ${
+                      !message.read ? 'bg-pink-50 border-l-4 border-pink-500' : 'bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="text-2xl">{getMessageIcon(message.message_type)}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm font-medium text-gray-600">
+                            From {partnerName || 'Your partner'}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            {!message.read && (
+                              <span className="text-xs bg-pink-500 text-white px-2 py-1 rounded-full">
+                                New
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleSaveMessage(message.id, message.is_saved || false)}
+                              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                              title={message.is_saved ? 'Unsave message' : 'Save message'}
+                            >
+                              {message.is_saved ? (
+                                <BookmarkCheck className="w-4 h-4 text-pink-500" />
+                              ) : (
+                                <Bookmark className="w-4 h-4 text-gray-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        <p
+                          className="text-gray-800 mb-2"
+                          onClick={() => {
+                            if (!message.read) {
+                              markAsReadMutation.mutate(message.id);
+                            }
+                          }}
+                        >
+                          {message.message_text}
                         </p>
-                        {!message.read && (
-                          <span className="text-xs bg-pink-500 text-white px-2 py-1 rounded-full">
-                            New
-                          </span>
+
+                        {/* Reactions Display */}
+                        {reactions.length > 0 && (
+                          <div className="flex gap-1 mb-2">
+                            {reactions.map((reaction) => (
+                              <span key={reaction.id} className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                                {getReactionEmoji(reaction.reaction_type)}
+                              </span>
+                            ))}
+                          </div>
                         )}
+
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-gray-400">
+                            {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                          </p>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleReaction(message.id, 'love')}
+                              className={`p-1 hover:bg-pink-100 rounded-full transition-colors ${
+                                userLoved ? 'bg-pink-100' : ''
+                              }`}
+                              title="Love this message"
+                            >
+                              <Heart className={`w-4 h-4 ${userLoved ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                            </button>
+                            <button
+                              onClick={() => handleReaction(message.id, 'like')}
+                              className={`p-1 hover:bg-blue-100 rounded-full transition-colors ${
+                                userLiked ? 'bg-blue-100' : ''
+                              }`}
+                              title="Like this message"
+                            >
+                              <ThumbsUp className={`w-4 h-4 ${userLiked ? 'fill-blue-500 text-blue-500' : 'text-gray-400'}`} />
+                            </button>
+                            <button
+                              onClick={() => handleReply(message)}
+                              className="p-1 hover:bg-purple-100 rounded-full transition-colors"
+                              title="Reply to this message"
+                            >
+                              <Reply className="w-4 h-4 text-gray-400" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-gray-800 mb-2">{message.message_text}</p>
-                      <p className="text-xs text-gray-400">
-                        {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
-                      </p>
                     </div>
-                  </div>
-                </Card>
-              ))
+                  </Card>
+                );
+              })
             )}
           </div>
         )}
@@ -459,22 +685,55 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
                 </p>
               </Card>
             ) : (
-              sentMessages.map((message) => (
-                <Card key={message.id} className="p-4 border-0 shadow-lg bg-white">
-                  <div className="flex items-start gap-3">
-                    <div className="text-2xl">{getMessageIcon(message.message_type)}</div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600 mb-2">
-                        To {partnerName || 'Your partner'}
-                      </p>
-                      <p className="text-gray-800 mb-2">{message.message_text}</p>
-                      <p className="text-xs text-gray-400">
-                        {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
-                      </p>
+              sentMessages.map((message) => {
+                const reactions = getMessageReactions(message.id);
+
+                return (
+                  <Card key={message.id} className="p-4 border-0 shadow-lg bg-white">
+                    <div className="flex items-start gap-3">
+                      <div className="text-2xl">{getMessageIcon(message.message_type)}</div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-sm font-medium text-gray-600">
+                            To {partnerName || 'Your partner'}
+                          </p>
+                          {message.reply_to_id && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full flex items-center gap-1">
+                              <Reply className="w-3 h-3" />
+                              Reply
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-800 mb-2">{message.message_text}</p>
+
+                        {/* Reactions Display */}
+                        {reactions.length > 0 && (
+                          <div className="flex gap-1 mb-2">
+                            {reactions.map((reaction) => (
+                              <span key={reaction.id} className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                                {getReactionEmoji(reaction.reaction_type)}
+                                {reaction.user_id !== user?.id && ' from partner'}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-gray-400">
+                            {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                          </p>
+                          {message.read && (
+                            <span className="text-xs text-green-600 flex items-center gap-1">
+                              <Check className="w-3 h-3" />
+                              Read
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))
+                  </Card>
+                );
+              })
             )}
           </div>
         )}

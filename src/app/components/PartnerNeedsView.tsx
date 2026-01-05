@@ -198,6 +198,29 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
                     <p className="text-sm text-gray-800">{need.aiSuggestion.receiverMessage}</p>
                   </div>
 
+                  {/* Suggested messages to send */}
+                  {need.aiSuggestion.suggestedMessages && need.aiSuggestion.suggestedMessages.length > 0 && (
+                    <div className="p-4 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl border border-pink-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MessageCircle className="w-4 h-4 text-pink-600" />
+                        <h4 className="font-semibold text-pink-900 text-sm">Suggested messages to send:</h4>
+                      </div>
+                      <div className="space-y-2">
+                        {need.aiSuggestion.suggestedMessages.map((msg: any, idx: number) => (
+                          <div key={idx} className="p-3 bg-white rounded-lg border border-pink-200 hover:border-pink-300 transition-colors">
+                            <p className="text-sm text-gray-800 mb-1">{msg.message}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500 capitalize">{msg.tone} tone</span>
+                              {msg.confidence && (
+                                <span className="text-xs text-gray-400">• {msg.confidence}% match</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* How to help with reasoning */}
                   {need.aiSuggestion.reasoning && (
                     <div className="p-4 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl border border-blue-200">
@@ -220,7 +243,7 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
                         {need.aiSuggestion.suggestedActions.map((action, idx) => (
                           <li key={idx} className="text-sm text-gray-800 flex items-start gap-2">
                             <span className="text-green-600 mt-0.5">•</span>
-                            <span>{action.action}</span>
+                            <span>{action.description || action.action}</span>
                           </li>
                         ))}
                       </ul>
