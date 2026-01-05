@@ -123,25 +123,41 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const { data, error } = await api.supabase
-        .from('message_reactions')
-        .select('*')
-        .or(`user_id.eq.${user.id},message_id.in.(${[...receivedMessages, ...sentMessages].map(m => m.id).join(',')})`);
+      try {
+        const messageIds = [...receivedMessages, ...sentMessages].map(m => m.id);
+        if (messageIds.length === 0) return [];
 
-      if (error) throw error;
+        const { data, error } = await api.supabase
+          .from('message_reactions')
+          .select('*')
+          .or(`user_id.eq.${user.id},message_id.in.(${messageIds.join(',')})`);
 
-      // Group reactions by message_id
-      const grouped: Record<string, MessageReaction[]> = {};
-      (data || []).forEach((reaction: MessageReaction) => {
-        if (!grouped[reaction.message_id]) {
-          grouped[reaction.message_id] = [];
+        if (error) {
+          // Table might not exist yet if migration hasn't been applied
+          if (error.code === 'PGRST204' || error.code === '42P01') {
+            console.log('Message reactions table not yet available. Please apply migration 022.');
+            return [];
+          }
+          throw error;
         }
-        grouped[reaction.message_id].push(reaction);
-      });
-      setMessageReactions(grouped);
-      return data || [];
+
+        // Group reactions by message_id
+        const grouped: Record<string, MessageReaction[]> = {};
+        (data || []).forEach((reaction: MessageReaction) => {
+          if (!grouped[reaction.message_id]) {
+            grouped[reaction.message_id] = [];
+          }
+          grouped[reaction.message_id].push(reaction);
+        });
+        setMessageReactions(grouped);
+        return data || [];
+      } catch (err) {
+        console.error('Error fetching reactions:', err);
+        return [];
+      }
     },
     enabled: !!user?.id && (receivedMessages.length > 0 || sentMessages.length > 0),
+    retry: false, // Don't retry if table doesn't exist
   });
 
   // Send message mutation
@@ -224,61 +240,87 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
     mutationFn: async ({ messageId, reactionType }: { messageId: string; reactionType: string }) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      // Check if user already reacted
-      const existingReaction = messageReactions[messageId]?.find(r => r.user_id === user.id);
+      try {
+        // Check if user already reacted
+        const existingReaction = messageReactions[messageId]?.find(r => r.user_id === user.id);
 
-      if (existingReaction) {
-        // If same reaction, remove it
-        if (existingReaction.reaction_type === reactionType) {
-          const { error } = await api.supabase
-            .from('message_reactions')
-            .delete()
-            .eq('id', existingReaction.id);
-          if (error) throw error;
-          return;
-        } else {
-          // Update to new reaction
-          const { error } = await api.supabase
-            .from('message_reactions')
-            .update({ reaction_type: reactionType })
-            .eq('id', existingReaction.id);
-          if (error) throw error;
+        if (existingReaction) {
+          // If same reaction, remove it
+          if (existingReaction.reaction_type === reactionType) {
+            const { error } = await api.supabase
+              .from('message_reactions')
+              .delete()
+              .eq('id', existingReaction.id);
+            if (error) throw error;
+            return;
+          } else {
+            // Update to new reaction
+            const { error } = await api.supabase
+              .from('message_reactions')
+              .update({ reaction_type: reactionType })
+              .eq('id', existingReaction.id);
+            if (error) throw error;
+            return;
+          }
+        }
+
+        // Add new reaction
+        const { error } = await api.supabase
+          .from('message_reactions')
+          .insert({
+            message_id: messageId,
+            user_id: user.id,
+            reaction_type: reactionType,
+          });
+
+        if (error) throw error;
+      } catch (err: any) {
+        // Handle case where table doesn't exist yet
+        if (err?.code === 'PGRST204' || err?.code === '42P01') {
+          toast.error('Please apply database migration 022 to enable reactions');
           return;
         }
+        throw err;
       }
-
-      // Add new reaction
-      const { error } = await api.supabase
-        .from('message_reactions')
-        .insert({
-          message_id: messageId,
-          user_id: user.id,
-          reaction_type: reactionType,
-        });
-
-      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['message-reactions'] });
+    },
+    onError: (error) => {
+      console.error('Error adding reaction:', error);
+      toast.error('Failed to add reaction');
     },
   });
 
   // Save/unsave message mutation
   const saveMessageMutation = useMutation({
     mutationFn: async ({ messageId, save }: { messageId: string; save: boolean }) => {
-      const { error } = await api.supabase
-        .from('partner_messages')
-        .update({
-          is_saved: save,
-          saved_at: save ? new Date().toISOString() : null,
-        })
-        .eq('id', messageId);
+      try {
+        const { error } = await api.supabase
+          .from('partner_messages')
+          .update({
+            is_saved: save,
+            saved_at: save ? new Date().toISOString() : null,
+          })
+          .eq('id', messageId);
 
-      if (error) throw error;
+        if (error) throw error;
+      } catch (err: any) {
+        // Handle case where columns don't exist yet
+        if (err?.code === '42703') {
+          toast.error('Please apply database migration 022 to enable saving messages');
+          return;
+        }
+        throw err;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       toast.success('Message saved!');
+    },
+    onError: (error) => {
+      console.error('Error saving message:', error);
+      toast.error('Failed to save message');
     },
   });
 
@@ -448,7 +490,7 @@ export function LoveMessages({ onBack }: LoveMessagesProps) {
 
             {/* AI Suggestions */}
             <AISuggestions
-              type="message"
+              type="affection"
               title="AI Message Ideas"
               onSelect={(suggestion: AISuggestion) => {
                 setMessageText(suggestion.text);

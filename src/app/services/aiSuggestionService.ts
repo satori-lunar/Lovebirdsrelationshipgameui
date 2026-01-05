@@ -97,45 +97,58 @@ class AISuggestionService {
     messageType?: string
   ): Promise<AISuggestion[]> {
     try {
+      console.log('💡 refreshSuggestions called:', { type, userId, targetId });
+
       // Get partner's onboarding data for context
-      const { data: partnerData } = await api.supabase
+      const { data: partnerData, error: fetchError } = await api.supabase
         .from('onboarding_responses')
         .select('love_language_primary, communication_style, name')
         .eq('user_id', targetId)
         .maybeSingle();
 
+      console.log('👤 Partner data fetched:', { partnerData, fetchError });
+
       const loveLanguage = (partnerData?.love_language_primary as LoveLanguage) || 'quality_time';
       const communicationStyle = (partnerData?.communication_style as CommunicationStyle) || 'gentle';
       const partnerName = partnerData?.name || 'them';
 
+      console.log('✨ Using:', { loveLanguage, communicationStyle, partnerName, type });
+
       // Get template variations
       const variations = getAllVariations(loveLanguage, type);
+      console.log('📝 Variations:', variations);
+
+      if (!variations) {
+        console.error('❌ No variations found for:', { loveLanguage, type });
+        return [];
+      }
 
       // Convert to simple AISuggestion format
       const suggestions: AISuggestion[] = [
         {
           id: this.generateId(),
-          text: variations.gentle.replace('{name}', partnerName),
+          text: (variations.gentle || 'No suggestion available').replace('{name}', partnerName),
           emoji: this.getEmojiForType(type),
           category: type,
         },
         {
           id: this.generateId(),
-          text: variations.playful.replace('{name}', partnerName),
+          text: (variations.playful || 'No suggestion available').replace('{name}', partnerName),
           emoji: this.getEmojiForType(type),
           category: type,
         },
         {
           id: this.generateId(),
-          text: variations.direct.replace('{name}', partnerName),
+          text: (variations.direct || 'No suggestion available').replace('{name}', partnerName),
           emoji: this.getEmojiForType(type),
           category: type,
         },
       ];
 
+      console.log('✅ Generated suggestions:', suggestions);
       return suggestions;
     } catch (error) {
-      console.error('Error generating suggestions:', error);
+      console.error('❌ Error generating suggestions:', error);
       return [];
     }
   }
@@ -148,6 +161,12 @@ class AISuggestionService {
     communicationStyle: CommunicationStyle;
     customPreferences?: Record<string, any>;
   }): Promise<AINeedSuggestion> {
+    console.log('🤖 Generating AI need response:', {
+      needCategory: need.needCategory,
+      loveLanguage: partnerProfile.loveLanguage,
+      communicationStyle: partnerProfile.communicationStyle
+    });
+
     // Special case: Space
     if (need.needCategory === 'space') {
       return this.generateSpaceResponse(need, partnerProfile);
@@ -155,6 +174,7 @@ class AISuggestionService {
 
     // Map need category to suggestion type
     const suggestionType = NEED_TO_SUGGESTION_TYPE[need.needCategory];
+    console.log('📝 Mapped to suggestion type:', suggestionType);
 
     // Generate message suggestions
     const context: SuggestionContext = {
@@ -165,6 +185,7 @@ class AISuggestionService {
     };
 
     const messages = await this.generateMessageSuggestions(context, suggestionType);
+    console.log('💬 Generated messages:', messages);
 
     // Generate action suggestions
     const actions = this.generateActionSuggestions(
@@ -175,7 +196,7 @@ class AISuggestionService {
     // Create receiver message (gentle summary)
     const receiverMessage = this.generateReceiverMessage(need, partnerProfile);
 
-    return {
+    const result = {
       receiverMessage,
       suggestedMessages: messages.slice(0, 3), // Top 3
       suggestedActions: actions,
@@ -184,6 +205,9 @@ class AISuggestionService {
         ? "If this feels urgent, consider reaching out directly beyond the app."
         : undefined
     };
+
+    console.log('✅ Final AI suggestion:', result);
+    return result;
   }
 
   /**
