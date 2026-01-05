@@ -31,6 +31,16 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
     try {
       setLoading(true);
       const pendingNeeds = await needsService.getPendingNeeds(userId);
+      console.log('📋 Loaded needs:', pendingNeeds);
+      pendingNeeds.forEach((need, idx) => {
+        console.log(`Need ${idx + 1}:`, {
+          category: need.needCategory,
+          hasAiSuggestion: !!need.aiSuggestion,
+          aiSuggestion: need.aiSuggestion,
+          suggestedMessages: need.aiSuggestion?.suggestedMessages,
+          messagesCount: need.aiSuggestion?.suggestedMessages?.length || 0
+        });
+      });
       setNeeds(pendingNeeds);
     } catch (error) {
       console.error('Failed to load partner needs:', error);

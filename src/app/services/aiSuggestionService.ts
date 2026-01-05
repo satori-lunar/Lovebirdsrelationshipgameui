@@ -148,6 +148,12 @@ class AISuggestionService {
     communicationStyle: CommunicationStyle;
     customPreferences?: Record<string, any>;
   }): Promise<AINeedSuggestion> {
+    console.log('🤖 Generating AI need response:', {
+      needCategory: need.needCategory,
+      loveLanguage: partnerProfile.loveLanguage,
+      communicationStyle: partnerProfile.communicationStyle
+    });
+
     // Special case: Space
     if (need.needCategory === 'space') {
       return this.generateSpaceResponse(need, partnerProfile);
@@ -155,6 +161,7 @@ class AISuggestionService {
 
     // Map need category to suggestion type
     const suggestionType = NEED_TO_SUGGESTION_TYPE[need.needCategory];
+    console.log('📝 Mapped to suggestion type:', suggestionType);
 
     // Generate message suggestions
     const context: SuggestionContext = {
@@ -165,6 +172,7 @@ class AISuggestionService {
     };
 
     const messages = await this.generateMessageSuggestions(context, suggestionType);
+    console.log('💬 Generated messages:', messages);
 
     // Generate action suggestions
     const actions = this.generateActionSuggestions(
@@ -175,7 +183,7 @@ class AISuggestionService {
     // Create receiver message (gentle summary)
     const receiverMessage = this.generateReceiverMessage(need, partnerProfile);
 
-    return {
+    const result = {
       receiverMessage,
       suggestedMessages: messages.slice(0, 3), // Top 3
       suggestedActions: actions,
@@ -184,6 +192,9 @@ class AISuggestionService {
         ? "If this feels urgent, consider reaching out directly beyond the app."
         : undefined
     };
+
+    console.log('✅ Final AI suggestion:', result);
+    return result;
   }
 
   /**
