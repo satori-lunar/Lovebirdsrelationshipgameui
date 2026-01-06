@@ -40,6 +40,21 @@ class NeedsService {
 
     console.log('👥 Receiver ID:', receiverId);
 
+    // Check if there's already a pending need from this requester to this receiver
+    const { data: existingNeed, error: checkError } = await api.supabase
+      .from('relationship_needs')
+      .select('id')
+      .eq('couple_id', request.coupleId)
+      .eq('requester_id', request.requesterId)
+      .eq('receiver_id', receiverId)
+      .in('status', ['pending', 'acknowledged'])
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('❌ Failed to check existing needs:', checkError);
+      // Continue with creating new need instead of throwing error
+    }
+
     // Try to get partner's onboarding data for personalization
     const { data: partnerOnboarding } = await api.supabase
       .from('onboarding_responses')
@@ -77,31 +92,64 @@ class NeedsService {
       }
     );
 
-    // Insert need with AI suggestion
-    const { data, error } = await api.supabase
-      .from('relationship_needs')
-      .insert({
-        couple_id: request.coupleId,
-        requester_id: request.requesterId,
-        receiver_id: receiverId,
-        need_category: request.needCategory,
-        custom_category: request.customCategory,
-        context: request.context,
-        urgency: request.urgency,
-        show_raw_need_to_partner: request.showRawNeedToPartner || false,
-        ai_suggestion: aiSuggestion,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    let data;
 
-    if (error) {
-      console.error('❌ Failed to insert need:', error);
-      throw error;
+    if (existingNeed) {
+      // Update existing pending need instead of creating a new one
+      console.log('🔄 Updating existing pending need:', existingNeed.id);
+
+      const { data: updated, error: updateError } = await api.supabase
+        .from('relationship_needs')
+        .update({
+          need_category: request.needCategory,
+          custom_category: request.customCategory,
+          context: request.context,
+          urgency: request.urgency,
+          show_raw_need_to_partner: request.showRawNeedToPartner || false,
+          ai_suggestion: aiSuggestion,
+          status: 'pending', // Reset to pending for new submission
+          acknowledged_at: null, // Clear acknowledgment since it's a new need
+          created_at: new Date().toISOString() // Update timestamp to show it was recently updated
+        })
+        .eq('id', existingNeed.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Failed to update existing need:', updateError);
+        throw updateError;
+      }
+
+      data = updated;
+      console.log('✅ Existing need updated successfully:', data.id);
+    } else {
+      // Insert new need
+      const { data: inserted, error: insertError } = await api.supabase
+        .from('relationship_needs')
+        .insert({
+          couple_id: request.coupleId,
+          requester_id: request.requesterId,
+          receiver_id: receiverId,
+          need_category: request.needCategory,
+          custom_category: request.customCategory,
+          context: request.context,
+          urgency: request.urgency,
+          show_raw_need_to_partner: request.showRawNeedToPartner || false,
+          ai_suggestion: aiSuggestion,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('❌ Failed to insert need:', insertError);
+        throw insertError;
+      }
+
+      data = inserted;
+      console.log('✅ Need submitted successfully:', data.id);
     }
-
-    console.log('✅ Need submitted successfully:', data.id);
 
     // TODO: Record engagement event (optional analytics)
     // await partnerProfileService.recordEngagementEvent(...)
