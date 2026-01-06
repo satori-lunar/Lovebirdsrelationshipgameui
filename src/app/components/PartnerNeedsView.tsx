@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, CheckCircle, Clock, AlertCircle, Sparkles, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, CheckCircle, Clock, AlertCircle, Sparkles, ChevronRight, Send, Copy } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
 import { needsService } from '../services/needsService';
@@ -70,6 +70,26 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
       console.error('Failed to update need:', error);
       toast.error('Failed to update');
     }
+  };
+
+  const handleCopyMessage = async (message: string) => {
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success("Message copied! You can paste it in your messaging app");
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+      toast.error('Failed to copy message');
+    }
+  };
+
+  const handleSendAppMessage = (message: string) => {
+    // For now, just copy to clipboard with a note about app messages
+    // In the future, this could integrate with the app's messaging system
+    navigator.clipboard.writeText(message).then(() => {
+      toast.success("Message copied! Send it through your favorite messaging app");
+    }).catch(() => {
+      toast.error('Failed to copy message');
+    });
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -218,12 +238,30 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
                       <div className="space-y-2">
                         {need.aiSuggestion.suggestedMessages.map((msg: any, idx: number) => (
                           <div key={idx} className="p-3 bg-white rounded-lg border border-pink-200 hover:border-pink-300 transition-colors">
-                            <p className="text-sm text-gray-800 mb-1">{msg.message}</p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500 capitalize">{msg.tone} tone</span>
-                              {msg.confidence && (
-                                <span className="text-xs text-gray-400">• {msg.confidence}% match</span>
-                              )}
+                            <p className="text-sm text-gray-800 mb-2">"{msg.message}"</p>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500 capitalize">{msg.tone} tone</span>
+                                {msg.confidence && (
+                                  <span className="text-xs text-gray-400">• {msg.confidence}% match</span>
+                                )}
+                              </div>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => handleSendAppMessage(msg.message)}
+                                  className="p-1.5 text-pink-600 hover:text-pink-700 hover:bg-pink-50 rounded transition-colors"
+                                  title="Send via messaging app"
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleCopyMessage(msg.message)}
+                                  className="p-1.5 text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded transition-colors"
+                                  title="Copy to clipboard"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}

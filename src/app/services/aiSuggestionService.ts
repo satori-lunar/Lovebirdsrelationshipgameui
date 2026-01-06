@@ -304,54 +304,67 @@ class AISuggestionService {
 
     const suggestions: MessageSuggestion[] = [];
 
-    // Create context-aware messages based on what they wrote
+        // Create short, conversational messages that can be sent immediately
     const hasContext = context && context.trim().length > 0;
 
     switch (needCategory) {
       case 'affection':
-        if (hasContext) {
-          // Use their specific context
-          if (loveLanguage === 'words') {
-            suggestions.push({
-              id: this.generateId(),
-              tone: communicationStyle,
-              message: `I hear you about ${context}. You mean the world to me, and I want you to feel loved every day. Let me show you better.`,
-              reasoning: `Acknowledges their specific concern while providing verbal affirmation`,
-              loveLanguageAlignment: loveLanguage,
-              suggestionType: 'affection',
-              confidence: 95
-            });
-          } else if (loveLanguage === 'touch') {
-            suggestions.push({
-              id: this.generateId(),
-              tone: communicationStyle,
-              message: `I understand you're feeling ${context}. I miss holding you close. Can we video call tonight? I want to feel closer to you.`,
-              reasoning: `Addresses their need while suggesting virtual closeness`,
-              loveLanguageAlignment: loveLanguage,
-              suggestionType: 'affection',
-              confidence: 95
-            });
-          } else if (loveLanguage === 'quality_time') {
-            suggestions.push({
-              id: this.generateId(),
-              tone: communicationStyle,
-              message: `You mentioned ${context}. Let's set aside real time together - just us, no distractions. You deserve my full attention.`,
-              reasoning: `Responds to their need with quality time commitment`,
-              loveLanguageAlignment: loveLanguage,
-              suggestionType: 'affection',
-              confidence: 95
-            });
-          }
-        } else {
-          // Generic affection messages
+        if (communicationStyle === 'playful') {
           suggestions.push({
             id: this.generateId(),
             tone: communicationStyle,
-            message: loveLanguage === 'words' ? `I love you more than I probably show. You're my person, and I want you to feel that every single day.` : `I want to make sure you feel loved. What would make you feel most cared for right now?`,
-            reasoning: `Provides affirmation and opens dialogue`,
+            message: `Missing my favorite person 💛`,
+            reasoning: `Short, sweet affirmation they can send immediately`,
             loveLanguageAlignment: loveLanguage,
             suggestionType: 'affection',
-            confidence: 85
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `You make my heart so full. Just wanted you to know 😊`,
+            reasoning: `Quick love note perfect for sending right away`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 90
+          });
+        } else if (communicationStyle === 'gentle') {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Thinking of you. You mean everything to me 💕`,
+            reasoning: `Soft, meaningful message ready to send`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Just wanted to remind you how much I care about you`,
+            reasoning: `Simple, genuine expression of love`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 90
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I love you. That's all. 💕`,
+            reasoning: `Direct, powerful message they can send immediately`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `You're my person. Just wanted you to know that.`,
+            reasoning: `Simple declaration of commitment`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 90
           });
         }
         break;
@@ -425,6 +438,77 @@ class AISuggestionService {
             loveLanguageAlignment: loveLanguage,
             suggestionType: 'appreciation',
             confidence: 85
+          });
+        }
+        break;
+
+      case 'fun':
+        // Short, conversational messages perfect for sending
+        if (communicationStyle === 'playful') {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Game night? You in? 🎲`,
+            reasoning: `Fun, casual invitation they can send immediately`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Movie marathon tonight? Your pick 🎬`,
+            reasoning: `Quick invitation for shared entertainment`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 90
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Let's do something silly. Ideas? 😜`,
+            reasoning: `Invites creativity and playfulness`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 88
+          });
+        } else if (communicationStyle === 'gentle') {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Would you like to watch a comedy together tonight?`,
+            reasoning: `Soft invitation to share laughter`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `How about a game night this week? I'd love that.`,
+            reasoning: `Gentle suggestion for quality time`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 90
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Let's plan something fun together.`,
+            reasoning: `Direct invitation to create joy`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I want to make you laugh tonight.`,
+            reasoning: `Shows intention to bring joy`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 90
           });
         }
         break;
