@@ -43,7 +43,7 @@ class NeedsService {
     // Check if there's already a pending need from this requester to this receiver
     const { data: existingNeed, error: checkError } = await api.supabase
       .from('relationship_needs')
-      .select('id')
+      .select('id, status, created_at')
       .eq('couple_id', request.coupleId)
       .eq('requester_id', request.requesterId)
       .eq('receiver_id', receiverId)
@@ -54,6 +54,13 @@ class NeedsService {
       console.error('❌ Failed to check existing needs:', checkError);
       // Continue with creating new need instead of throwing error
     }
+
+    console.log('🔍 Existing need check:', {
+      coupleId: request.coupleId,
+      requesterId: request.requesterId,
+      receiverId,
+      existingNeed: existingNeed ? { id: existingNeed.id, status: existingNeed.status, createdAt: existingNeed.created_at } : null
+    });
 
     // Try to get partner's onboarding data for personalization
     const { data: partnerOnboarding } = await api.supabase
@@ -159,18 +166,54 @@ class NeedsService {
 
   /**
    * Get pending needs for a user (where they are the receiver)
+   * Returns only the most recent pending need per requester to avoid crowding the UI
    */
   async getPendingNeeds(userId: string): Promise<RelationshipNeed[]> {
-    const { data, error } = await api.supabase
-      .from('relationship_needs')
-      .select('*')
-      .eq('receiver_id', userId)
-      .in('status', ['pending', 'acknowledged'])
-      .order('created_at', { ascending: false });
+    // First, get all relationships this user is part of
+    const { data: relationships, error: relError } = await api.supabase
+      .from('relationships')
+      .select('id, partner_a_id, partner_b_id')
+      .or(`partner_a_id.eq.${userId},partner_b_id.eq.${userId}`);
 
-    if (error) throw error;
+    if (relError) throw relError;
 
-    return (data || []).map(this.mapFromDatabase);
+    if (!relationships || relationships.length === 0) {
+      return [];
+    }
+
+    // For each relationship, get the most recent pending need from the other partner
+    const pendingNeeds: any[] = [];
+
+    for (const relationship of relationships) {
+      const partnerId = relationship.partner_a_id === userId
+        ? relationship.partner_b_id
+        : relationship.partner_a_id;
+
+      if (!partnerId) continue; // Partner not connected yet
+
+      // Get the most recent pending/acknowledged need from this partner
+      const { data: recentNeed, error: needError } = await api.supabase
+        .from('relationship_needs')
+        .select('*')
+        .eq('couple_id', relationship.id)
+        .eq('requester_id', partnerId)
+        .eq('receiver_id', userId)
+        .in('status', ['pending', 'acknowledged'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (needError) {
+        console.error('Error fetching recent need:', needError);
+        continue;
+      }
+
+      if (recentNeed) {
+        pendingNeeds.push(recentNeed);
+      }
+    }
+
+    return pendingNeeds.map(this.mapFromDatabase);
   }
 
   /**
