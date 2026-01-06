@@ -776,26 +776,66 @@ class AISuggestionService {
         break;
 
       case 'fun':
-        actions.push({
-          type: 'schedule_date',
-          description: `Plan something playful and light this week - game night, silly photos, trying something new together, or revisiting a fun activity from when you first met. Prioritize laughter.`,
-          reasoning: `Fun doesn't happen by accident when life gets heavy - you have to choose it intentionally`,
-          loveLanguageAlignment: 'quality_time'
-        });
+        // Prioritize immediate, playful activities
+        if (urgency === 'important') {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan an immediate fun activity tonight - watch a comedy movie together, play a board game, or do a silly TikTok dance challenge. Make it happen within the next few hours.`,
+            reasoning: `They marked this as important - immediate playfulness shows you're taking their need for joy seriously`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'schedule_date',
+            description: `Set up a game night this week - board games, card games, drinking games, or online multiplayer games. Include snacks and turn off phones for focused fun.`,
+            reasoning: `Games create natural laughter and bonding - low effort, high connection`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
 
-        actions.push({
-          type: 'send_message',
-          description: `Send them something to make them laugh today - a meme that reminds you of an inside joke, a funny memory, or a silly photo. Lighten the mood proactively.`,
-          reasoning: `Small moments of levity prevent relationships from feeling like all work and no play`,
-          loveLanguageAlignment: 'words'
-        });
+        // Virtual or in-person comedy/movie night
+        if (favoriteActivities.some(a => a.toLowerCase().includes('movie') || a.toLowerCase().includes('tv'))) {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan a comedy marathon - pick a funny show or movie series, make popcorn, and laugh together. Virtual works great for this too.`,
+            reasoning: `Since they love movies/TV, combining it with comedy creates their favorite activity with extra joy`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'schedule_date',
+            description: `Organize a comedy movie night - pick something light-hearted and hilarious, order delivery food, and focus on laughing together.`,
+            reasoning: `Comedy creates shared joy and inside jokes - perfect for rekindling playfulness`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
 
-        actions.push({
-          type: 'send_message',
-          description: `Surprise them with spontaneity - "Drop everything, we're [doing something fun] tonight" or "I'm picking you up in 20 minutes for an adventure." Safe spontaneity reignites spark.`,
-          reasoning: `Breaking routine creates excitement - playfulness thrives on a little unpredictability`,
-          loveLanguageAlignment: 'quality_time'
-        });
+        // Physical/silly activities
+        if (!isLongDistance) {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan a silly adventure - hide and go seek in a park, have a water balloon fight, try a new ice cream flavor crawl, or make funny TikToks together.`,
+            reasoning: `Physical playfulness creates memories and breaks routine - safe activities that spark joy`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'send_message',
+            description: `Send them funny content daily - memes, TikToks, or videos that match your shared humor. Make them laugh unexpectedly throughout the week.`,
+            reasoning: `Small daily doses of humor prevent relationships from feeling too serious`,
+            loveLanguageAlignment: 'words'
+          });
+        }
+
+        // Drinking games or social drinking if appropriate
+        if (energyLevel !== 'low_energy' && budgetComfort !== 'budget_friendly') {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan a fun drinking game night - cards against humanity, truth or dare with drinks, or a cocktail-making session. Keep it light and consensual.`,
+            reasoning: `Adult playfulness with drinks can create memorable, intimate moments - but only if it fits both your comfort levels`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
         break;
     }
 
