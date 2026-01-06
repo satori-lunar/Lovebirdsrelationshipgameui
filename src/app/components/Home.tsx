@@ -37,7 +37,6 @@ import PartnerFormInvite from './PartnerFormInvite';
 import WeeklyRhythm from './WeeklyRhythm';
 import PartnerCapacityView from './PartnerCapacityView';
 import { SubmitNeedModal } from './SubmitNeedModal';
-import { RelationshipWellnessPrompt } from './RelationshipWellnessPrompt';
 import { PartnerNeedsView } from './PartnerNeedsView';
 import { ProfilePhotos } from './ProfilePhotos';
 
@@ -61,8 +60,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [showNeedModal, setShowNeedModal] = useState(false);
-  const [showWellnessPrompt, setShowWellnessPrompt] = useState(false);
-  const [wellnessPromptDismissed, setWellnessPromptDismissed] = useState(false);
 
   const { data: onboarding } = useQuery({
     queryKey: ['onboarding', user?.id],
@@ -182,64 +179,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Query last wellness check-in
-  const { data: lastWellnessCheckin } = useQuery({
-    queryKey: ['lastWellnessCheckin', relationship?.id, user?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
-      try {
-        const { data, error } = await api.supabase
-          .from('relationship_wellness_checkins')
-          .select('*')
-          .eq('couple_id', relationship.id)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Failed to fetch last wellness check-in:', error);
-          return null;
-        }
-
-        return data;
-      } catch (error) {
-        console.error('Failed to fetch last wellness check-in:', error);
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
-  });
-
-  // Determine if we should show the wellness prompt
-  // Show it if:
-  // 1. They have a partner connected
-  // 2. It hasn't been dismissed this session
-  // 3. They haven't done a check-in in the last 3 days
-  useEffect(() => {
-    if (!relationship?.partner_b_id || wellnessPromptDismissed) {
-      setShowWellnessPrompt(false);
-      return;
-    }
-
-    if (!lastWellnessCheckin) {
-      // No check-in ever, show it
-      setShowWellnessPrompt(true);
-      return;
-    }
-
-    const lastCheckinDate = new Date(lastWellnessCheckin.created_at);
-    const daysSinceLastCheckin = Math.floor(
-      (Date.now() - lastCheckinDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    // Show if it's been 3+ days since last check-in
-    if (daysSinceLastCheckin >= 3) {
-      setShowWellnessPrompt(true);
-    } else {
-      setShowWellnessPrompt(false);
-    }
-  }, [relationship?.partner_b_id, lastWellnessCheckin, wellnessPromptDismissed]);
 
   // Calculate time together - uses actual relationship start date from onboarding if available
   const getTimeTogether = () => {
@@ -606,22 +546,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             </motion.div>
           )}
 
-          {/* Relationship Wellness Check-In */}
-          {showWellnessPrompt && user && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.29 }}
-            >
-              <RelationshipWellnessPrompt
-                userId={user.id}
-                coupleId={relationship?.id || ''}
-                partnerName={partnerName || 'your partner'}
-                onNavigate={onNavigate}
-                onDismiss={() => setWellnessPromptDismissed(true)}
-              />
-            </motion.div>
-          )}
 
           {/* Solo Mode - Partner Form Invite */}
           {couple?.relationship_mode === 'solo' && !couple?.partner_form_completed && (

@@ -393,26 +393,6 @@ export interface Database {
           end_date?: string | null;
         };
       };
-      relationship_wellness_checkins: {
-        Row: {
-          id: string;
-          couple_id: string;
-          user_id: string;
-          mood: 'amazing' | 'good' | 'okay' | 'struggling';
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          couple_id: string;
-          user_id: string;
-          mood: 'amazing' | 'good' | 'okay' | 'struggling';
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          mood?: 'amazing' | 'good' | 'okay' | 'struggling';
-        };
-      };
     };
   };
 }
