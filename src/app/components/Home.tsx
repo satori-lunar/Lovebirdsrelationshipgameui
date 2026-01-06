@@ -607,7 +607,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           )}
 
           {/* Relationship Wellness Check-In */}
-          {showWellnessPrompt && user && relationship && (
+          {showWellnessPrompt && user && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -615,8 +615,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             >
               <RelationshipWellnessPrompt
                 userId={user.id}
-                coupleId={relationship.id}
-                partnerName={partnerName}
+                coupleId={relationship?.id || ''}
+                partnerName={partnerName || 'your partner'}
                 onNavigate={onNavigate}
                 onDismiss={() => setWellnessPromptDismissed(true)}
               />

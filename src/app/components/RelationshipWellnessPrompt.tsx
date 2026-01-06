@@ -39,7 +39,7 @@ export function RelationshipWellnessPrompt({
       await api.supabase
         .from('relationship_wellness_checkins')
         .insert({
-          couple_id: coupleId,
+          couple_id: coupleId || null,
           user_id: userId,
           mood: mood,
           created_at: new Date().toISOString(),
@@ -56,21 +56,21 @@ export function RelationshipWellnessPrompt({
     {
       icon: MessageCircleHeart,
       title: 'Send a Message',
-      description: `Let ${partnerName} know you're thinking of them`,
+      description: partnerName ? `Let ${partnerName} know you're thinking of them` : 'Send yourself an encouraging message',
       color: 'from-blue-500 to-indigo-500',
       action: () => onNavigate('messages'),
     },
     {
       icon: Sparkles,
       title: 'Get Suggestions',
-      description: 'Discover thoughtful ways to connect',
+      description: 'Discover ways to take care of yourself',
       color: 'from-purple-500 to-pink-500',
       action: () => onNavigate('weekly-suggestions'),
     },
     {
       icon: Heart,
-      title: 'Share Your Capacity',
-      description: "Let them know how you're doing today",
+      title: 'Check Your Capacity',
+      description: partnerName ? "Let them know how you're doing today" : "Track how you're feeling over time",
       color: 'from-rose-500 to-pink-500',
       action: () => onNavigate('capacity-checkin'),
     },
@@ -103,8 +103,8 @@ export function RelationshipWellnessPrompt({
                   <Heart className="w-6 h-6" fill="white" />
                 </motion.div>
                 <div>
-                  <h3 className="font-bold text-lg">Relationship Check-In</h3>
-                  <p className="text-purple-100 text-sm">How are things going?</p>
+                  <h3 className="font-bold text-lg">Wellness Check-In</h3>
+                  <p className="text-purple-100 text-sm">How are you feeling today?</p>
                 </div>
               </div>
             </div>
@@ -114,7 +114,7 @@ export function RelationshipWellnessPrompt({
               {!showActions ? (
                 <>
                   <p className="text-gray-700 mb-4 text-center">
-                    How's your relationship feeling lately?
+                    How are you feeling today?
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     {moods.map((mood) => (
