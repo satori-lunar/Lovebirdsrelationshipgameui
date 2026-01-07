@@ -37,7 +37,6 @@ import { api } from '../services/api';
 import PartnerFormInvite from './PartnerFormInvite';
 import WeeklyRhythm from './WeeklyRhythm';
 import PartnerCapacityView from './PartnerCapacityView';
-import { SubmitNeedModal } from './SubmitNeedModal';
 import { PartnerNeedsView } from './PartnerNeedsView';
 import { ProfilePhotos } from './ProfilePhotos';
 
@@ -64,7 +63,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   };
 
   const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [showNeedModal, setShowNeedModal] = useState(false);
 
   const { data: onboarding } = useQuery({
     queryKey: ['onboarding', user?.id],
@@ -507,46 +505,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             </motion.div>
           )}
 
-          {/* What Feels Missing? */}
-          {relationship?.partner_b_id && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.26 }}
-            >
-              <button
-                onClick={() => setShowNeedModal(true)}
-                className="w-full text-left"
-              >
-                <Card className="border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg hover:shadow-xl transition-all">
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-4">
-                      <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-200"
-                      >
-                        <Heart className="w-6 h-6 text-white" fill="white" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <p className="text-xs text-amber-600 font-semibold uppercase tracking-wide">What Feels Missing?</p>
-                        <h3 className="font-semibold text-gray-900 mt-1">Tell us what you need</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          We'll help {partnerName} know how to support you in a way that feels right to them
-                        </p>
-                        <div className="mt-3">
-                          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-medium rounded-xl shadow-md">
-                            <span>Share What's Missing</span>
-                            <ChevronRight className="w-4 h-4" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-          )}
 
 
           {/* Solo Mode - Partner Form Invite */}
@@ -803,16 +761,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
         </div>
       </nav>
 
-      {/* Submit Need Modal */}
-      {user && relationship && (
-        <SubmitNeedModal
-          isOpen={showNeedModal}
-          onClose={() => setShowNeedModal(false)}
-          userId={user.id}
-          coupleId={relationship.id}
-          partnerName={partnerName}
-        />
-      )}
     </div>
   );
 }

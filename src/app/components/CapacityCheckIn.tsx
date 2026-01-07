@@ -7,6 +7,8 @@ import { Textarea } from './ui/textarea';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
+import { NEED_CATEGORIES, NeedCategory, Urgency } from '../types/needs';
+import { needsService } from '../services/needsService';
 
 const moods = [
   {
@@ -107,17 +109,8 @@ const moods = [
   },
 ];
 
-const needs = [
-  { id: 'comfort', label: 'I want comfort' },
-  { id: 'distraction', label: 'I want distraction' },
-  { id: 'encouragement', label: 'I want encouragement' },
-  { id: 'space', label: 'I want space' },
-  { id: 'no_talk', label: "I don't want to talk about it" },
-  { id: 'open_to_talk', label: "I'm open to talking" },
-  { id: 'check_in', label: 'Just check in on me' },
-  { id: 'be_close', label: 'Be physically close' },
-  { id: 'be_present_virtual', label: 'Be present virtually' },
-];
+// Using detailed need categories from the "What Feels Missing?" system
+const needs = NEED_CATEGORIES.filter(c => c.category !== 'other'); // Exclude 'other' for now
 
 interface CapacityCheckInProps {
   onComplete?: () => void;
@@ -127,9 +120,10 @@ interface CapacityCheckInProps {
 export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
-  const [step, setStep] = useState<'mood' | 'needs' | 'context'>('mood');
+  const [step, setStep] = useState<'mood' | 'needs' | 'urgency' | 'context'>('mood');
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const [selectedNeeds, setSelectedNeeds] = useState<string[]>([]);
+  const [selectedNeeds, setSelectedNeeds] = useState<NeedCategory[]>([]);
+  const [urgency, setUrgency] = useState<Urgency>('would_help');
   const [context, setContext] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -153,11 +147,11 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     };
   }, []);
 
-  const toggleNeed = (needId: string) => {
+  const toggleNeed = (needCategory: NeedCategory) => {
     setSelectedNeeds(prev =>
-      prev.includes(needId)
-        ? prev.filter(id => id !== needId)
-        : [...prev, needId]
+      prev.includes(needCategory)
+        ? prev.filter(id => id !== needCategory)
+        : [...prev, needCategory]
     );
   };
 
@@ -166,6 +160,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
     setSubmitting(true);
     try {
+      // Save capacity check-in
       const { error } = await api.supabase
         .from('capacity_checkins')
         .insert({
@@ -178,6 +173,19 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
         });
 
       if (error) throw error;
+
+      // If needs were selected, also submit them through the needs service
+      if (selectedNeeds.length > 0) {
+        for (const needCategory of selectedNeeds) {
+          await needsService.submitNeed({
+            coupleId: relationship.id,
+            requesterId: user.id,
+            needCategory,
+            context: context.trim() || undefined,
+            urgency
+          });
+        }
+      }
 
       setSubmitted(true);
       if (onComplete) {
@@ -585,34 +593,42 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
           {moods.find(m => m.id === selectedMood)?.icon}
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Anything you need from your partner?
+          What feels missing right now?
         </h2>
         <p className="text-gray-600 text-sm">
           Optional • Select all that apply
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-96 overflow-y-auto">
         {needs.map((need) => (
           <motion.button
-            key={need.id}
-            onClick={() => toggleNeed(need.id)}
+            key={need.category}
+            onClick={() => toggleNeed(need.category)}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             className="w-full"
           >
             <Card className={`cursor-pointer transition-all ${
-              selectedNeeds.includes(need.id)
+              selectedNeeds.includes(need.category)
                 ? 'ring-2 ring-purple-400 bg-purple-50'
                 : 'hover:shadow-md'
             }`}>
-              <CardContent className="p-4 flex items-center justify-between">
-                <span className="text-gray-900 font-medium">{need.label}</span>
-                {selectedNeeds.includes(need.id) && (
-                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
-                    <Check className="w-4 h-4 text-white" />
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{need.icon}</span>
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-900 font-medium">{need.label}</span>
+                      {selectedNeeds.includes(need.category) && (
+                        <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{need.description}</p>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </motion.button>
@@ -626,6 +642,66 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
           className="flex-1"
         >
           Skip & Finish
+        </Button>
+        <Button
+          onClick={() => setStep('urgency')}
+          disabled={selectedNeeds.length === 0}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderUrgencyStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          How urgent is this?
+        </h2>
+        <p className="text-gray-600 text-sm">
+          Help your partner understand the priority
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {[
+          { value: 'not_urgent', label: 'Not Urgent', desc: 'Can wait, no rush', color: 'blue' },
+          { value: 'would_help', label: 'Would Help', desc: 'Would improve things', color: 'yellow' },
+          { value: 'important', label: 'Important', desc: 'Needs attention soon', color: 'red' }
+        ].map((option) => (
+          <motion.button
+            key={option.value}
+            onClick={() => setUrgency(option.value as Urgency)}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+              urgency === option.value
+                ? option.color === 'blue'
+                  ? 'border-blue-500 bg-blue-50'
+                  : option.color === 'yellow'
+                  ? 'border-yellow-500 bg-yellow-50'
+                  : 'border-red-500 bg-red-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-semibold text-gray-900">{option.label}</div>
+            <div className="text-sm text-gray-500">{option.desc}</div>
+          </motion.button>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('needs')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
         </Button>
         <Button
           onClick={() => setStep('context')}
@@ -664,7 +740,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
       <div className="flex gap-3">
         <Button
-          onClick={() => setStep('needs')}
+          onClick={() => setStep('urgency')}
           variant="outline"
           className="flex-1"
         >
@@ -705,13 +781,13 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
         {/* Progress */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {['mood', 'needs', 'context'].map((s, i) => (
+          {['mood', 'needs', 'urgency', 'context'].map((s, i) => (
             <div
               key={s}
               className={`h-2 rounded-full transition-all ${
                 s === step
                   ? 'w-12 bg-gradient-to-r from-purple-500 to-violet-500'
-                  : ['mood', 'needs'].indexOf(s) < ['mood', 'needs', 'context'].indexOf(step)
+                  : ['mood', 'needs', 'urgency'].indexOf(s) < ['mood', 'needs', 'urgency', 'context'].indexOf(step)
                   ? 'w-8 bg-purple-300'
                   : 'w-8 bg-gray-200'
               }`}
@@ -723,6 +799,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
         <div className="bg-white rounded-3xl shadow-xl p-8">
           {step === 'mood' && renderMoodStep()}
           {step === 'needs' && renderNeedsStep()}
+          {step === 'urgency' && renderUrgencyStep()}
           {step === 'context' && renderContextStep()}
         </div>
       </div>
