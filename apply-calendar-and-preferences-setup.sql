@@ -70,9 +70,9 @@ CREATE POLICY "Users can manage their own notification preferences"
   ON user_notification_preferences FOR ALL
   USING (auth.uid() = user_id);
 
--- Function to update updated_at timestamp
-DROP FUNCTION IF EXISTS update_updated_at_column();
-CREATE OR REPLACE FUNCTION update_updated_at_column()
+-- Function to update notification preferences updated_at timestamp
+-- Using a separate function to avoid conflicts with existing function used by other tables
+CREATE OR REPLACE FUNCTION update_notification_preferences_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = NOW();
@@ -87,7 +87,7 @@ DROP TRIGGER IF EXISTS update_user_notification_preferences_updated_at ON user_n
 CREATE TRIGGER update_user_notification_preferences_updated_at
   BEFORE UPDATE ON user_notification_preferences
   FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  EXECUTE FUNCTION update_notification_preferences_updated_at();
 
 -- Grant permissions
 GRANT ALL ON user_calendar_events TO authenticated;
