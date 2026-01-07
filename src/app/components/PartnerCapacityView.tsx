@@ -150,6 +150,11 @@ export default function PartnerCapacityView({
   partnerName,
   isLongDistance = false
 }: PartnerCapacityViewProps) {
+  // Don't render anything if no checkin data
+  if (!checkin) {
+    return null;
+  }
+
   const mood = moods[checkin.mood as keyof typeof moods];
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
