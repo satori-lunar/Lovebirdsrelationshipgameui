@@ -17,9 +17,10 @@ interface PartnerNeedsViewProps {
   userId: string;
   partnerName: string;
   onViewDetails?: (need: RelationshipNeed) => void;
+  onStartNeedPlan?: (need: RelationshipNeed) => void;
 }
 
-export function PartnerNeedsView({ userId, partnerName, onViewDetails }: PartnerNeedsViewProps) {
+export function PartnerNeedsView({ userId, partnerName, onViewDetails, onStartNeedPlan }: PartnerNeedsViewProps) {
   const [needs, setNeeds] = useState<RelationshipNeed[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingOnNeed, setWorkingOnNeed] = useState<string | null>(null);
@@ -110,20 +111,18 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
     }
   };
 
-  const handleStartWorking = async (needId: string) => {
+  const handleStartWorking = async (need: RelationshipNeed) => {
     try {
-      await needsService.markInProgress(needId);
-      setWorkingOnNeed(needId);
+      await needsService.markInProgress(need.id);
       await loadNeeds();
-      toast.success("Let's work on this together! Check back in a few hours for a progress update.");
 
-      // Schedule follow-up check-ins (simplified - in a real app this would be more sophisticated)
-      setTimeout(() => {
-        if (window.confirm(`How's it going with helping ${partnerName}? Any progress to report?`)) {
-          // User clicked OK - could show a follow-up modal here
-          toast.info("Keep up the great work!");
-        }
-      }, 4 * 60 * 60 * 1000); // 4 hours later
+      // Navigate to the detailed support plan
+      if (onStartNeedPlan) {
+        onStartNeedPlan(need);
+      } else {
+        // Fallback if no callback provided
+        toast.success("Let's work on this together! Check back in a few hours for a progress update.");
+      }
 
     } catch (error) {
       console.error('Failed to start working on need:', error);
@@ -351,7 +350,7 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
                       Completed It
                     </button>
                     <button
-                      onClick={() => handleStartWorking(need.id)}
+                      onClick={() => handleStartWorking(need)}
                       className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
                     >
                       <Play className="w-4 h-4" fill="white" />
@@ -369,7 +368,7 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
                       Completed It
                     </button>
                     <button
-                      onClick={() => handleStartWorking(need.id)}
+                      onClick={() => handleStartWorking(need)}
                       className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
                     >
                       <Play className="w-4 h-4" fill="white" />
@@ -400,27 +399,6 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
                 )}
               </div>
 
-              {/* Working guidance for started needs */}
-              {need.status === 'in_progress' && workingOnNeed === need.id && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-blue-600" />
-                    <h4 className="font-semibold text-blue-900 text-sm">Your Action Plan:</h4>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3">
-                    Great! You're working on helping {partnerName}. Use the suggestions above as your guide.
-                    You'll get a check-in reminder in a few hours to see how it's going.
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
-                    <Clock className="w-3 h-3" />
-                    <span>Next check-in: ~4 hours from now</span>
-                  </div>
-                </motion.div>
-              )}
             </CardContent>
           </Card>
         </motion.div>
