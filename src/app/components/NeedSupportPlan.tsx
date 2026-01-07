@@ -239,6 +239,177 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
   const proximity = assessProximity();
   const mentalCapacity = assessMentalCapacity();
 
+  // Generate capacity-aware actions based on need + user capacity
+  const generateCapacityAwareActions = () => {
+    const needCategory = need.needCategory || (need as any).need_category;
+    const actions = {
+      immediateMessages: [] as string[],
+      microConnections: [] as { text: string; action: () => void }[],
+      primaryGoal: ''
+    };
+
+    // Generate capacity-aware actions based on need type
+    if (needCategory === 'space') {
+      actions.primaryGoal = 'Help partner feel respected and give them breathing room';
+
+      // Immediate messages - always available regardless of capacity
+      actions.immediateMessages = [
+        "Take all the time you need. I'm here when you're ready.",
+        "I respect your need for space. Take care of yourself.",
+        "No pressure. Whenever you're ready to connect, I'm here."
+      ];
+
+      // Micro-connections based on capacity and proximity
+      if (mentalCapacity === 'high' && timeAvailable === 'plenty') {
+        // High capacity - can offer more support
+        actions.microConnections = [
+          {
+            text: proximity === 'close' ? "Give them a gentle hug if they're open to it" : "Send a quick 'thinking of you' text",
+            action: () => handleMicroConnection('gentle_affection')
+          },
+          {
+            text: "Plan a low-pressure check-in for tomorrow",
+            action: () => handleScheduleReminder("Tomorrow: Gentle check-in - 'How are you feeling?'")
+          }
+        ];
+      } else if (mentalCapacity === 'moderate' || timeAvailable === 'moderate') {
+        // Moderate capacity - balanced approach
+        actions.microConnections = [
+          {
+            text: "Send one emoji heart if it feels right",
+            action: () => handleMicroConnection('subtle_connection')
+          },
+          {
+            text: "Respect their space - no messages unless they initiate",
+            action: () => handleMicroConnection('space_respect')
+          }
+        ];
+      } else {
+        // Low capacity - minimal, respectful actions
+        actions.microConnections = [
+          {
+            text: "Simply acknowledge their need for space internally",
+            action: () => handleMicroConnection('internal_acknowledgment')
+          },
+          {
+            text: "Focus on giving them uninterrupted space",
+            action: () => handleMicroConnection('space_honoring')
+          }
+        ];
+      }
+    } else if (needCategory === 'affection') {
+      actions.primaryGoal = 'Help partner feel loved and valued';
+
+      actions.immediateMessages = [
+        "You mean the world to me. I hope you know that.",
+        "I'm so grateful to have you in my life.",
+        "Thinking of you with a smile right now."
+      ];
+
+      if (mentalCapacity === 'high' && timeAvailable === 'plenty') {
+        actions.microConnections = [
+          {
+            text: proximity === 'close' ? "Share a specific compliment about them" : "Send a voice message with appreciation",
+            action: () => handleMicroConnection('personal_affection')
+          },
+          {
+            text: "Write down 3 things you love about them",
+            action: () => handleMicroConnection('reflection_affection')
+          }
+        ];
+      } else if (mentalCapacity === 'moderate' || timeAvailable === 'moderate') {
+        actions.microConnections = [
+          {
+            text: "Send a heart emoji with a simple 'thinking of you'",
+            action: () => handleMicroConnection('quick_affection')
+          },
+          {
+            text: "Look at a photo of them and smile",
+            action: () => handleMicroConnection('internal_affection')
+          }
+        ];
+      } else {
+        actions.microConnections = [
+          {
+            text: "Take a moment to appreciate them internally",
+            action: () => handleMicroConnection('quiet_affection')
+          },
+          {
+            text: "Send a simple heart emoji",
+            action: () => handleMicroConnection('minimal_affection')
+          }
+        ];
+      }
+    } else if (needCategory === 'communication') {
+      actions.primaryGoal = 'Help partner feel heard and understood';
+
+      actions.immediateMessages = [
+        "I'm here to listen whenever you want to talk.",
+        "Your thoughts and feelings matter to me.",
+        "I want to understand your perspective better."
+      ];
+
+      if (mentalCapacity === 'high' && timeAvailable === 'plenty') {
+        actions.microConnections = [
+          {
+            text: "Ask open-ended questions about their day",
+            action: () => handleMicroConnection('deep_listening')
+          },
+          {
+            text: "Set aside focused time for conversation",
+            action: () => handleScheduleReminder("Tonight: 15-minute focused conversation")
+          }
+        ];
+      } else if (mentalCapacity === 'moderate' || timeAvailable === 'moderate') {
+        actions.microConnections = [
+          {
+            text: "Send 'How was your day?' and actually listen to response",
+            action: () => handleMicroConnection('balanced_listening')
+          },
+          {
+            text: "Practice active listening without distractions",
+            action: () => handleMicroConnection('present_listening')
+          }
+        ];
+      } else {
+        actions.microConnections = [
+          {
+            text: "Send 'I'm here if you want to talk'",
+            action: () => handleMicroConnection('available_signal')
+          },
+          {
+            text: "Put away phone during their responses",
+            action: () => handleMicroConnection('undivided_attention')
+          }
+        ];
+      }
+    } else {
+      // Generic fallback for other need types
+      actions.primaryGoal = 'Support your partner with actions that match your current capacity';
+
+      actions.immediateMessages = [
+        "I'm thinking about you and care about how you're feeling.",
+        "You matter to me, and I'm here for you.",
+        "I appreciate you and our relationship."
+      ];
+
+      actions.microConnections = [
+        {
+          text: "Send a supportive message matching your capacity",
+          action: () => handleMicroConnection('capacity_aware_support')
+        },
+        {
+          text: "Take one small action that feels manageable",
+          action: () => handleMicroConnection('appropriate_effort')
+        }
+      ];
+    }
+
+    return actions;
+  };
+
+  const capacityActions = generateCapacityAwareActions();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 px-4 py-6 sm:px-6">
       <div className="max-w-2xl mx-auto">
@@ -325,8 +496,11 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                 </div>
 
                 <div className="p-3 bg-purple-50 rounded-lg">
-                  <p className="text-sm font-medium text-purple-900 mb-1">Primary Goal</p>
-                  <p className="text-xs text-purple-700">Help partner feel emotionally acknowledged without requiring planning or memory</p>
+                  <p className="text-sm font-medium text-purple-900 mb-1">Tailored Approach</p>
+                  <p className="text-xs text-purple-700">{capacityActions.primaryGoal}</p>
+                  <p className="text-xs text-purple-600 mt-1">
+                    Based on your {mentalCapacity} capacity, {timeAvailable} time, and {proximity.replace('_', ' ')} proximity
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -345,17 +519,13 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                 <Zap className="w-5 h-5 text-yellow-600" />
                 Step 1: Immediate Emotional Regulation (2–3 minutes)
               </CardTitle>
-              <p className="text-sm text-gray-600">Your partner may be feeling disconnected. Let's help them feel seen right now.</p>
+                <p className="text-sm text-gray-600">{capacityActions.primaryGoal}</p>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-700 mb-3">Tap-to-send messages (no typing required):</p>
+                <p className="text-sm font-medium text-gray-700 mb-3">Capacity-aware messages ({mentalCapacity} mental capacity, {timeAvailable} time):</p>
 
-                {[
-                  "I know I've been a bit distracted lately, but you matter to me and I really appreciate you.",
-                  "I don't have a lot of time today, but I want you to know I care and I'm thinking about you.",
-                  "I see you. I'm grateful for you. I'll make space for us soon."
-                ].map((message, index) => (
+                {capacityActions.immediateMessages.map((message, index) => (
                   <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-800 italic break-words">"{message}"</p>
@@ -401,51 +571,36 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <p className="text-sm font-medium text-gray-700">Pick one (takes less than 5 minutes):</p>
+                <p className="text-sm font-medium text-gray-700">Capacity-tailored actions (takes 1-2 minutes):</p>
 
-                {proximity === 'close' && (
-                  <Button
-                    onClick={() => handleMicroConnection('sit_together')}
-                    className="w-full justify-start p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200 text-left"
-                    variant="outline"
-                  >
-                    <div className="flex items-start gap-3 w-full">
-                      <Users className="w-4 h-4 mt-1 text-green-600 flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-green-900 break-words">Sit next to them for 5 minutes</p>
-                        <p className="text-sm text-green-700 break-words">No phones, just presence</p>
+                {capacityActions.microConnections.map((connection, index) => {
+                  const colors = [
+                    { bg: 'bg-green-50', hover: 'hover:bg-green-100', border: 'border-green-200', text: 'text-green-600', title: 'text-green-900', desc: 'text-green-700' },
+                    { bg: 'bg-blue-50', hover: 'hover:bg-blue-100', border: 'border-blue-200', text: 'text-blue-600', title: 'text-blue-900', desc: 'text-blue-700' },
+                    { bg: 'bg-purple-50', hover: 'hover:bg-purple-100', border: 'border-purple-200', text: 'text-purple-600', title: 'text-purple-900', desc: 'text-purple-700' }
+                  ][index % 3];
+
+                  return (
+                    <Button
+                      key={index}
+                      onClick={connection.action}
+                      className={`w-full justify-start p-4 h-auto ${colors.bg} ${colors.hover} ${colors.border} text-left`}
+                      variant="outline"
+                    >
+                      <div className="flex items-start gap-3 w-full">
+                        <CheckCircle className={`w-4 h-4 mt-1 ${colors.text} flex-shrink-0`} />
+                        <div className="min-w-0 flex-1">
+                          <p className={`font-medium ${colors.title} break-words`}>{connection.text}</p>
+                          <p className={`text-sm ${colors.desc} break-words`}>
+                            {mentalCapacity === 'high' ? 'Thoughtful support' :
+                             mentalCapacity === 'moderate' ? 'Balanced approach' :
+                             'Respectful minimum'}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </Button>
-                )}
-
-                <Button
-                  onClick={() => handleMicroConnection('emoji_checkin')}
-                  className="w-full justify-start p-4 h-auto bg-blue-50 hover:bg-blue-100 border-blue-200 text-left"
-                  variant="outline"
-                >
-                  <div className="flex items-start gap-3 w-full">
-                    <Heart className="w-4 h-4 mt-1 text-blue-600 flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-blue-900 break-words">Send a heart/emoji check-in later today</p>
-                      <p className="text-sm text-blue-700 break-words">Quick emotional ping</p>
-                    </div>
-                  </div>
-                </Button>
-
-                <Button
-                  onClick={() => handleMicroConnection('guided_question')}
-                  className="w-full justify-start p-4 h-auto bg-purple-50 hover:bg-purple-100 border-purple-200 text-left"
-                  variant="outline"
-                >
-                  <div className="flex items-start gap-3 w-full">
-                    <MessageCircle className="w-4 h-4 mt-1 text-purple-600 flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-purple-900 break-words">Ask one guided question</p>
-                      <p className="text-sm text-purple-700 break-words">"What's been weighing on you lately?" or "What do you need most from me this week?"</p>
-                    </div>
-                  </div>
-                </Button>
+                    </Button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
