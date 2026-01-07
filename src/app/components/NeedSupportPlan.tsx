@@ -179,7 +179,7 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Support Plan for {partnerName}</h1>
-            <p className="text-gray-600">Helping with: {need.needCategory.replace('_', ' ')}</p>
+            <p className="text-gray-600">Helping with: {need.needCategory || (need as any).need_category ? (need.needCategory || (need as any).need_category).replace('_', ' ') : 'Unknown need'}</p>
           </div>
         </motion.div>
 
@@ -209,7 +209,7 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                     <Target className="w-5 h-5 text-blue-600 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm">Partner Need</p>
-                      <p className="text-xs text-gray-600 break-words">{need.needCategory.replace('_', ' ')}</p>
+                      <p className="text-xs text-gray-600 break-words">{need.needCategory || (need as any).need_category ? (need.needCategory || (need as any).need_category).replace('_', ' ') : 'Unknown need'}</p>
                     </div>
                   </div>
                 </div>
