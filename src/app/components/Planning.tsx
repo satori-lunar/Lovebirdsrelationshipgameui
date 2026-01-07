@@ -34,7 +34,9 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
 
       // Get all needs for the couple
       const allNeeds = await needsService.getNeedsForCouple(relationship.id);
-      console.log('📋 Raw needs data:', allNeeds);
+      console.log('📋 Raw needs data for couple:', allNeeds);
+      console.log('🔍 Current user ID:', user.id);
+      console.log('🔍 Relationship ID:', relationship.id);
 
       // Filter for needs where this user is the requester (their own needs that partner is helping with)
       // and the need is not yet resolved
@@ -44,6 +46,7 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
         console.log('🔍 Checking need:', {
           id: need.id,
           requesterId: need.requesterId,
+          receiverId: need.receiverId,
           userId: user.id,
           isRequester,
           status: need.status,
@@ -52,6 +55,8 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
         });
         return isRequester && isActive;
       });
+
+      console.log('✅ Filtered needs being helped:', needsBeingHelped);
 
       // Return only the most recent need (if any)
       if (needsBeingHelped.length > 0) {
