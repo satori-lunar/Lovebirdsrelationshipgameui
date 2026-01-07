@@ -191,35 +191,10 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     }
   };
 
-  // Submit directly for high-capacity moods (>80%) without asking for needs/context
-  const handleSubmitDirectly = async (moodId: string) => {
-    if (!user?.id || !relationship?.id) return;
-
-    setSubmitting(true);
-    try {
-      const { error } = await api.supabase
-        .from('capacity_checkins')
-        .insert({
-          user_id: user.id,
-          couple_id: relationship.id,
-          mood: moodId,
-          needs: [], // Empty - feeling good, no needs
-          context: null, // No context needed
-          created_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-
-      setSubmitted(true);
-      if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
-      }
-    } catch (error) {
-      console.error('Error saving capacity check-in:', error);
-      alert(`Error saving check-in: ${error.message}`);
-    } finally {
-      setSubmitting(false);
-    }
+  // Set capacity and move to needs step - capacity will be saved when user completes
+  const handleCapacitySelected = (moodId: string) => {
+    setSelectedMood(moodId);
+    setStep('needs');
   };
 
   if (submitted) {
@@ -236,10 +211,10 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
                 <Check className="w-10 h-10 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                Shared ✨
+                Capacity Shared ✨
               </h2>
               <p className="text-gray-600 leading-relaxed">
-                Your partner will be notified about how you're feeling today.
+                Your partner knows how you're feeling. Now let's see if there's anything you need...
               </p>
             </CardContent>
           </Card>
@@ -273,18 +248,11 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
       holdTimerRef.current = window.setTimeout(() => {
         setHoldProgress(100);
-        setSelectedMood(currentMood.id);
         setIsHolding(false);
-        // Only show needs/context questions for moods below 80%
-        // For 80% and higher capacity, submit directly - they're fine!
-        if (currentMood.capacity < 80) {
-          setTimeout(() => setStep('needs'), 300);
-        } else {
-          // High capacity mood (80%+) - submit directly without needs/context
-          setTimeout(() => {
-            handleSubmitDirectly(currentMood.id);
-          }, 300);
-        }
+        // Capacity selected - move to needs step
+        setTimeout(() => {
+          handleCapacitySelected(currentMood.id);
+        }, 300);
       }, holdDuration);
     };
 
@@ -301,10 +269,11 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
     // Convert Tailwind gradient to CSS gradient
     const getGradientStyle = (colorClass: string) => {
-      const colors = colorClass.match(/([\w-]+)-(\d+)/g) || [];
-      if (colors.length >= 2) {
-        const fromColor = colors[0];
-        const toColor = colors[1];
+      const matches = colorClass.match(/from-([\w-]+)-(\d+)/);
+      const matches2 = colorClass.match(/to-([\w-]+)-(\d+)/);
+      if (matches && matches2) {
+        const fromColor = `${matches[1]}-${matches[2]}`;
+        const toColor = `${matches2[1]}-${matches2[2]}`;
         const colorMap: Record<string, string> = {
           'emerald-400': '#34d399',
           'green-500': '#22c55e',
@@ -616,10 +585,10 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
           {moods.find(m => m.id === selectedMood)?.icon}
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          What do you need right now?
+          Anything you need from your partner?
         </h2>
         <p className="text-gray-600 text-sm">
-          Select all that apply
+          Optional • Select all that apply
         </p>
       </div>
 
@@ -652,18 +621,17 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
       <div className="flex gap-3">
         <Button
-          onClick={() => setStep('mood')}
+          onClick={handleSubmit}
           variant="outline"
           className="flex-1"
         >
-          Back
+          Skip & Finish
         </Button>
         <Button
           onClick={() => setStep('context')}
-          disabled={selectedNeeds.length === 0}
           className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
         >
-          Continue
+          Add Context
         </Button>
       </div>
     </div>
