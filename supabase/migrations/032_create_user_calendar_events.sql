@@ -23,6 +23,10 @@ CREATE INDEX IF NOT EXISTS idx_user_calendar_events_time_range ON user_calendar_
 -- Enable RLS
 ALTER TABLE user_calendar_events ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for migration safety)
+DROP POLICY IF EXISTS "Users can view their own calendar events" ON user_calendar_events;
+DROP POLICY IF EXISTS "Users can manage their own calendar events" ON user_calendar_events;
+
 -- Users can only see their own calendar events
 CREATE POLICY "Users can view their own calendar events"
   ON user_calendar_events FOR SELECT

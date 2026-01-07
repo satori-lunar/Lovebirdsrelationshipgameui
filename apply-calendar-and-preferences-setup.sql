@@ -24,6 +24,10 @@ CREATE INDEX IF NOT EXISTS idx_user_calendar_events_time_range ON user_calendar_
 -- Enable RLS for calendar events
 ALTER TABLE user_calendar_events ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for migration safety)
+DROP POLICY IF EXISTS "Users can view their own calendar events" ON user_calendar_events;
+DROP POLICY IF EXISTS "Users can manage their own calendar events" ON user_calendar_events;
+
 -- Users can only see their own calendar events
 CREATE POLICY "Users can view their own calendar events"
   ON user_calendar_events FOR SELECT
@@ -51,6 +55,10 @@ CREATE TABLE IF NOT EXISTS user_notification_preferences (
 
 -- Enable RLS for notification preferences
 ALTER TABLE user_notification_preferences ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (for migration safety)
+DROP POLICY IF EXISTS "Users can view their own notification preferences" ON user_notification_preferences;
+DROP POLICY IF EXISTS "Users can manage their own notification preferences" ON user_notification_preferences;
 
 -- Users can only see their own notification preferences
 CREATE POLICY "Users can view their own notification preferences"

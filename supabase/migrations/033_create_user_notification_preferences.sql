@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS user_notification_preferences (
 -- Enable RLS
 ALTER TABLE user_notification_preferences ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for migration safety)
+DROP POLICY IF EXISTS "Users can view their own notification preferences" ON user_notification_preferences;
+DROP POLICY IF EXISTS "Users can manage their own notification preferences" ON user_notification_preferences;
+
 -- Users can only see their own notification preferences
 CREATE POLICY "Users can view their own notification preferences"
   ON user_notification_preferences FOR SELECT
