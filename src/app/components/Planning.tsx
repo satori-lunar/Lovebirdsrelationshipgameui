@@ -94,8 +94,8 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Planning</h1>
-            <p className="text-gray-600">Support plans for {partnerName}</p>
+            <h1 className="text-2xl font-bold text-gray-900">Support</h1>
+            <p className="text-gray-600">Help {partnerName} with their needs</p>
           </div>
         </motion.div>
 
