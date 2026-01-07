@@ -36,6 +36,7 @@ CREATE POLICY "Users can manage their own notification preferences"
 GRANT ALL ON user_notification_preferences TO authenticated;
 
 -- Create function to update updated_at timestamp
+DROP FUNCTION IF EXISTS update_updated_at_column();
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -43,6 +44,9 @@ BEGIN
   RETURN NEW;
 END;
 $$ language 'plpgsql';
+
+-- Drop existing trigger if it exists (for migration safety)
+DROP TRIGGER IF EXISTS update_user_notification_preferences_updated_at ON user_notification_preferences;
 
 -- Create trigger to automatically update updated_at
 CREATE TRIGGER update_user_notification_preferences_updated_at
