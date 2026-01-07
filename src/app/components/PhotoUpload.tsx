@@ -128,10 +128,12 @@ export function PhotoUpload({
       if (error) {
         console.error('Upload error:', error);
         // Provide more specific error messages
-        if (error.message?.includes('Bucket not found')) {
-          throw new Error('Photo storage is not set up yet. Please contact support.');
-        } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
-          throw new Error('You don\'t have permission to upload photos. Please try again.');
+        if (error.message?.includes('Bucket not found') || error.message?.includes('bucket')) {
+          throw new Error('Photo storage is not set up yet. Please contact support or try again later.');
+        } else if (error.message?.includes('permission') || error.message?.includes('policy') || error.message?.includes('RLS')) {
+          throw new Error('Storage permissions not configured. Please contact support.');
+        } else if (error.message?.includes('JWT') || error.message?.includes('session')) {
+          throw new Error('Authentication issue. Please sign out and sign back in.');
         } else {
           throw new Error(`Upload failed: ${error.message}`);
         }
