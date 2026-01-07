@@ -26,24 +26,61 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
 
-  // Query active needs - only show the most recent need that requires action from this user
-  const { data: activeNeeds, isLoading } = useQuery({
-    queryKey: ['active-needs', relationship?.id, user?.id],
+  // Query partner's needs that user is helping with (user is RECEIVER)
+  const { data: partnerNeeds, isLoading: isLoadingPartnerNeeds } = useQuery({
+    queryKey: ['partner-needs', relationship?.id, user?.id],
     queryFn: async () => {
       if (!relationship?.id || !user?.id) return [];
 
       // Get all needs for the couple
       const allNeeds = await needsService.getNeedsForCouple(relationship.id);
-      console.log('📋 Raw needs data for couple:', allNeeds);
-      console.log('🔍 Current user ID:', user.id);
-      console.log('🔍 Relationship ID:', relationship.id);
+      console.log('📋 Partner needs raw data:', allNeeds);
 
-      // Filter for needs where this user is the requester (their own needs that partner is helping with)
-      // and the need is not yet resolved
-      const needsBeingHelped = allNeeds.filter(need => {
+      // Filter for needs where user is the RECEIVER (partner's needs they're helping with)
+      const partnerNeedsBeingHelped = allNeeds.filter(need => {
+        const isReceiver = need.receiverId === user.id;
+        const isActive = need.status !== 'resolved';
+        console.log('🔍 Checking partner need:', {
+          id: need.id,
+          requesterId: need.requesterId,
+          receiverId: need.receiverId,
+          userId: user.id,
+          isReceiver,
+          status: need.status,
+          isActive,
+          needCategory: need.needCategory || (need as any).need_category
+        });
+        return isReceiver && isActive;
+      });
+
+      // Return only the most recent need
+      if (partnerNeedsBeingHelped.length > 0) {
+        const sortedNeeds = partnerNeedsBeingHelped.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        return [sortedNeeds[0]];
+      }
+
+      return [];
+    },
+    enabled: !!relationship?.id && !!user?.id,
+  });
+
+  // Query user's own needs that partner is helping with (user is REQUESTER)
+  const { data: myNeeds, isLoading: isLoadingMyNeeds } = useQuery({
+    queryKey: ['my-needs', relationship?.id, user?.id],
+    queryFn: async () => {
+      if (!relationship?.id || !user?.id) return [];
+
+      // Get all needs for the couple
+      const allNeeds = await needsService.getNeedsForCouple(relationship.id);
+      console.log('📋 My needs raw data:', allNeeds);
+
+      // Filter for needs where user is the REQUESTER (their own needs partner is helping with)
+      const myNeedsBeingHelped = allNeeds.filter(need => {
         const isRequester = need.requesterId === user.id;
         const isActive = need.status !== 'resolved';
-        console.log('🔍 Checking need:', {
+        console.log('🔍 Checking my need:', {
           id: need.id,
           requesterId: need.requesterId,
           receiverId: need.receiverId,
@@ -56,18 +93,15 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
         return isRequester && isActive;
       });
 
-      console.log('✅ Filtered needs being helped:', needsBeingHelped);
-
-      // Return only the most recent need (if any)
-      if (needsBeingHelped.length > 0) {
-        // Sort by created date (most recent first) and take the first one
-        const sortedNeeds = needsBeingHelped.sort((a, b) =>
+      // Return only the most recent need
+      if (myNeedsBeingHelped.length > 0) {
+        const sortedNeeds = myNeedsBeingHelped.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-        return [sortedNeeds[0]]; // Return only the most recent one
+        return [sortedNeeds[0]];
       }
 
-      return []; // No active needs requiring action
+      return [];
     },
     enabled: !!relationship?.id && !!user?.id,
   });
@@ -121,19 +155,60 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
               </p>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">Track your support progress here</p>
-                <p className="text-sm text-gray-500">
-                  When {partnerName} shares needs, you'll see your progress on helping them
-                </p>
-                <Button
-                  onClick={() => onNavigate('home')}
-                  className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
-                >
-                  Go to Home to See Partner Needs
-                </Button>
-              </div>
+              {isLoadingPartnerNeeds ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading partner needs...</p>
+                </div>
+              ) : partnerNeeds && partnerNeeds.length > 0 ? (
+                <div className="space-y-4">
+                  {partnerNeeds.map((need) => (
+                    <div
+                      key={need.id}
+                      className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          need.status === 'in_progress' ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {need.needCategory || (need as any).need_category ?
+                             (need.needCategory || (need as any).need_category).replace('_', ' ') :
+                             'Unknown need'}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {need.status === 'resolved' ? 'Completed' :
+                             need.status === 'in_progress' ? 'You are working on this' :
+                             need.status === 'acknowledged' ? 'You acknowledged this' :
+                             'Waiting for your response'}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => onNavigate('need-support-plan', { need })}
+                        className="bg-purple-500 hover:bg-purple-600 text-white"
+                      >
+                        Continue Helping
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">No partner needs to help with</p>
+                  <p className="text-sm text-gray-500">
+                    When {partnerName} shares needs, you'll see them here
+                  </p>
+                  <Button
+                    onClick={() => onNavigate('home')}
+                    className="mt-4 bg-purple-500 hover:bg-purple-600 text-white"
+                  >
+                    Check Home for Updates
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -155,14 +230,14 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
               </p>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {isLoadingMyNeeds ? (
                 <div className="text-center py-8">
                   <div className="animate-spin w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading your requests...</p>
                 </div>
-              ) : activeNeeds && activeNeeds.length > 0 ? (
+              ) : myNeeds && myNeeds.length > 0 ? (
                 <div className="space-y-4">
-                  {activeNeeds.map((need) => (
+                  {myNeeds.map((need) => (
                     <div
                       key={need.id}
                       className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200"
@@ -186,7 +261,7 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
                         </div>
                       </div>
                       <Button
-                        onClick={() => handleStartPlanning(need)}
+                        onClick={() => onNavigate('need-support-plan', { need })}
                         className="bg-pink-500 hover:bg-pink-600 text-white"
                       >
                         View Progress
