@@ -30,13 +30,9 @@ interface SupportPlan {
 }
 
 export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedSupportPlanProps) {
-  console.log('NeedSupportPlan rendered with:', { need, partnerName });
-
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
-
-  console.log('NeedSupportPlan data:', { user: !!user, relationship: !!relationship, partnerId });
   const [plan, setPlan] = useState<SupportPlan | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -47,40 +43,13 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
   }, [need, relationship, partnerId]);
 
   const generateSupportPlan = async () => {
-    if (!relationship || !partnerId) {
-      // Create a basic plan without partner profile data
-      const basicPlan: SupportPlan = {
-        timeAvailable: 'moderate',
-        proximity: 'close',
-        priorityActions: [
-          "Send a message showing you care and are there to help",
-          "Ask them specifically what they need from you right now",
-          "Follow through on whatever they ask for",
-          "Check in later to see how things are going"
-        ],
-        timeline: [
-          "Today: Reach out and offer support",
-          "This week: Follow through and stay consistent",
-          "Ongoing: Keep checking in and showing you care"
-        ],
-        checkInSchedule: ["Tomorrow", "Mid-week"],
-        successMetrics: [
-          "They express feeling supported",
-          "The situation feels more manageable",
-          "They know they can count on you"
-        ]
-      };
-      setPlan(basicPlan);
-      return;
-    }
-
     // Get partner's profile for personalization
     let partnerProfile: any = {};
     try {
       const { data: profile } = await import('../services/api').then(api =>
         api.api.supabase
           .from('onboarding_responses')
-          .select('love_language_primary, communication_style, favorite_activities, energy_level')
+          .select('love_language_primary, communication_style, favorite_activities, energy_level, budget_comfort')
           .eq('user_id', partnerId)
           .maybeSingle()
       );
@@ -89,12 +58,15 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
       console.error('Failed to fetch partner profile:', error);
     }
 
+    const timeAvailable = assessTimeAvailability();
+    const proximity = assessProximity();
+
     const supportPlan: SupportPlan = {
-      timeAvailable: assessTimeAvailability(),
-      proximity: assessProximity(),
-      priorityActions: generatePriorityActions(need, partnerProfile, assessTimeAvailability(), assessProximity()),
-      timeline: generateTimeline(need, assessTimeAvailability()),
-      checkInSchedule: generateCheckInSchedule(assessTimeAvailability()),
+      timeAvailable,
+      proximity,
+      priorityActions: generatePriorityActions(need, partnerProfile, timeAvailable, proximity),
+      timeline: generateTimeline(need, timeAvailable),
+      checkInSchedule: generateCheckInSchedule(timeAvailable),
       successMetrics: generateSuccessMetrics(need)
     };
 
@@ -102,21 +74,49 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
   };
 
   const assessTimeAvailability = (): TimeAvailability => {
-    // Simple assessment - in a real app this could be more sophisticated
-    const hour = new Date().getHours();
-    const isWeekend = [0, 6].includes(new Date().getDay());
+    const now = new Date();
+    const hour = now.getHours();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-    if (isWeekend && (hour >= 10 && hour <= 22)) return 'plenty';
-    if (!isWeekend && (hour >= 18 && hour <= 22)) return 'moderate';
+    // Morning (6-12): Limited - people are busy starting their day
+    if (hour >= 6 && hour < 12) return 'limited';
+
+    // Lunch time (12-14): Moderate - quick break available
+    if (hour >= 12 && hour < 14) return 'moderate';
+
+    // Afternoon work hours (14-17): Limited - busy work time
+    if (hour >= 14 && hour < 17) return 'limited';
+
+    // Early evening (17-20): Moderate - winding down, some time available
+    if (hour >= 17 && hour < 20) return 'moderate';
+
+    // Evening (20-22): Plenty - relaxed time, especially on weekends
+    if (hour >= 20 && hour < 22) {
+      return isWeekend ? 'plenty' : 'moderate';
+    }
+
+    // Late night (22-6): Limited - time for rest
     return 'limited';
   };
 
   const assessProximity = (): ProximityType => {
-    // Check if they have an active relationship (implies they're connected)
-    // In a real app, this could check GPS proximity or user preference
-    if (!relationship?.connected_at) return 'long_distance';
-    if (relationship?.relationship_mode === 'solo') return 'distant';
-    return 'close'; // Assume they're close if in a relationship
+    if (!relationship) return 'long_distance';
+
+    // If no partner connected yet
+    if (!relationship.partner_b_id) return 'long_distance';
+
+    // Check relationship mode and living situation from onboarding
+    // For now, use relationship data - in future could integrate GPS
+    const hasRecentConnection = relationship.connected_at &&
+      (Date.now() - new Date(relationship.connected_at).getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 days
+
+    if (relationship.relationship_mode === 'long_distance') return 'long_distance';
+    if (relationship.relationship_mode === 'solo') return 'distant';
+
+    // Check if they live together (from onboarding data if available)
+    // For now, assume close proximity unless specified as long distance
+    return hasRecentConnection ? 'close' : 'distant';
   };
 
   const generatePriorityActions = (
@@ -127,103 +127,187 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
   ): string[] => {
     const actions: string[] = [];
     const loveLanguage = partnerProfile.love_language_primary || 'quality_time';
+    const favoriteActivities = partnerProfile.favorite_activities || [];
     const energyLevel = partnerProfile.energy_level || 'balanced';
+    const communicationStyle = partnerProfile.communication_style || 'gentle';
 
+    // Create specific, actionable steps based on real data
     switch (need.needCategory) {
       case 'affection':
         if (loveLanguage === 'words') {
-          actions.push("Send a heartfelt message sharing 3 specific things you appreciate about them");
-          if (proximity === 'close') {
-            actions.push("Plan a 10-minute 'appreciation chat' where you only talk about what you love about each other");
-          }
-        } else if (loveLanguage === 'touch') {
-          if (proximity === 'close') {
-            actions.push("Initiate physical affection - a hug, holding hands, or just sitting close while watching something");
+          if (communicationStyle === 'playful') {
+            actions.push(`Send: "Just thinking about you and smiling. You're the highlight of my day 💕"`);
+            actions.push(`Send: "I love how you [mention something specific about them]. It makes me feel so lucky."`);
+          } else if (communicationStyle === 'direct') {
+            actions.push(`Send: "I want you to know how much I care about you. You're important to me."`);
+            actions.push(`Send: "Thinking of you right now. Just wanted to say I appreciate you."`);
           } else {
-            actions.push("Send a voice message saying how much you miss their touch and warmth");
+            actions.push(`Send: "I'm so grateful to have you in my life. You make everything better."`);
+            actions.push(`Send: "You mean the world to me. I hope you know that."`);
           }
+        } else if (loveLanguage === 'touch' && proximity === 'close') {
+          actions.push(`Give them a hug when you see them next - no words needed, just closeness`);
+          actions.push(`Hold their hand while watching TV or walking together tonight`);
+          actions.push(`Cuddle up together - physical closeness shows you care`);
         } else if (loveLanguage === 'quality_time') {
           if (timeAvailable === 'plenty') {
-            actions.push("Set aside 30-60 minutes of focused, distraction-free time together");
+            actions.push(`Spend 20 minutes of focused time together - phones away, just being present`);
+            if (favoriteActivities.length > 0) {
+              actions.push(`Do ${favoriteActivities[0].toLowerCase()} together - give them your full attention`);
+            }
           } else {
-            actions.push("Send them a 'quality time' promise for later this week when you have more time");
+            actions.push(`Send: "I can't wait for our next date night. You make time together so special."`);
           }
+        } else if (loveLanguage === 'acts') {
+          actions.push(`Make them their favorite drink or prepare something they enjoy without being asked`);
+          actions.push(`Take care of a small task they've mentioned - show you listen through actions`);
         }
         break;
 
       case 'communication':
-        actions.push("Ask open-ended questions: 'What's been on your mind lately?' or 'How are you really feeling?'");
-        if (loveLanguage === 'quality_time') {
-          actions.push("Schedule a 'deep talk' session without distractions - put phones away and really listen");
+        if (communicationStyle === 'playful') {
+          actions.push(`Send: "Hey, what's new with you? I want to hear everything! 😊"`);
+          actions.push(`Ask: "What's been making you laugh lately? Tell me a funny story."`);
+        } else if (communicationStyle === 'direct') {
+          actions.push(`Send: "I want to know how you're really doing. What's on your mind?"`);
+          actions.push(`Ask: "How has your day been? I want to hear about it."`);
+        } else {
+          actions.push(`Send: "I've been thinking about you. How are you feeling today?"`);
+          actions.push(`Ask: "What's something you'd like to talk about? I'm here to listen."`);
         }
-        if (proximity === 'close') {
-          actions.push("Create a 'communication ritual' - same time each day for checking in with each other");
+
+        if (proximity === 'close' && timeAvailable !== 'limited') {
+          actions.push(`Set aside 15 minutes for a conversation - phones away, eye contact, really listen`);
         }
         break;
 
       case 'quality_time':
-        if (timeAvailable === 'plenty') {
-          actions.push("Plan an activity from their favorite activities list and give them your full attention");
+        if (favoriteActivities.length > 0) {
+          if (timeAvailable === 'plenty') {
+            actions.push(`Plan to ${favoriteActivities[0].toLowerCase()} together tonight - make it special`);
+            if (favoriteActivities.length > 1) {
+              actions.push(`Try ${favoriteActivities[1].toLowerCase()} as a couple - create new memories`);
+            }
+          } else {
+            actions.push(`Send: "Let's ${favoriteActivities[0].toLowerCase()} together soon. I can't wait! 📅"`);
+          }
         } else {
-          actions.push("Send them a calendar invite for dedicated time together later this week");
-        }
-        if (proximity === 'close') {
-          actions.push("Do a 'parallel activity' - work on separate things in the same room, staying connected");
+          if (proximity === 'close') {
+            actions.push(`Cook dinner together - prep, cook, eat, and clean up as a team`);
+            actions.push(`Take a walk together and talk about your day - simple but meaningful`);
+          } else {
+            actions.push(`Schedule a video call for ${timeAvailable === 'plenty' ? 'tonight' : 'tomorrow'} - focused time together`);
+          }
         }
         break;
 
       case 'support':
-        actions.push("Ask them directly: 'What would actually help right now - advice, listening, or just being there?'");
-        actions.push("Validate their feelings first: 'That sounds really hard' or 'You have every right to feel this way'");
+        actions.push(`Send: "I hear that ${need.context ? need.context.substring(0, 30) + '...' : 'you\'re going through something'}. I'm here for you."`);
+        actions.push(`Ask: "What would help most right now - listening, advice, or just being present?"`);
+
         if (energyLevel === 'low_energy') {
-          actions.push("Offer low-energy support - send encouraging texts throughout the day or order their favorite comfort food");
+          actions.push(`Send encouraging texts throughout the day: "Thinking of you 💙" or "You've got this"`);
+        } else {
+          actions.push(`Offer specific help: "Can I pick up groceries for you?" or "Would a home-cooked meal help?"`);
         }
         break;
 
       case 'fun':
-        if (timeAvailable === 'plenty') {
-          actions.push("Plan a spontaneous fun activity - game night, dance party, or silly TikTok challenge");
+        if (favoriteActivities.some(a => a.toLowerCase().includes('game'))) {
+          actions.push(`Send: "Game night? Your turn to pick the game 🎲"`);
+          actions.push(`Set up a board game or card game session - keep it light and fun`);
+        } else if (favoriteActivities.some(a => a.toLowerCase().includes('movie') || a.toLowerCase().includes('tv'))) {
+          actions.push(`Send: "Comedy movie marathon tonight? 🍿"`);
+          actions.push(`Pick their favorite comedy and watch together - share the laughs`);
         } else {
-          actions.push("Send funny memes, videos, or plan a 'fun promise' for when you have more time");
+          actions.push(`Send: "Let's do something spontaneous and fun. Ideas? 🎉"`);
+          actions.push(`Plan a silly activity: make funny TikToks, have a dance party, or tell jokes`);
         }
-        actions.push("Share something that made you laugh today and ask them to share theirs");
+
+        if (proximity === 'close') {
+          actions.push(`Create inside jokes together - find something silly and laugh about it`);
+        }
+        break;
+
+      case 'appreciation':
+        if (communicationStyle === 'playful') {
+          actions.push(`Send: "You're basically a superhero in my life. Just FYI 🦸‍♀️"`);
+          actions.push(`List 3 specific things they did this week that you appreciate`);
+        } else {
+          actions.push(`Send: "I don't say it enough, but I'm so grateful for everything you do. Thank you."`);
+          actions.push(`Tell them specifically: "I appreciate how you [mention something they did recently]"`);
+        }
+        break;
+
+      case 'understanding':
+        actions.push(`Send: "I want to understand your perspective better. Can you tell me more about how you see it?"`);
+        actions.push(`Listen without defending: just hear them out completely before sharing your view`);
+        break;
+
+      case 'consistency':
+        actions.push(`Send: "I commit to checking in with you every morning. Here's to being more consistent! 📅"`);
+        actions.push(`Create a daily ritual: same time each day for connection, even if just a quick text`);
         break;
 
       default:
-        actions.push("Start with listening - ask them to tell you more about what they need and really hear them");
-        actions.push("Show you care through action - do one small thing today that shows you're paying attention");
+        actions.push(`Start with empathy: "I hear you. Tell me more about what's going on."`);
+        actions.push(`Ask what they need: "What would be most helpful from me right now?"`);
+        actions.push(`Follow through: Whatever they ask for, make it happen`);
     }
 
     return actions;
   };
 
   const generateTimeline = (need: RelationshipNeed, timeAvailable: TimeAvailability): string[] => {
+    const now = new Date();
+    const hour = now.getHours();
     const timeline: string[] = [];
 
     if (timeAvailable === 'plenty') {
-      timeline.push("Today: Start with immediate action - send a message or initiate contact");
-      timeline.push("Next 2-3 days: Follow through on your plan with consistent effort");
-      timeline.push("End of week: Check in on progress and adjust as needed");
+      // Evening/weekend time - can act immediately
+      timeline.push(`Today (${hour >= 18 ? 'now' : 'this evening'}): Send the first message from your action plan above`);
+      timeline.push("Tonight: Follow through with your planned activity or quality time");
+      timeline.push("Tomorrow: Send a follow-up message asking how they're feeling");
+      timeline.push("This week: Continue the support and check in regularly");
     } else if (timeAvailable === 'moderate') {
-      timeline.push("Today: Quick action - send a thoughtful message or make a concrete plan");
-      timeline.push("Tomorrow: Follow up with the first step of your action plan");
-      timeline.push("This week: Complete the main support action and check in");
+      // Evening time on weekday - some time available
+      timeline.push(`Today (${hour >= 17 ? 'now' : 'this evening'}): Send an initial supportive message`);
+      timeline.push("Tomorrow: Follow up with more substantial support from your action plan");
+      timeline.push("This week: Complete the main support actions and maintain connection");
     } else {
-      timeline.push("Today: Send an acknowledging message showing you heard them");
-      timeline.push("Soon: Schedule time to properly address their need");
-      timeline.push("When possible: Follow through with meaningful support");
+      // Busy time - limited immediate availability
+      timeline.push("Today: Send a quick acknowledging message showing you heard them");
+      timeline.push("This evening: Send a more substantial message from your action plan");
+      timeline.push("Tomorrow: Follow through with concrete support actions");
+      timeline.push("This week: Build on the initial support with ongoing care");
     }
 
     return timeline;
   };
 
   const generateCheckInSchedule = (timeAvailable: TimeAvailability): string[] => {
+    const now = new Date();
+    const hour = now.getHours();
+
     if (timeAvailable === 'plenty') {
-      return ["Tomorrow morning", "2 days from now", "End of week"];
+      // Can be more frequent with plenty of time
+      return [
+        "Tomorrow morning - ask how they're feeling after your support",
+        "2 days from now - check on progress",
+        "End of week - see how things have improved"
+      ];
     } else if (timeAvailable === 'moderate') {
-      return ["Tomorrow", "Mid-week"];
+      return [
+        "Tomorrow - follow up on your initial message",
+        "Mid-week - check in on how the support is landing"
+      ];
     } else {
-      return ["When you have time", "End of week"];
+      // Limited time - focus on key moments
+      return [
+        "This evening - send your planned supportive message",
+        "Tomorrow - check in after your message",
+        "When you have time - follow through on action items"
+      ];
     }
   };
 
