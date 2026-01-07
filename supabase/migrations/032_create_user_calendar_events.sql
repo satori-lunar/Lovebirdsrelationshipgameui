@@ -13,12 +13,12 @@ CREATE TABLE IF NOT EXISTS user_calendar_events (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
   -- Ensure end time is after start time
-  CONSTRAINT valid_time_range CHECK (end_time > start_time),
-
-  -- Index for efficient queries
-  INDEX idx_user_calendar_events_user_id (user_id),
-  INDEX idx_user_calendar_events_time_range (start_time, end_time)
+  CONSTRAINT valid_time_range CHECK (end_time > start_time)
 );
+
+-- Create indexes for efficient queries
+CREATE INDEX IF NOT EXISTS idx_user_calendar_events_user_id ON user_calendar_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_calendar_events_time_range ON user_calendar_events(start_time, end_time);
 
 -- Enable RLS
 ALTER TABLE user_calendar_events ENABLE ROW LEVEL SECURITY;
