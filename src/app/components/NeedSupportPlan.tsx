@@ -30,9 +30,13 @@ interface SupportPlan {
 }
 
 export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedSupportPlanProps) {
+  console.log('NeedSupportPlan rendered with:', { need, partnerName });
+
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
+
+  console.log('NeedSupportPlan data:', { user: !!user, relationship: !!relationship, partnerId });
   const [plan, setPlan] = useState<SupportPlan | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
@@ -40,10 +44,35 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
   // Generate personalized support plan
   useEffect(() => {
     generateSupportPlan();
-  }, [need, relationship]);
+  }, [need, relationship, partnerId]);
 
   const generateSupportPlan = async () => {
-    if (!relationship || !partnerId) return;
+    if (!relationship || !partnerId) {
+      // Create a basic plan without partner profile data
+      const basicPlan: SupportPlan = {
+        timeAvailable: 'moderate',
+        proximity: 'close',
+        priorityActions: [
+          "Send a message showing you care and are there to help",
+          "Ask them specifically what they need from you right now",
+          "Follow through on whatever they ask for",
+          "Check in later to see how things are going"
+        ],
+        timeline: [
+          "Today: Reach out and offer support",
+          "This week: Follow through and stay consistent",
+          "Ongoing: Keep checking in and showing you care"
+        ],
+        checkInSchedule: ["Tomorrow", "Mid-week"],
+        successMetrics: [
+          "They express feeling supported",
+          "The situation feels more manageable",
+          "They know they can count on you"
+        ]
+      };
+      setPlan(basicPlan);
+      return;
+    }
 
     // Get partner's profile for personalization
     let partnerProfile: any = {};
@@ -263,11 +292,10 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
     return (
       <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 p-6">
         <div className="max-w-2xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-purple-200 rounded w-1/3 mb-6"></div>
-            <div className="space-y-4">
-              <div className="h-32 bg-purple-200 rounded"></div>
-              <div className="h-24 bg-purple-200 rounded"></div>
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full mx-auto mb-4"></div>
+              <p className="text-gray-600">Creating your personalized support plan...</p>
             </div>
           </div>
         </div>

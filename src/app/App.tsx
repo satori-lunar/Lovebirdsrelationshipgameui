@@ -302,10 +302,10 @@ export default function App() {
         <DragonEvolutionDemo onBack={handleBack} />
       )}
 
-      {currentView === 'need-support-plan' && supportPlanNeed && userData && (
+      {currentView === 'need-support-plan' && supportPlanNeed && (
         <NeedSupportPlan
           need={supportPlanNeed}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'your partner'}
           onBack={() => setCurrentView('home')}
           onComplete={() => {
             setSupportPlanNeed(null);
