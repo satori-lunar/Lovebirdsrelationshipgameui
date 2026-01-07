@@ -26,21 +26,45 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
 
-  // Query active needs
+  // Query active needs - only show the most recent need that requires action from this user
   const { data: activeNeeds, isLoading } = useQuery({
-    queryKey: ['active-needs', relationship?.id],
+    queryKey: ['active-needs', relationship?.id, user?.id],
     queryFn: async () => {
-      if (!relationship?.id) return [];
-      // Get needs where status is 'acknowledged' or 'in_progress'
-      const needs = await needsService.getNeedsForCouple(relationship.id);
-      console.log('📋 Raw needs data:', needs);
-      return needs.filter(need => {
-        console.log('🔍 Checking need:', { id: need.id, status: need.status, needCategory: need.needCategory, need_category: (need as any).need_category });
-        return need.status === 'acknowledged' ||
-               need.status === 'in_progress';
+      if (!relationship?.id || !user?.id) return [];
+
+      // Get all needs for the couple
+      const allNeeds = await needsService.getNeedsForCouple(relationship.id);
+      console.log('📋 Raw needs data:', allNeeds);
+
+      // Filter for needs where this user is the receiver (they need to respond)
+      // and the need is not yet resolved
+      const needsRequiringAction = allNeeds.filter(need => {
+        const isReceiver = need.receiverId === user.id;
+        const needsAction = need.status === 'acknowledged' || need.status === 'in_progress';
+        console.log('🔍 Checking need:', {
+          id: need.id,
+          receiverId: need.receiverId,
+          userId: user.id,
+          isReceiver,
+          status: need.status,
+          needsAction,
+          needCategory: need.needCategory || (need as any).need_category
+        });
+        return isReceiver && needsAction;
       });
+
+      // Return only the most recent need (if any)
+      if (needsRequiringAction.length > 0) {
+        // Sort by created date (most recent first) and take the first one
+        const sortedNeeds = needsRequiringAction.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        return [sortedNeeds[0]]; // Return only the most recent one
+      }
+
+      return []; // No active needs requiring action
     },
-    enabled: !!relationship?.id,
+    enabled: !!relationship?.id && !!user?.id,
   });
 
   const handleStartPlanning = (need: RelationshipNeed) => {
@@ -85,10 +109,10 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-purple-600" />
-                Active Support Plans
+                Current Support Request
               </CardTitle>
               <p className="text-sm text-gray-600">
-                Continue working on needs you've acknowledged
+                Your partner's most recent need that needs your attention
               </p>
             </CardHeader>
             <CardContent>
@@ -131,9 +155,9 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
               ) : (
                 <div className="text-center py-8">
                   <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">No active support plans</p>
+                  <p className="text-gray-600 mb-4">No current support requests</p>
                   <p className="text-sm text-gray-500">
-                    When {partnerName} shares a need, you'll see planning options here
+                    When {partnerName} shares a need, it will appear here for you to address
                   </p>
                 </div>
               )}
