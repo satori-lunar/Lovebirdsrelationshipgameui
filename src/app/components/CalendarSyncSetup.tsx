@@ -10,6 +10,7 @@ import {
   Save,
   Bell,
   Heart,
+  MessageCircle,
   CalendarDays,
   Settings
 } from 'lucide-react';
