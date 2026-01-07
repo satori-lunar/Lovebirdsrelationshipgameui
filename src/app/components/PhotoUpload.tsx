@@ -127,7 +127,14 @@ export function PhotoUpload({
 
       if (error) {
         console.error('Upload error:', error);
-        throw error;
+        // Provide more specific error messages
+        if (error.message?.includes('Bucket not found')) {
+          throw new Error('Photo storage is not set up yet. Please contact support.');
+        } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
+          throw new Error('You don\'t have permission to upload photos. Please try again.');
+        } else {
+          throw new Error(`Upload failed: ${error.message}`);
+        }
       }
 
       // Get public URL

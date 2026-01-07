@@ -77,7 +77,7 @@ export default function App() {
 
   const userData = onboarding ? {
     name: onboarding.name,
-    partnerName: onboarding.partner_name,
+    partnerName: onboarding.partner_name || 'Partner',
   } : null;
 
   const handleOnboardingComplete = () => {
