@@ -15,6 +15,8 @@ interface DateSuggestionRequest {
     vibe: string[]
     max_budget: number
   }
+  user_id?: string // Optional: for calendar integration
+  couple_id?: string // Optional: for partner calendar checking
 }
 
 interface PlaceResult {
@@ -75,13 +77,109 @@ interface DatePackage {
     taxes_tips: number
   }
   items: DateItem[]
+  suggested_times?: Date[] // Calendar-aware time suggestions
 }
 
 // Cache interface for Redis-like functionality
 const cache = new Map<string, { data: any; expires: number }>()
 
-function getCacheKey(lat: number, lon: number, radius: number, preferences: any): string {
-  return `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}_${JSON.stringify(preferences)}`
+// Calendar availability interface
+interface CalendarEvent {
+  id: string
+  user_id: string
+  start_time: string
+  end_time: string
+  can_share_busy_status: boolean
+}
+
+interface NotificationPreferences {
+  date_suggestion_days: string[]
+  date_suggestion_time_preference: string
+}
+
+function getCacheKey(lat: number, lon: number, radius: number, preferences: any, userId?: string): string {
+  return `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}_${JSON.stringify(preferences)}_${userId || 'anon'}`
+}
+
+// Calendar availability functions
+async function getPartnerCalendarEvents(supabase: any, coupleId: string, userId: string): Promise<CalendarEvent[]> {
+  // Get partner ID
+  const { data: couple } = await supabase
+    .from('relationships')
+    .select('partner_a_id, partner_b_id')
+    .eq('id', coupleId)
+    .single()
+
+  if (!couple) return []
+
+  const partnerId = couple.partner_a_id === userId ? couple.partner_b_id : couple.partner_a_id
+
+  // Get partner's calendar events where they share busy status
+  const { data: events } = await supabase
+    .from('user_calendar_events')
+    .select('id, user_id, start_time, end_time, can_share_busy_status')
+    .eq('user_id', partnerId)
+    .eq('can_share_busy_status', true)
+
+  return events || []
+}
+
+async function getUserNotificationPreferences(supabase: any, userId: string): Promise<NotificationPreferences | null> {
+  const { data } = await supabase
+    .from('user_notification_preferences')
+    .select('date_suggestion_days, date_suggestion_time_preference')
+    .eq('user_id', userId)
+    .single()
+
+  return data
+}
+
+function isTimeSlotAvailable(events: CalendarEvent[], proposedDateTime: Date, durationHours: number = 3): boolean {
+  const proposedEnd = new Date(proposedDateTime)
+  proposedEnd.setHours(proposedEnd.getHours() + durationHours)
+
+  // Check if any events overlap with the proposed time slot
+  return !events.some(event => {
+    const eventStart = new Date(event.start_time)
+    const eventEnd = new Date(event.end_time)
+
+    // Check for overlap: proposed time overlaps with existing event
+    return (proposedDateTime < eventEnd && proposedEnd > eventStart)
+  })
+}
+
+function getPreferredTimeSlots(preferences: NotificationPreferences | null, date: Date): Date[] {
+  const slots: Date[] = []
+  const dayName = date.toLocaleDateString('en-US', { weekday: 'long' })
+
+  // Check if this day is preferred
+  if (preferences?.date_suggestion_days && !preferences.date_suggestion_days.includes(dayName)) {
+    return slots // No slots for non-preferred days
+  }
+
+  // Determine preferred hour based on time preference
+  let preferredHour = 19 // Default evening
+  if (preferences?.date_suggestion_time_preference === 'morning') {
+    preferredHour = 10
+  } else if (preferences?.date_suggestion_time_preference === 'afternoon') {
+    preferredHour = 14
+  }
+
+  // Create time slots around preferred time
+  const preferredTime = new Date(date)
+  preferredTime.setHours(preferredHour, 0, 0, 0)
+  slots.push(preferredTime)
+
+  // Add alternative slots (1-2 hours before/after)
+  for (let offset of [-2, -1, 1, 2]) {
+    const alternativeTime = new Date(preferredTime)
+    alternativeTime.setHours(alternativeTime.getHours() + offset)
+    if (alternativeTime.getHours() >= 9 && alternativeTime.getHours() <= 22) { // Reasonable hours
+      slots.push(alternativeTime)
+    }
+  }
+
+  return slots
 }
 
 function getCachedData(key: string): any | null {
@@ -159,7 +257,12 @@ function mergeAndRankPlaces(places: PlaceResult[], events: EventResult[], userLa
   return [...rankedPlaces, ...rankedEvents]
 }
 
-function generateDatePackages(rankedItems: any[], preferences: any): DatePackage[] {
+function generateDatePackages(
+  rankedItems: any[],
+  preferences: any,
+  partnerCalendarEvents: CalendarEvent[] = [],
+  userPreferences: NotificationPreferences | null = null
+): DatePackage[] {
   const diningOptions = rankedItems.filter(item => item.types?.includes('restaurant') || item.types?.includes('cafe'))
   const activityOptions = rankedItems.filter(item => !item.types?.includes('restaurant') && !item.types?.includes('cafe'))
 
@@ -174,6 +277,25 @@ function generateDatePackages(rankedItems: any[], preferences: any): DatePackage
     const activityCost = activity.ticket_availability?.minimum_ticket_price?.value || 10
     const transportCost = Math.min(15, Math.max(5, (dining.distance + activity.distance) * 0.5))
     const taxesTips = (diningCost + activityCost) * 0.15
+
+    // Generate calendar-aware time suggestions for the next 7 days
+    const timeSuggestions: Date[] = []
+    if (partnerCalendarEvents.length > 0 || userPreferences) {
+      const now = new Date()
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const checkDate = new Date(now)
+        checkDate.setDate(now.getDate() + dayOffset)
+
+        const availableSlots = getPreferredTimeSlots(userPreferences, checkDate)
+        for (const slot of availableSlots) {
+          if (isTimeSlotAvailable(partnerCalendarEvents, slot)) {
+            timeSuggestions.push(slot)
+            if (timeSuggestions.length >= 5) break // Limit suggestions
+          }
+        }
+        if (timeSuggestions.length >= 5) break
+      }
+    }
 
     packages.push({
       id: 'cheap_package',
@@ -199,7 +321,8 @@ function generateDatePackages(rankedItems: any[], preferences: any): DatePackage
           event_id: activity.id,
           details: activity
         }
-      ]
+      ],
+      suggested_times: timeSuggestions.length > 0 ? timeSuggestions : undefined
     })
   }
 
@@ -212,6 +335,25 @@ function generateDatePackages(rankedItems: any[], preferences: any): DatePackage
     const activityCost = activity.ticket_availability?.minimum_ticket_price?.value || 25
     const transportCost = Math.min(20, Math.max(8, (dining.distance + activity.distance) * 0.7))
     const taxesTips = (diningCost + activityCost) * 0.18
+
+    // Generate calendar-aware time suggestions
+    const timeSuggestions: Date[] = []
+    if (partnerCalendarEvents.length > 0 || userPreferences) {
+      const now = new Date()
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const checkDate = new Date(now)
+        checkDate.setDate(now.getDate() + dayOffset)
+
+        const availableSlots = getPreferredTimeSlots(userPreferences, checkDate)
+        for (const slot of availableSlots) {
+          if (isTimeSlotAvailable(partnerCalendarEvents, slot)) {
+            timeSuggestions.push(slot)
+            if (timeSuggestions.length >= 5) break
+          }
+        }
+        if (timeSuggestions.length >= 5) break
+      }
+    }
 
     packages.push({
       id: 'midrange_package',
@@ -237,7 +379,8 @@ function generateDatePackages(rankedItems: any[], preferences: any): DatePackage
           event_id: activity.id,
           details: activity
         }
-      ]
+      ],
+      suggested_times: timeSuggestions.length > 0 ? timeSuggestions : undefined
     })
   }
 
@@ -250,6 +393,25 @@ function generateDatePackages(rankedItems: any[], preferences: any): DatePackage
     const activityCost = activity.ticket_availability?.minimum_ticket_price?.value || 50
     const transportCost = Math.min(30, Math.max(12, (dining.distance + activity.distance) * 1.0))
     const taxesTips = (diningCost + activityCost) * 0.2
+
+    // Generate calendar-aware time suggestions
+    const timeSuggestions: Date[] = []
+    if (partnerCalendarEvents.length > 0 || userPreferences) {
+      const now = new Date()
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const checkDate = new Date(now)
+        checkDate.setDate(now.getDate() + dayOffset)
+
+        const availableSlots = getPreferredTimeSlots(userPreferences, checkDate)
+        for (const slot of availableSlots) {
+          if (isTimeSlotAvailable(partnerCalendarEvents, slot)) {
+            timeSuggestions.push(slot)
+            if (timeSuggestions.length >= 5) break
+          }
+        }
+        if (timeSuggestions.length >= 5) break
+      }
+    }
 
     packages.push({
       id: 'splurge_package',
@@ -275,7 +437,8 @@ function generateDatePackages(rankedItems: any[], preferences: any): DatePackage
           event_id: activity.id,
           details: activity
         }
-      ]
+      ],
+      suggested_times: timeSuggestions.length > 0 ? timeSuggestions : undefined
     })
   }
 
@@ -298,9 +461,15 @@ serve(async (req) => {
       )
     }
 
+    // Initialize Supabase client
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    )
+
     // Parse request body
     const requestData: DateSuggestionRequest = await req.json()
-    const { latitude, longitude, radius_km = 5, preferences } = requestData
+    const { latitude, longitude, radius_km = 5, preferences, user_id, couple_id } = requestData
 
     if (!latitude || !longitude) {
       return new Response(
@@ -309,14 +478,25 @@ serve(async (req) => {
       )
     }
 
-    // Check cache first
-    const cacheKey = getCacheKey(latitude, longitude, radius_km, preferences)
+    // Check cache first (include user_id for personalized caching)
+    const cacheKey = getCacheKey(latitude, longitude, radius_km, preferences, user_id)
     const cachedResult = getCachedData(cacheKey)
     if (cachedResult) {
       return new Response(
         JSON.stringify(cachedResult),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // Get calendar data and preferences if user is provided
+    let partnerCalendarEvents: CalendarEvent[] = []
+    let userPreferences: NotificationPreferences | null = null
+
+    if (user_id && couple_id) {
+      [partnerCalendarEvents, userPreferences] = await Promise.all([
+        getPartnerCalendarEvents(supabase, couple_id, user_id),
+        getUserNotificationPreferences(supabase, user_id)
+      ])
     }
 
     // Get API keys from environment
@@ -339,8 +519,8 @@ serve(async (req) => {
     // Merge and rank results
     const rankedItems = mergeAndRankPlaces(places, events, latitude, longitude)
 
-    // Generate date packages
-    const datePackages = generateDatePackages(rankedItems, preferences)
+    // Generate date packages with calendar awareness
+    const datePackages = generateDatePackages(rankedItems, preferences, partnerCalendarEvents, userPreferences)
 
     const result = { date_packages: datePackages }
 
