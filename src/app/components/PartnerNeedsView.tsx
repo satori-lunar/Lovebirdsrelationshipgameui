@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, CheckCircle, Clock, AlertCircle, Sparkles, ChevronRight, Send, Copy } from 'lucide-react';
+import { Heart, MessageCircle, CheckCircle, Clock, AlertCircle, Sparkles, ChevronRight, Send, Copy, Play, Check } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
 import { needsService } from '../services/needsService';
@@ -22,6 +22,7 @@ interface PartnerNeedsViewProps {
 export function PartnerNeedsView({ userId, partnerName, onViewDetails }: PartnerNeedsViewProps) {
   const [needs, setNeeds] = useState<RelationshipNeed[]>([]);
   const [loading, setLoading] = useState(true);
+  const [workingOnNeed, setWorkingOnNeed] = useState<string | null>(null);
 
   useEffect(() => {
     loadNeeds();
@@ -90,6 +91,44 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
     }).catch(() => {
       toast.error('Failed to copy message');
     });
+  };
+
+  const handleCompleteNeed = async (needId: string) => {
+    try {
+      await needsService.resolveNeed({
+        needId,
+        resolvedBy: userId,
+        howItWasResolved: "Completed the need",
+        wasHelpful: true
+      });
+      await loadNeeds();
+      toast.success("Great job completing this! Your partner will appreciate it.");
+      setWorkingOnNeed(null);
+    } catch (error) {
+      console.error('Failed to complete need:', error);
+      toast.error('Failed to mark as completed');
+    }
+  };
+
+  const handleStartWorking = async (needId: string) => {
+    try {
+      await needsService.markInProgress(needId);
+      setWorkingOnNeed(needId);
+      await loadNeeds();
+      toast.success("Let's work on this together! Check back in a few hours for a progress update.");
+
+      // Schedule follow-up check-ins (simplified - in a real app this would be more sophisticated)
+      setTimeout(() => {
+        if (window.confirm(`How's it going with helping ${partnerName}? Any progress to report?`)) {
+          // User clicked OK - could show a follow-up modal here
+          toast.info("Keep up the great work!");
+        }
+      }, 4 * 60 * 60 * 1000); // 4 hours later
+
+    } catch (error) {
+      console.error('Failed to start working on need:', error);
+      toast.error('Failed to start working on this');
+    }
   };
 
   const getUrgencyColor = (urgency: string) => {
@@ -303,30 +342,85 @@ export function PartnerNeedsView({ userId, partnerName, onViewDetails }: Partner
               {/* Actions */}
               <div className="flex gap-2">
                 {need.status === 'pending' && (
-                  <button
-                    onClick={() => handleAcknowledge(need.id)}
-                    className="flex-1 px-4 py-2.5 bg-white border-2 border-purple-300 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-all flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    I See This
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleCompleteNeed(need.id)}
+                      className="flex-1 px-4 py-2.5 bg-green-500 border-2 border-green-600 text-white rounded-xl font-medium hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      Completed It
+                    </button>
+                    <button
+                      onClick={() => handleStartWorking(need.id)}
+                      className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                    >
+                      <Play className="w-4 h-4" fill="white" />
+                      Start This
+                    </button>
+                  </>
                 )}
-                {(need.status === 'pending' || need.status === 'acknowledged') && (
-                  <button
-                    onClick={() => handleMarkInProgress(need.id)}
-                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
-                  >
-                    <Heart className="w-4 h-4" fill="white" />
-                    Working On It
-                  </button>
+                {need.status === 'acknowledged' && (
+                  <>
+                    <button
+                      onClick={() => handleCompleteNeed(need.id)}
+                      className="flex-1 px-4 py-2.5 bg-green-500 border-2 border-green-600 text-white rounded-xl font-medium hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      Completed It
+                    </button>
+                    <button
+                      onClick={() => handleStartWorking(need.id)}
+                      className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                    >
+                      <Play className="w-4 h-4" fill="white" />
+                      Start This
+                    </button>
+                  </>
                 )}
-                {need.status === 'in_progress' && (
-                  <div className="flex-1 px-4 py-2.5 bg-green-100 border-2 border-green-300 text-green-700 rounded-xl font-medium flex items-center justify-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
+                {need.status === 'in_progress' && workingOnNeed === need.id && (
+                  <>
+                    <button
+                      onClick={() => handleCompleteNeed(need.id)}
+                      className="flex-1 px-4 py-2.5 bg-green-500 border-2 border-green-600 text-white rounded-xl font-medium hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      Mark Complete
+                    </button>
+                    <div className="flex-1 px-4 py-2.5 bg-blue-100 border-2 border-blue-300 text-blue-700 rounded-xl font-medium flex items-center justify-center gap-2">
+                      <Heart className="w-4 h-4" />
+                      Working On It
+                    </div>
+                  </>
+                )}
+                {need.status === 'in_progress' && workingOnNeed !== need.id && (
+                  <div className="w-full px-4 py-2.5 bg-blue-100 border-2 border-blue-300 text-blue-700 rounded-xl font-medium flex items-center justify-center gap-2">
+                    <Heart className="w-4 h-4" />
                     In Progress
                   </div>
                 )}
               </div>
+
+              {/* Working guidance for started needs */}
+              {need.status === 'in_progress' && workingOnNeed === need.id && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <h4 className="font-semibold text-blue-900 text-sm">Your Action Plan:</h4>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-3">
+                    Great! You're working on helping {partnerName}. Use the suggestions above as your guide.
+                    You'll get a check-in reminder in a few hours to see how it's going.
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Clock className="w-3 h-3" />
+                    <span>Next check-in: ~4 hours from now</span>
+                  </div>
+                </motion.div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
