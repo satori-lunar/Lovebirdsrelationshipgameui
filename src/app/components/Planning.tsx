@@ -33,10 +33,12 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
       if (!relationship?.id) return [];
       // Get needs where status is 'acknowledged' or 'in_progress'
       const needs = await needsService.getNeedsForCouple(relationship.id);
-      return needs.filter(need =>
-        need.status === 'acknowledged' ||
-        need.status === 'in_progress'
-      );
+      console.log('📋 Raw needs data:', needs);
+      return needs.filter(need => {
+        console.log('🔍 Checking need:', { id: need.id, status: need.status, needCategory: need.needCategory, need_category: (need as any).need_category });
+        return need.status === 'acknowledged' ||
+               need.status === 'in_progress';
+      });
     },
     enabled: !!relationship?.id,
   });
@@ -108,7 +110,9 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
                         }`}></div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {need.needCategory.replace('_', ' ')}
+                            {need.needCategory || (need as any).need_category ?
+                             (need.needCategory || (need as any).need_category).replace('_', ' ') :
+                             'Unknown need'}
                           </p>
                           <p className="text-sm text-gray-600">
                             {need.status === 'in_progress' ? 'In progress' : 'Ready to start'}
