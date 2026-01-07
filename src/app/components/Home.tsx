@@ -38,13 +38,12 @@ import WeeklyRhythm from './WeeklyRhythm';
 import PartnerCapacityView from './PartnerCapacityView';
 import { SubmitNeedModal } from './SubmitNeedModal';
 import { PartnerNeedsView } from './PartnerNeedsView';
-import { NeedSupportPlan } from './NeedSupportPlan';
 import { ProfilePhotos } from './ProfilePhotos';
 
 interface HomeProps {
   userName: string;
   partnerName: string;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, data?: any) => void;
 }
 
 export function Home({ userName, partnerName: partnerNameProp, onNavigate }: HomeProps) {
@@ -59,9 +58,12 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
 
   const partnerName = partnerNameFromOnboarding || partnerNameProp;
 
+  const handleStartNeedPlan = (need: any) => {
+    onNavigate('need-support-plan', { need });
+  };
+
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [showNeedModal, setShowNeedModal] = useState(false);
-  const [supportPlanNeed, setSupportPlanNeed] = useState<any>(null);
 
   const { data: onboarding } = useQuery({
     queryKey: ['onboarding', user?.id],
@@ -380,16 +382,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
             </motion.div>
           )}
 
-          {/* Need Support Plan */}
-          {supportPlanNeed && (
-            <NeedSupportPlan
-              need={supportPlanNeed}
-              partnerName={partnerName}
-              onBack={() => setSupportPlanNeed(null)}
-              onComplete={() => setSupportPlanNeed(null)}
-            />
-          )}
-
           {/* Daily Question Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -462,7 +454,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               <PartnerNeedsView
                 userId={user.id}
                 partnerName={partnerName}
-                onStartNeedPlan={(need) => setSupportPlanNeed(need)}
+                onStartNeedPlan={handleStartNeedPlan}
               />
             </motion.div>
           )}

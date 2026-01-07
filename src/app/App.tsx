@@ -30,6 +30,7 @@ import SoloModeSetup from './components/SoloModeSetup';
 import PartnerInsightsForm from './components/PartnerInsightsForm';
 import CapacityCheckIn from './components/CapacityCheckIn';
 import { PartnerProfileOnboarding } from './components/PartnerProfileOnboarding';
+import { NeedSupportPlan } from './components/NeedSupportPlan';
 import { useAuth } from './hooks/useAuth';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
@@ -38,12 +39,13 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'need-support-plan';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
   const [currentView, setCurrentView] = useState<AppState>('entry');
   const [showSignInModal, setShowSignInModal] = useState(false);
+  const [supportPlanNeed, setSupportPlanNeed] = useState<any>(null);
 
   // Handle push notification taps
   const handleNotificationTap = useCallback((data: PushNotificationData) => {
@@ -82,7 +84,10 @@ export default function App() {
     setCurrentView('home');
   };
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: string, data?: any) => {
+    if (page === 'need-support-plan' && data?.need) {
+      setSupportPlanNeed(data.need);
+    }
     setCurrentView(page as AppState);
   };
 
@@ -295,6 +300,18 @@ export default function App() {
 
       {currentView === 'dragon-demo' && (
         <DragonEvolutionDemo onBack={handleBack} />
+      )}
+
+      {currentView === 'need-support-plan' && supportPlanNeed && userData && (
+        <NeedSupportPlan
+          need={supportPlanNeed}
+          partnerName={userData.partnerName || 'your partner'}
+          onBack={() => setCurrentView('home')}
+          onComplete={() => {
+            setSupportPlanNeed(null);
+            setCurrentView('home');
+          }}
+        />
       )}
 
       {currentView === 'settings' && (
