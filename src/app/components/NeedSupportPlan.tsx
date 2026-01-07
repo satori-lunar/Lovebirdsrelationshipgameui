@@ -5,9 +5,11 @@ import { Button } from './ui/button';
 import { motion } from 'motion/react';
 import { RelationshipNeed } from '../types/needs';
 import { needsService } from '../services/needsService';
+import { onboardingService } from '../services/onboardingService';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { usePartner } from '../hooks/usePartner';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 interface NeedSupportPlanProps {
@@ -19,11 +21,20 @@ interface NeedSupportPlanProps {
 
 type TimeAvailability = 'limited' | 'moderate' | 'plenty';
 type ProximityType = 'together' | 'close' | 'distant' | 'long_distance';
+type MentalCapacity = 'low' | 'moderate' | 'high';
 
 export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedSupportPlanProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
+
+  // Get user's onboarding data for capacity assessment
+  const { data: userOnboarding } = useQuery({
+    queryKey: ['user-onboarding-capacity', user?.id],
+    queryFn: () => user?.id ? onboardingService.getOnboarding(user.id) : null,
+    enabled: !!user?.id,
+  });
+
   const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
   const [scheduledReminders, setScheduledReminders] = useState<string[]>([]);
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
@@ -83,25 +94,56 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
     const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
+    // Start with time-of-day assessment
+    let baseAvailability: TimeAvailability = 'moderate';
+
     // Morning (6-12): Limited - people are busy starting their day
-    if (hour >= 6 && hour < 12) return 'limited';
+    if (hour >= 6 && hour < 12) baseAvailability = 'limited';
 
     // Lunch time (12-14): Moderate - quick break available
-    if (hour >= 12 && hour < 14) return 'moderate';
+    if (hour >= 12 && hour < 14) baseAvailability = 'moderate';
 
     // Afternoon work hours (14-17): Limited - busy work time
-    if (hour >= 14 && hour < 17) return 'limited';
+    if (hour >= 14 && hour < 17) baseAvailability = 'limited';
 
     // Early evening (17-20): Moderate - winding down, some time available
-    if (hour >= 17 && hour < 20) return 'moderate';
+    if (hour >= 17 && hour < 20) baseAvailability = 'moderate';
 
     // Evening (20-22): Plenty - relaxed time, especially on weekends
     if (hour >= 20 && hour < 22) {
-      return isWeekend ? 'plenty' : 'moderate';
+      baseAvailability = isWeekend ? 'plenty' : 'moderate';
     }
 
     // Late night (22-6): Limited - time for rest
-    return 'limited';
+    if (hour >= 22 || hour < 6) baseAvailability = 'limited';
+
+    // Now adjust based on user's real data
+    if (userOnboarding) {
+      const energyLevel = userOnboarding.energy_level;
+
+      // If user reports low energy, reduce availability
+      if (energyLevel === 'low_energy' || energyLevel === 'very_low_energy') {
+        if (baseAvailability === 'plenty') return 'moderate';
+        if (baseAvailability === 'moderate') return 'limited';
+        return 'limited';
+      }
+
+      // If user reports high energy, increase availability
+      if (energyLevel === 'high_energy' || energyLevel === 'very_high_energy') {
+        if (baseAvailability === 'limited') return 'moderate';
+        if (baseAvailability === 'moderate') return 'plenty';
+        return 'plenty';
+      }
+
+      // Check for work/stress indicators
+      const feelLoved = userOnboarding.feel_loved;
+      if (feelLoved === 'seldom' || feelLoved === 'never') {
+        // User might be stressed, reduce availability
+        if (baseAvailability === 'plenty') return 'moderate';
+      }
+    }
+
+    return baseAvailability;
   };
 
   const assessProximity = (): ProximityType => {
@@ -110,17 +152,54 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
     // If no partner connected yet
     if (!relationship.partner_b_id) return 'long_distance';
 
-    // Check relationship mode and living situation from onboarding
-    // For now, use relationship data - in future could integrate GPS
-    const hasRecentConnection = relationship.connected_at &&
-      (Date.now() - new Date(relationship.connected_at).getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 days
-
+    // First check relationship mode
     if (relationship.relationship_mode === 'long_distance') return 'long_distance';
     if (relationship.relationship_mode === 'solo') return 'distant';
 
-    // Check if they live together (from onboarding data if available)
-    // For now, assume close proximity unless specified as long distance
+    // Check user's onboarding for living situation
+    if (userOnboarding) {
+      const relationshipStatus = userOnboarding.relationship_status;
+
+      // If they live together, they're physically close
+      if (relationshipStatus === 'cohabitating') return 'together';
+
+      // If married but not cohabitating, check if they're living separately
+      if (relationshipStatus === 'living_separately') return 'distant';
+
+      // If married and we don't know living situation, assume close
+      if (relationshipStatus === 'married') return 'close';
+    }
+
+    // Fallback: check connection recency and relationship mode
+    const hasRecentConnection = relationship.connected_at &&
+      (Date.now() - new Date(relationship.connected_at).getTime()) < (30 * 24 * 60 * 60 * 1000); // 30 days
+
     return hasRecentConnection ? 'close' : 'distant';
+  };
+
+  const assessMentalCapacity = (): MentalCapacity => {
+    if (!userOnboarding) return 'moderate'; // Default if no data
+
+    const energyLevel = userOnboarding.energy_level;
+    const feelLoved = userOnboarding.feel_loved;
+
+    // Low energy indicates low mental capacity
+    if (energyLevel === 'very_low_energy' || energyLevel === 'low_energy') {
+      return 'low';
+    }
+
+    // High energy indicates high mental capacity
+    if (energyLevel === 'high_energy' || energyLevel === 'very_high_energy') {
+      return 'high';
+    }
+
+    // Check relationship satisfaction as indicator of mental load
+    if (feelLoved === 'seldom' || feelLoved === 'never') {
+      // Relationship stress might reduce mental capacity
+      return 'low';
+    }
+
+    return 'moderate'; // Default moderate capacity
   };
 
 
@@ -158,6 +237,7 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
 
   const timeAvailable = assessTimeAvailability();
   const proximity = assessProximity();
+  const mentalCapacity = assessMentalCapacity();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 px-4 py-6 sm:px-6">
@@ -218,8 +298,18 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                   <div className="flex items-center gap-3">
                     <Timer className={`w-5 h-5 flex-shrink-0 ${timeAvailable === 'plenty' ? 'text-green-600' : timeAvailable === 'moderate' ? 'text-yellow-600' : 'text-red-600'}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm">Your Capacity</p>
-                      <p className="text-xs text-gray-600 break-words capitalize">{timeAvailable} time + limited mental bandwidth</p>
+                      <p className="font-medium text-sm">Time Available</p>
+                      <p className="text-xs text-gray-600 break-words capitalize">{timeAvailable}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-blue-50 rounded-lg gap-2 sm:gap-0">
+                  <div className="flex items-center gap-3">
+                    <Zap className={`w-5 h-5 flex-shrink-0 ${mentalCapacity === 'high' ? 'text-green-600' : mentalCapacity === 'moderate' ? 'text-yellow-600' : 'text-red-600'}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm">Mental Capacity</p>
+                      <p className="text-xs text-gray-600 break-words capitalize">{mentalCapacity} bandwidth</p>
                     </div>
                   </div>
                 </div>
