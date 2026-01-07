@@ -40,27 +40,31 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
       const partnerNeedsBeingHelped = allNeeds.filter(need => {
         const isReceiver = need.receiverId === user.id;
         const isActive = need.status !== 'resolved';
-        console.log('🔍 Checking partner need:', {
-          id: need.id,
+        console.log(`🔍 Partner need ${need.id}:`, {
           requesterId: need.requesterId,
           receiverId: need.receiverId,
           userId: user.id,
           isReceiver,
           status: need.status,
           isActive,
-          needCategory: need.needCategory || (need as any).need_category
+          needCategory: need.needCategory || (need as any).need_category,
+          MATCH: isReceiver && isActive
         });
         return isReceiver && isActive;
       });
+
+      console.log(`✅ Partner needs filtered: ${partnerNeedsBeingHelped.length} matches`);
 
       // Return only the most recent need
       if (partnerNeedsBeingHelped.length > 0) {
         const sortedNeeds = partnerNeedsBeingHelped.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
+        console.log(`🎯 Returning most recent partner need: ${sortedNeeds[0].id}`);
         return [sortedNeeds[0]];
       }
 
+      console.log('❌ No partner needs match criteria');
       return [];
     },
     enabled: !!relationship?.id && !!user?.id,
@@ -80,27 +84,31 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
       const myNeedsBeingHelped = allNeeds.filter(need => {
         const isRequester = need.requesterId === user.id;
         const isActive = need.status !== 'resolved';
-        console.log('🔍 Checking my need:', {
-          id: need.id,
+        console.log(`🔍 My need ${need.id}:`, {
           requesterId: need.requesterId,
           receiverId: need.receiverId,
           userId: user.id,
           isRequester,
           status: need.status,
           isActive,
-          needCategory: need.needCategory || (need as any).need_category
+          needCategory: need.needCategory || (need as any).need_category,
+          MATCH: isRequester && isActive
         });
         return isRequester && isActive;
       });
+
+      console.log(`✅ My needs filtered: ${myNeedsBeingHelped.length} matches`);
 
       // Return only the most recent need
       if (myNeedsBeingHelped.length > 0) {
         const sortedNeeds = myNeedsBeingHelped.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
+        console.log(`🎯 Returning most recent my need: ${sortedNeeds[0].id}`);
         return [sortedNeeds[0]];
       }
 
+      console.log('❌ No my needs match criteria');
       return [];
     },
     enabled: !!relationship?.id && !!user?.id,
