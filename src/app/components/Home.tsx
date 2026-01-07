@@ -60,7 +60,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const partnerName = partnerNameFromOnboarding || partnerNameProp;
 
   const handleStartNeedPlan = (need: any) => {
-    onNavigate('need-support-plan', { need });
+    onNavigate('planning'); // Go to Support tab to see progress overview
   };
 
   const [showMoreOptions, setShowMoreOptions] = useState(false);
