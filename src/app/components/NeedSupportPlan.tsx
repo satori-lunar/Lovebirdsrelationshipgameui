@@ -76,28 +76,6 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
     return hasRecentConnection ? 'close' : 'distant';
   };
 
-  const handleStepComplete = (stepIndex: number) => {
-    const newCompleted = new Set(completedSteps);
-    newCompleted.add(stepIndex);
-    setCompletedSteps(newCompleted);
-    setCurrentStep(stepIndex + 1);
-  };
-
-  const handleCompletePlan = async () => {
-    try {
-      await needsService.resolveNeed({
-        needId: need.id,
-        resolvedBy: user!.id,
-        howItWasResolved: "Completed personalized support plan",
-        wasHelpful: true
-      });
-      toast.success("Amazing work! Your partner will really appreciate your support.");
-      onComplete();
-    } catch (error) {
-      console.error('Failed to complete plan:', error);
-      toast.error('Failed to mark as complete');
-    }
-  };
 
   const handleSendMessage = async (message: string) => {
     await navigator.clipboard.writeText(message);
