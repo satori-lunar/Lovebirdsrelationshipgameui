@@ -19,7 +19,8 @@ import {
   Flame,
   Settings,
   Calendar,
-  Bookmark
+  Bookmark,
+  Target
 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Progress } from './ui/progress';
