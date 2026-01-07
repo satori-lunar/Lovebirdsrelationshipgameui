@@ -160,7 +160,7 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
   const proximity = assessProximity();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 px-4 py-6 sm:px-6">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <motion.div
@@ -204,32 +204,32 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-blue-50 rounded-lg gap-2 sm:gap-0">
                   <div className="flex items-center gap-3">
-                    <Target className="w-5 h-5 text-blue-600" />
-                    <div>
+                    <Target className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm">Partner Need</p>
-                      <p className="text-xs text-gray-600">{need.needCategory.replace('_', ' ')}</p>
+                      <p className="text-xs text-gray-600 break-words">{need.needCategory.replace('_', ' ')}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-orange-50 rounded-lg gap-2 sm:gap-0">
                   <div className="flex items-center gap-3">
-                    <Timer className={`w-5 h-5 ${timeAvailable === 'plenty' ? 'text-green-600' : timeAvailable === 'moderate' ? 'text-yellow-600' : 'text-red-600'}`} />
-                    <div>
+                    <Timer className={`w-5 h-5 flex-shrink-0 ${timeAvailable === 'plenty' ? 'text-green-600' : timeAvailable === 'moderate' ? 'text-yellow-600' : 'text-red-600'}`} />
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm">Your Capacity</p>
-                      <p className="text-xs text-gray-600 capitalize">{timeAvailable} time + limited mental bandwidth</p>
+                      <p className="text-xs text-gray-600 break-words capitalize">{timeAvailable} time + limited mental bandwidth</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-green-50 rounded-lg gap-2 sm:gap-0">
                   <div className="flex items-center gap-3">
-                    <MapPin className={`w-5 h-5 ${proximity === 'close' ? 'text-green-600' : 'text-blue-600'}`} />
-                    <div>
+                    <MapPin className={`w-5 h-5 flex-shrink-0 ${proximity === 'close' ? 'text-green-600' : 'text-blue-600'}`} />
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm">Physical Proximity</p>
-                      <p className="text-xs text-gray-600 capitalize">{proximity.replace('_', ' ')}</p>
+                      <p className="text-xs text-gray-600 break-words capitalize">{proximity.replace('_', ' ')}</p>
                     </div>
                   </div>
                 </div>
@@ -266,15 +266,15 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                   "I don't have a lot of time today, but I want you to know I care and I'm thinking about you.",
                   "I see you. I'm grateful for you. I'll make space for us soon."
                 ].map((message, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-800 italic">"{message}"</p>
+                  <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-800 italic break-words">"{message}"</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 self-end sm:self-auto">
                       <Button
                         onClick={() => handleSendMessage(message)}
                         size="sm"
-                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                        className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3"
                       >
                         <Send className="w-3 h-3 mr-1" />
                         Send
@@ -283,6 +283,7 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                         onClick={() => navigator.clipboard.writeText(message)}
                         size="sm"
                         variant="outline"
+                        className="text-xs px-3"
                       >
                         <Copy className="w-3 h-3" />
                       </Button>
@@ -315,38 +316,44 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                 {proximity === 'close' && (
                   <Button
                     onClick={() => handleMicroConnection('sit_together')}
-                    className="w-full justify-start p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200"
+                    className="w-full justify-start p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200 text-left"
                     variant="outline"
                   >
-                    <Users className="w-4 h-4 mr-3 text-green-600" />
-                    <div className="text-left">
-                      <p className="font-medium text-green-900">Sit next to them for 5 minutes</p>
-                      <p className="text-sm text-green-700">No phones, just presence</p>
+                    <div className="flex items-start gap-3 w-full">
+                      <Users className="w-4 h-4 mt-1 text-green-600 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-green-900 break-words">Sit next to them for 5 minutes</p>
+                        <p className="text-sm text-green-700 break-words">No phones, just presence</p>
+                      </div>
                     </div>
                   </Button>
                 )}
 
                 <Button
                   onClick={() => handleMicroConnection('emoji_checkin')}
-                  className="w-full justify-start p-4 h-auto bg-blue-50 hover:bg-blue-100 border-blue-200"
+                  className="w-full justify-start p-4 h-auto bg-blue-50 hover:bg-blue-100 border-blue-200 text-left"
                   variant="outline"
                 >
-                  <Heart className="w-4 h-4 mr-3 text-blue-600" />
-                  <div className="text-left">
-                    <p className="font-medium text-blue-900">Send a heart/emoji check-in later today</p>
-                    <p className="text-sm text-blue-700">Quick emotional ping</p>
+                  <div className="flex items-start gap-3 w-full">
+                    <Heart className="w-4 h-4 mt-1 text-blue-600 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-blue-900 break-words">Send a heart/emoji check-in later today</p>
+                      <p className="text-sm text-blue-700 break-words">Quick emotional ping</p>
+                    </div>
                   </div>
                 </Button>
 
                 <Button
                   onClick={() => handleMicroConnection('guided_question')}
-                  className="w-full justify-start p-4 h-auto bg-purple-50 hover:bg-purple-100 border-purple-200"
+                  className="w-full justify-start p-4 h-auto bg-purple-50 hover:bg-purple-100 border-purple-200 text-left"
                   variant="outline"
                 >
-                  <MessageCircle className="w-4 h-4 mr-3 text-purple-600" />
-                  <div className="text-left">
-                    <p className="font-medium text-purple-900">Ask one guided question</p>
-                    <p className="text-sm text-purple-700">"What's been weighing on you lately?" or "What do you need most from me this week?"</p>
+                  <div className="flex items-start gap-3 w-full">
+                    <MessageCircle className="w-4 h-4 mt-1 text-purple-600 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-purple-900 break-words">Ask one guided question</p>
+                      <p className="text-sm text-purple-700 break-words">"What's been weighing on you lately?" or "What do you need most from me this week?"</p>
+                    </div>
                   </div>
                 </Button>
               </div>
@@ -374,20 +381,24 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                   <>
                     <Button
                       onClick={() => handleScheduleReminder("Tonight at 8:30pm: Send one appreciation message")}
-                      className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200"
+                      className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200 text-left"
                       variant="outline"
                     >
-                      <Clock className="w-4 h-4 mr-3 text-orange-600" />
-                      <p className="font-medium text-orange-900">Tonight at 8:30pm: Send one appreciation message</p>
+                      <div className="flex items-start gap-3 w-full">
+                        <Clock className="w-4 h-4 mt-1 text-orange-600 flex-shrink-0" />
+                        <p className="font-medium text-orange-900 break-words">Tonight at 8:30pm: Send one appreciation message</p>
+                      </div>
                     </Button>
 
                     <Button
                       onClick={() => handleScheduleReminder("Tomorrow morning: Ask how they're feeling today")}
-                      className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200"
+                      className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200 text-left"
                       variant="outline"
                     >
-                      <Clock className="w-4 h-4 mr-3 text-orange-600" />
-                      <p className="font-medium text-orange-900">Tomorrow morning: Ask how they're feeling today</p>
+                      <div className="flex items-start gap-3 w-full">
+                        <Clock className="w-4 h-4 mt-1 text-orange-600 flex-shrink-0" />
+                        <p className="font-medium text-orange-900 break-words">Tomorrow morning: Ask how they're feeling today</p>
+                      </div>
                     </Button>
                   </>
                 )}
@@ -395,22 +406,26 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                 {timeAvailable === 'moderate' && (
                   <Button
                     onClick={() => handleScheduleReminder("Tomorrow evening: 5-minute check-in call")}
-                    className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200"
+                    className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200 text-left"
                     variant="outline"
                   >
-                    <Clock className="w-4 h-4 mr-3 text-orange-600" />
-                    <p className="font-medium text-orange-900">Tomorrow evening: 5-minute check-in call</p>
+                    <div className="flex items-start gap-3 w-full">
+                      <Clock className="w-4 h-4 mt-1 text-orange-600 flex-shrink-0" />
+                      <p className="font-medium text-orange-900 break-words">Tomorrow evening: 5-minute check-in call</p>
+                    </div>
                   </Button>
                 )}
 
                 {timeAvailable === 'limited' && (
                   <Button
                     onClick={() => handleScheduleReminder("When you have a quiet moment: Send 'thinking of you'")}
-                    className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200"
+                    className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200 text-left"
                     variant="outline"
                   >
-                    <Clock className="w-4 h-4 mr-3 text-orange-600" />
-                    <p className="font-medium text-orange-900">When you have a quiet moment: Send 'thinking of you'</p>
+                    <div className="flex items-start gap-3 w-full">
+                      <Clock className="w-4 h-4 mt-1 text-orange-600 flex-shrink-0" />
+                      <p className="font-medium text-orange-900 break-words">When you have a quiet moment: Send 'thinking of you'</p>
+                    </div>
                   </Button>
                 )}
               </div>

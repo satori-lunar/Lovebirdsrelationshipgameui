@@ -323,6 +323,28 @@ class NeedsService {
   }
 
   /**
+   * Get all needs for a couple (for planning overview)
+   */
+  async getNeedsForCouple(coupleId: string): Promise<RelationshipNeed[]> {
+    console.log('📋 Getting needs for couple:', coupleId);
+
+    const { data, error } = await api.supabase
+      .from('relationship_needs')
+      .select('*')
+      .eq('couple_id', coupleId)
+      .neq('status', 'expired')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Failed to get needs for couple:', error);
+      throw new Error(`Failed to get needs: ${error.message}`);
+    }
+
+    console.log('✅ Got needs for couple:', data?.length || 0);
+    return data || [];
+  }
+
+  /**
    * Get needs analytics for a couple
    */
   async getNeedsAnalytics(coupleId: string): Promise<NeedsAnalytics> {

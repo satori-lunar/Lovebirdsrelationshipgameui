@@ -785,6 +785,16 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           </button>
 
           <button
+            onClick={() => onNavigate('planning')}
+            className="flex flex-col items-center gap-1 py-2"
+          >
+            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
+              <Target className="w-5 h-5 text-gray-500" />
+            </div>
+            <span className="text-[10px] font-medium text-gray-400">Planning</span>
+          </button>
+
+          <button
             onClick={() => onNavigate('memories')}
             className="flex flex-col items-center gap-1 py-2"
           >
