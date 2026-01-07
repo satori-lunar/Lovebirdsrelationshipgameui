@@ -119,16 +119,12 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           return null;
         }
 
-        // Get partner's latest capacity check-in from today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
+        // Get partner's latest capacity check-in (not just today)
         const { data, error } = await api.supabase
           .from('capacity_checkins')
           .select('*')
           .eq('couple_id', relationship.id)
           .eq('user_id', partnerId) // Filter by partner's user_id
-          .gte('created_at', today.toISOString())
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(); // Use maybeSingle to handle no results gracefully
