@@ -165,8 +165,9 @@ class NeedsService {
   }
 
   /**
-   * Get pending needs for a user (where they are the receiver)
-   * Returns only the most recent pending need per requester to avoid crowding the UI
+   * Get unresolved needs for a user (where they are the receiver)
+   * Returns only the most recent unresolved need per requester to avoid crowding the UI
+   * Includes pending, acknowledged, and in_progress needs (anything not resolved)
    */
   async getPendingNeeds(userId: string): Promise<RelationshipNeed[]> {
     // First, get all relationships this user is part of
@@ -181,7 +182,7 @@ class NeedsService {
       return [];
     }
 
-    // For each relationship, get the most recent pending need from the other partner
+    // For each relationship, get the most recent unresolved need from the other partner
     const pendingNeeds: any[] = [];
 
     for (const relationship of relationships) {
@@ -191,14 +192,14 @@ class NeedsService {
 
       if (!partnerId) continue; // Partner not connected yet
 
-      // Get the most recent pending/acknowledged need from this partner
+      // Get the most recent need from this partner that hasn't been resolved yet
       const { data: recentNeed, error: needError } = await api.supabase
         .from('relationship_needs')
         .select('*')
         .eq('couple_id', relationship.id)
         .eq('requester_id', partnerId)
         .eq('receiver_id', userId)
-        .in('status', ['pending', 'acknowledged'])
+        .neq('status', 'resolved') // Show all needs except resolved ones
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
