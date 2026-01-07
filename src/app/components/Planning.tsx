@@ -35,14 +35,16 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
       // Get all needs for the couple
       const allNeeds = await needsService.getNeedsForCouple(relationship.id);
       console.log('📋 Partner needs raw data:', allNeeds);
+      console.log('🔍 Looking for needs where receiverId equals:', user.id);
 
       // Filter for needs where user is the RECEIVER (partner's needs they're helping with)
       const partnerNeedsBeingHelped = allNeeds.filter(need => {
-        const isReceiver = need.receiverId === user.id;
+        const receiverId = need.receiverId || (need as any).receiver_id;
+        const isReceiver = receiverId === user.id;
         const isActive = need.status !== 'resolved';
         console.log(`🔍 Partner need ${need.id}:`, {
-          requesterId: need.requesterId,
-          receiverId: need.receiverId,
+          requesterId: need.requesterId || (need as any).requester_id,
+          receiverId: receiverId,
           userId: user.id,
           isReceiver,
           status: need.status,
@@ -82,11 +84,12 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
 
       // Filter for needs where user is the REQUESTER (their own needs partner is helping with)
       const myNeedsBeingHelped = allNeeds.filter(need => {
-        const isRequester = need.requesterId === user.id;
+        const requesterId = need.requesterId || (need as any).requester_id;
+        const isRequester = requesterId === user.id;
         const isActive = need.status !== 'resolved';
         console.log(`🔍 My need ${need.id}:`, {
-          requesterId: need.requesterId,
-          receiverId: need.receiverId,
+          requesterId: requesterId,
+          receiverId: need.receiverId || (need as any).receiver_id,
           userId: user.id,
           isRequester,
           status: need.status,
