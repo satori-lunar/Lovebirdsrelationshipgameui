@@ -26,6 +26,53 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
   const { partnerId } = usePartner(relationship);
   const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
   const [scheduledReminders, setScheduledReminders] = useState<string[]>([]);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+
+  // Load saved progress on component mount
+  useEffect(() => {
+    const loadProgress = async () => {
+      try {
+        const progress = await needsService.getSupportPlanProgress(need.id);
+        if (progress) {
+          setCompletedActions(new Set(progress.completedActions));
+          setScheduledReminders(progress.scheduledReminders);
+          console.log('✅ Loaded saved progress:', progress);
+        } else {
+          console.log('ℹ️ No saved progress found, starting fresh');
+        }
+      } catch (error) {
+        console.error('Failed to load progress (column may not exist yet):', error);
+        // Continue without saved progress - user can still use the plan
+      } finally {
+        setIsLoadingProgress(false);
+      }
+    };
+
+    loadProgress();
+  }, [need.id]);
+
+  // Save progress whenever it changes
+  useEffect(() => {
+    if (isLoadingProgress) return; // Don't save while loading
+
+    const saveProgress = async () => {
+      try {
+        const progress = {
+          completedActions: Array.from(completedActions),
+          scheduledReminders,
+          lastUpdated: new Date()
+        };
+        await needsService.saveSupportPlanProgress(need.id, progress);
+        console.log('💾 Progress saved automatically');
+      } catch (error) {
+        console.error('Failed to save progress (column may not exist yet):', error);
+        // Don't show error to user - saving is nice-to-have, not required
+      }
+    };
+
+    const timeoutId = setTimeout(saveProgress, 1000); // Debounce saves
+    return () => clearTimeout(timeoutId);
+  }, [completedActions, scheduledReminders, need.id, isLoadingProgress]);
   const [showQualityTime, setShowQualityTime] = useState(false);
 
   // Component is now driven by real-time state and user interactions
@@ -147,6 +194,12 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-600" />
                 Your Support Context
+                {!isLoadingProgress && (
+                  <span className="text-xs text-green-600 ml-auto flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    Progress saved
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>

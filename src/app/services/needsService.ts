@@ -280,6 +280,49 @@ class NeedsService {
   }
 
   /**
+   * Save support plan progress for a need
+   */
+  async saveSupportPlanProgress(needId: string, progress: import('../types/needs').SupportPlanProgress): Promise<void> {
+    console.log('💾 Saving support plan progress:', { needId, progress });
+
+    const { error } = await api.supabase
+      .from('relationship_needs')
+      .update({
+        support_plan_progress: progress,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', needId);
+
+    if (error) {
+      console.error('❌ Failed to save support plan progress:', error);
+      throw new Error(`Failed to save progress: ${error.message}`);
+    }
+
+    console.log('✅ Support plan progress saved');
+  }
+
+  /**
+   * Load support plan progress for a need
+   */
+  async getSupportPlanProgress(needId: string): Promise<import('../types/needs').SupportPlanProgress | null> {
+    console.log('📖 Loading support plan progress for need:', needId);
+
+    const { data, error } = await api.supabase
+      .from('relationship_needs')
+      .select('support_plan_progress')
+      .eq('id', needId)
+      .single();
+
+    if (error) {
+      console.error('❌ Failed to load support plan progress:', error);
+      return null;
+    }
+
+    console.log('✅ Support plan progress loaded:', data?.support_plan_progress);
+    return data?.support_plan_progress || null;
+  }
+
+  /**
    * Get needs analytics for a couple
    */
   async getNeedsAnalytics(coupleId: string): Promise<NeedsAnalytics> {

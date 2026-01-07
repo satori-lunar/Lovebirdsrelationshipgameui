@@ -54,6 +54,9 @@ export interface RelationshipNeed {
   // AI-generated response
   aiSuggestion?: AINeedSuggestion;
 
+  // Support plan progress (for NeedSupportPlan component)
+  supportPlanProgress?: SupportPlanProgress;
+
   // Privacy
   showRawNeedToPartner: boolean; // Usually false - show AI translation instead
 
@@ -62,6 +65,20 @@ export interface RelationshipNeed {
   acknowledgedAt?: Date;
   resolvedAt?: Date;
   expiresAt?: Date; // Auto-expire after 7 days
+}
+
+/**
+ * Progress tracking for the NeedSupportPlan component
+ */
+export interface SupportPlanProgress {
+  // Completed actions (immediate_message, micro_connection, etc.)
+  completedActions: string[];
+
+  // Scheduled reminders that have been set
+  scheduledReminders: string[];
+
+  // Last time progress was updated
+  lastUpdated: Date;
 }
 
 /**
