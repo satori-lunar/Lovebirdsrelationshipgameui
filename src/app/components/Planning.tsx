@@ -36,27 +36,27 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
       const allNeeds = await needsService.getNeedsForCouple(relationship.id);
       console.log('📋 Raw needs data:', allNeeds);
 
-      // Filter for needs where this user is the receiver (they need to respond)
+      // Filter for needs where this user is the requester (their own needs that partner is helping with)
       // and the need is not yet resolved
-      const needsRequiringAction = allNeeds.filter(need => {
-        const isReceiver = need.receiverId === user.id;
-        const needsAction = need.status === 'acknowledged' || need.status === 'in_progress';
+      const needsBeingHelped = allNeeds.filter(need => {
+        const isRequester = need.requesterId === user.id;
+        const isActive = need.status !== 'resolved';
         console.log('🔍 Checking need:', {
           id: need.id,
-          receiverId: need.receiverId,
+          requesterId: need.requesterId,
           userId: user.id,
-          isReceiver,
+          isRequester,
           status: need.status,
-          needsAction,
+          isActive,
           needCategory: need.needCategory || (need as any).need_category
         });
-        return isReceiver && needsAction;
+        return isRequester && isActive;
       });
 
       // Return only the most recent need (if any)
-      if (needsRequiringAction.length > 0) {
+      if (needsBeingHelped.length > 0) {
         // Sort by created date (most recent first) and take the first one
-        const sortedNeeds = needsRequiringAction.sort((a, b) =>
+        const sortedNeeds = needsBeingHelped.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         return [sortedNeeds[0]]; // Return only the most recent one
@@ -109,10 +109,10 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="w-5 h-5 text-purple-600" />
-                Current Support Request
+                My Support Request
               </CardTitle>
               <p className="text-sm text-gray-600">
-                Your partner's most recent need that needs your attention
+                Your most recent need that {partnerName} is helping you with
               </p>
             </CardHeader>
             <CardContent>
@@ -139,7 +139,10 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
                              'Unknown need'}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {need.status === 'in_progress' ? 'In progress' : 'Ready to start'}
+                            {need.status === 'resolved' ? 'Completed' :
+                             need.status === 'in_progress' ? `${partnerName} is working on this` :
+                             need.status === 'acknowledged' ? `${partnerName} has seen this` :
+                             'Waiting for response'}
                           </p>
                         </div>
                       </div>
@@ -147,7 +150,7 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
                         onClick={() => handleStartPlanning(need)}
                         className="bg-purple-500 hover:bg-purple-600 text-white"
                       >
-                        Continue Planning
+                        View Progress
                       </Button>
                     </div>
                   ))}
@@ -155,9 +158,9 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
               ) : (
                 <div className="text-center py-8">
                   <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-4">No current support requests</p>
+                  <p className="text-gray-600 mb-4">No active support requests</p>
                   <p className="text-sm text-gray-500">
-                    When {partnerName} shares a need, it will appear here for you to address
+                    When you share a need, it will appear here to track {partnerName}'s progress
                   </p>
                 </div>
               )}
