@@ -120,8 +120,12 @@ interface CapacityCheckInProps {
 export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
-  const [step, setStep] = useState<'mood' | 'needs' | 'urgency' | 'context'>('mood');
+  const [step, setStep] = useState<'mood' | 'duration' | 'causes' | 'activities' | 'boundaries' | 'needs' | 'urgency' | 'context'>('mood');
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [duration, setDuration] = useState<string>('');
+  const [causes, setCauses] = useState<string[]>([]);
+  const [activities, setActivities] = useState<string>('');
+  const [boundaries, setBoundaries] = useState<string>('');
   const [selectedNeeds, setSelectedNeeds] = useState<NeedCategory[]>([]);
   const [urgency, setUrgency] = useState<Urgency>('would_help');
   const [context, setContext] = useState('');
@@ -167,6 +171,10 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
           user_id: user.id,
           couple_id: relationship.id,
           mood: selectedMood,
+          duration: duration || null,
+          causes: causes.length > 0 ? causes : null,
+          activities: activities.trim() || null,
+          boundaries: boundaries.trim() || null,
           needs: selectedNeeds,
           context: context.trim() || null,
           created_at: new Date().toISOString()
@@ -199,10 +207,10 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     }
   };
 
-  // Set capacity and move to needs step - capacity will be saved when user completes
+  // Set capacity and move to duration step - capacity details will be saved when user completes
   const handleCapacitySelected = (moodId: string) => {
     setSelectedMood(moodId);
-    setStep('needs');
+    setStep('duration');
   };
 
   if (submitted) {
@@ -586,6 +594,223 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     );
   };
 
+  const renderDurationStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          How long have you felt this way?
+        </h2>
+        <p className="text-gray-600 text-sm">
+          Help your partner understand the timeline
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {[
+          { value: 'just_today', label: 'Just today', desc: 'This is new today' },
+          { value: 'few_days', label: 'A few days', desc: '2-3 days now' },
+          { value: 'this_week', label: 'This week', desc: 'Most of this week' },
+          { value: 'few_weeks', label: 'A few weeks', desc: '2-3 weeks or more' },
+          { value: 'ongoing', label: 'Ongoing', desc: 'This has been going on for a while' }
+        ].map((option) => (
+          <motion.button
+            key={option.value}
+            onClick={() => {
+              setDuration(option.value);
+              setStep('causes');
+            }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+              duration === option.value
+                ? 'border-purple-500 bg-purple-50'
+                : 'border-gray-200 hover:border-purple-300'
+            }`}
+          >
+            <div className="font-semibold text-gray-900">{option.label}</div>
+            <div className="text-sm text-gray-500">{option.desc}</div>
+          </motion.button>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('mood')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => setStep('causes')}
+          disabled={!duration}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderCausesStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          What's contributing to this?
+        </h2>
+        <p className="text-gray-600 text-sm">
+          Select all that apply • Optional
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {[
+          'Work stress',
+          'Health issues',
+          'Family responsibilities',
+          'Relationship challenges',
+          'Financial concerns',
+          'Sleep issues',
+          'Social obligations',
+          'Weather/seasonal changes',
+          'Personal goals',
+          'Other'
+        ].map((cause) => (
+          <motion.button
+            key={cause}
+            onClick={() => {
+              setCauses(prev =>
+                prev.includes(cause)
+                  ? prev.filter(c => c !== cause)
+                  : [...prev, cause]
+              );
+            }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className="w-full"
+          >
+            <Card className={`cursor-pointer transition-all ${
+              causes.includes(cause)
+                ? 'ring-2 ring-purple-400 bg-purple-50'
+                : 'hover:shadow-md'
+            }`}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <span className="text-gray-900 font-medium">{cause}</span>
+                {causes.includes(cause) && (
+                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.button>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('duration')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => setStep('activities')}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderActivitiesStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Activities & Energy
+        </h2>
+        <p className="text-gray-600 text-sm">
+          Any specific activities you're looking forward to or avoiding?
+        </p>
+      </div>
+
+      <Textarea
+        value={activities}
+        onChange={(e) => setActivities(e.target.value)}
+        placeholder="E.g., 'Looking forward to our date night' or 'Need to skip social plans this weekend'"
+        rows={3}
+        className="resize-none"
+      />
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('causes')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => setStep('boundaries')}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderBoundariesStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Any boundaries or specific needs?
+        </h2>
+        <p className="text-gray-600 text-sm">
+          How can your partner best support you right now?
+        </p>
+      </div>
+
+      <Textarea
+        value={boundaries}
+        onChange={(e) => setBoundaries(e.target.value)}
+        placeholder="E.g., 'Please check in before making plans' or 'I need quiet time after work'"
+        rows={3}
+        className="resize-none"
+      />
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('activities')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => setStep('needs')}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
   const renderNeedsStep = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -645,7 +870,6 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
         </Button>
         <Button
           onClick={() => setStep('urgency')}
-          disabled={selectedNeeds.length === 0}
           className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
         >
           Continue
@@ -697,7 +921,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
       <div className="flex gap-3">
         <Button
-          onClick={() => setStep('needs')}
+          onClick={() => setStep('boundaries')}
           variant="outline"
           className="flex-1"
         >
@@ -781,13 +1005,13 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
         {/* Progress */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {['mood', 'needs', 'urgency', 'context'].map((s, i) => (
+          {['mood', 'duration', 'causes', 'activities', 'boundaries', 'needs', 'urgency', 'context'].map((s, i) => (
             <div
               key={s}
               className={`h-2 rounded-full transition-all ${
                 s === step
                   ? 'w-12 bg-gradient-to-r from-purple-500 to-violet-500'
-                  : ['mood', 'needs', 'urgency'].indexOf(s) < ['mood', 'needs', 'urgency', 'context'].indexOf(step)
+                  : ['mood', 'duration', 'causes', 'activities', 'boundaries', 'needs', 'urgency'].indexOf(s) < ['mood', 'duration', 'causes', 'activities', 'boundaries', 'needs', 'urgency', 'context'].indexOf(step)
                   ? 'w-8 bg-purple-300'
                   : 'w-8 bg-gray-200'
               }`}
@@ -798,6 +1022,10 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
         {/* Content */}
         <div className="bg-white rounded-3xl shadow-xl p-8">
           {step === 'mood' && renderMoodStep()}
+          {step === 'duration' && renderDurationStep()}
+          {step === 'causes' && renderCausesStep()}
+          {step === 'activities' && renderActivitiesStep()}
+          {step === 'boundaries' && renderBoundariesStep()}
           {step === 'needs' && renderNeedsStep()}
           {step === 'urgency' && renderUrgencyStep()}
           {step === 'context' && renderContextStep()}
