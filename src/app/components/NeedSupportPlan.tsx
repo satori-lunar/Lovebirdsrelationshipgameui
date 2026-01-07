@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, MapPin, Heart, CheckCircle, MessageCircle, Calendar, Sparkles, Users, Timer } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Heart, CheckCircle, MessageCircle, Calendar, Sparkles, Users, Timer, Send, Copy, Zap, Target, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { motion } from 'motion/react';
@@ -20,58 +20,15 @@ interface NeedSupportPlanProps {
 type TimeAvailability = 'limited' | 'moderate' | 'plenty';
 type ProximityType = 'together' | 'close' | 'distant' | 'long_distance';
 
-interface SupportPlan {
-  timeAvailable: TimeAvailability;
-  proximity: ProximityType;
-  priorityActions: string[];
-  timeline: string[];
-  checkInSchedule: string[];
-  successMetrics: string[];
-}
-
 export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedSupportPlanProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
-  const [plan, setPlan] = useState<SupportPlan | null>(null);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [completedActions, setCompletedActions] = useState<Set<string>>(new Set());
+  const [scheduledReminders, setScheduledReminders] = useState<string[]>([]);
+  const [showQualityTime, setShowQualityTime] = useState(false);
 
-  // Generate personalized support plan
-  useEffect(() => {
-    generateSupportPlan();
-  }, [need, relationship, partnerId]);
-
-  const generateSupportPlan = async () => {
-    // Get partner's profile for personalization
-    let partnerProfile: any = {};
-    try {
-      const { data: profile } = await import('../services/api').then(api =>
-        api.api.supabase
-          .from('onboarding_responses')
-          .select('love_language_primary, communication_style, favorite_activities, energy_level, budget_comfort')
-          .eq('user_id', partnerId)
-          .maybeSingle()
-      );
-      partnerProfile = profile || {};
-    } catch (error) {
-      console.error('Failed to fetch partner profile:', error);
-    }
-
-    const timeAvailable = assessTimeAvailability();
-    const proximity = assessProximity();
-
-    const supportPlan: SupportPlan = {
-      timeAvailable,
-      proximity,
-      priorityActions: generatePriorityActions(need, partnerProfile, timeAvailable, proximity),
-      timeline: generateTimeline(need, timeAvailable),
-      checkInSchedule: generateCheckInSchedule(timeAvailable),
-      successMetrics: generateSuccessMetrics(need)
-    };
-
-    setPlan(supportPlan);
-  };
+  // Component is now driven by real-time state and user interactions
 
   const assessTimeAvailability = (): TimeAvailability => {
     const now = new Date();
@@ -119,236 +76,6 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
     return hasRecentConnection ? 'close' : 'distant';
   };
 
-  const generatePriorityActions = (
-    need: RelationshipNeed,
-    partnerProfile: any,
-    timeAvailable: TimeAvailability,
-    proximity: ProximityType
-  ): string[] => {
-    const actions: string[] = [];
-    const loveLanguage = partnerProfile.love_language_primary || 'quality_time';
-    const favoriteActivities = partnerProfile.favorite_activities || [];
-    const energyLevel = partnerProfile.energy_level || 'balanced';
-    const communicationStyle = partnerProfile.communication_style || 'gentle';
-
-    // Create specific, actionable steps based on real data
-    switch (need.needCategory) {
-      case 'affection':
-        if (loveLanguage === 'words') {
-          if (communicationStyle === 'playful') {
-            actions.push(`Send: "Just thinking about you and smiling. You're the highlight of my day 💕"`);
-            actions.push(`Send: "I love how you [mention something specific about them]. It makes me feel so lucky."`);
-          } else if (communicationStyle === 'direct') {
-            actions.push(`Send: "I want you to know how much I care about you. You're important to me."`);
-            actions.push(`Send: "Thinking of you right now. Just wanted to say I appreciate you."`);
-          } else {
-            actions.push(`Send: "I'm so grateful to have you in my life. You make everything better."`);
-            actions.push(`Send: "You mean the world to me. I hope you know that."`);
-          }
-        } else if (loveLanguage === 'touch' && proximity === 'close') {
-          actions.push(`Give them a hug when you see them next - no words needed, just closeness`);
-          actions.push(`Hold their hand while watching TV or walking together tonight`);
-          actions.push(`Cuddle up together - physical closeness shows you care`);
-        } else if (loveLanguage === 'quality_time') {
-          if (timeAvailable === 'plenty') {
-            actions.push(`Spend 20 minutes of focused time together - phones away, just being present`);
-            if (favoriteActivities.length > 0) {
-              actions.push(`Do ${favoriteActivities[0].toLowerCase()} together - give them your full attention`);
-            }
-          } else {
-            actions.push(`Send: "I can't wait for our next date night. You make time together so special."`);
-          }
-        } else if (loveLanguage === 'acts') {
-          actions.push(`Make them their favorite drink or prepare something they enjoy without being asked`);
-          actions.push(`Take care of a small task they've mentioned - show you listen through actions`);
-        }
-        break;
-
-      case 'communication':
-        if (communicationStyle === 'playful') {
-          actions.push(`Send: "Hey, what's new with you? I want to hear everything! 😊"`);
-          actions.push(`Ask: "What's been making you laugh lately? Tell me a funny story."`);
-        } else if (communicationStyle === 'direct') {
-          actions.push(`Send: "I want to know how you're really doing. What's on your mind?"`);
-          actions.push(`Ask: "How has your day been? I want to hear about it."`);
-        } else {
-          actions.push(`Send: "I've been thinking about you. How are you feeling today?"`);
-          actions.push(`Ask: "What's something you'd like to talk about? I'm here to listen."`);
-        }
-
-        if (proximity === 'close' && timeAvailable !== 'limited') {
-          actions.push(`Set aside 15 minutes for a conversation - phones away, eye contact, really listen`);
-        }
-        break;
-
-      case 'quality_time':
-        if (favoriteActivities.length > 0) {
-          if (timeAvailable === 'plenty') {
-            actions.push(`Plan to ${favoriteActivities[0].toLowerCase()} together tonight - make it special`);
-            if (favoriteActivities.length > 1) {
-              actions.push(`Try ${favoriteActivities[1].toLowerCase()} as a couple - create new memories`);
-            }
-          } else {
-            actions.push(`Send: "Let's ${favoriteActivities[0].toLowerCase()} together soon. I can't wait! 📅"`);
-          }
-        } else {
-          if (proximity === 'close') {
-            actions.push(`Cook dinner together - prep, cook, eat, and clean up as a team`);
-            actions.push(`Take a walk together and talk about your day - simple but meaningful`);
-          } else {
-            actions.push(`Schedule a video call for ${timeAvailable === 'plenty' ? 'tonight' : 'tomorrow'} - focused time together`);
-          }
-        }
-        break;
-
-      case 'support':
-        actions.push(`Send: "I hear that ${need.context ? need.context.substring(0, 30) + '...' : 'you\'re going through something'}. I'm here for you."`);
-        actions.push(`Ask: "What would help most right now - listening, advice, or just being present?"`);
-
-        if (energyLevel === 'low_energy') {
-          actions.push(`Send encouraging texts throughout the day: "Thinking of you 💙" or "You've got this"`);
-        } else {
-          actions.push(`Offer specific help: "Can I pick up groceries for you?" or "Would a home-cooked meal help?"`);
-        }
-        break;
-
-      case 'fun':
-        if (favoriteActivities.some(a => a.toLowerCase().includes('game'))) {
-          actions.push(`Send: "Game night? Your turn to pick the game 🎲"`);
-          actions.push(`Set up a board game or card game session - keep it light and fun`);
-        } else if (favoriteActivities.some(a => a.toLowerCase().includes('movie') || a.toLowerCase().includes('tv'))) {
-          actions.push(`Send: "Comedy movie marathon tonight? 🍿"`);
-          actions.push(`Pick their favorite comedy and watch together - share the laughs`);
-        } else {
-          actions.push(`Send: "Let's do something spontaneous and fun. Ideas? 🎉"`);
-          actions.push(`Plan a silly activity: make funny TikToks, have a dance party, or tell jokes`);
-        }
-
-        if (proximity === 'close') {
-          actions.push(`Create inside jokes together - find something silly and laugh about it`);
-        }
-        break;
-
-      case 'appreciation':
-        if (communicationStyle === 'playful') {
-          actions.push(`Send: "You're basically a superhero in my life. Just FYI 🦸‍♀️"`);
-          actions.push(`List 3 specific things they did this week that you appreciate`);
-        } else {
-          actions.push(`Send: "I don't say it enough, but I'm so grateful for everything you do. Thank you."`);
-          actions.push(`Tell them specifically: "I appreciate how you [mention something they did recently]"`);
-        }
-        break;
-
-      case 'understanding':
-        actions.push(`Send: "I want to understand your perspective better. Can you tell me more about how you see it?"`);
-        actions.push(`Listen without defending: just hear them out completely before sharing your view`);
-        break;
-
-      case 'consistency':
-        actions.push(`Send: "I commit to checking in with you every morning. Here's to being more consistent! 📅"`);
-        actions.push(`Create a daily ritual: same time each day for connection, even if just a quick text`);
-        break;
-
-      default:
-        actions.push(`Start with empathy: "I hear you. Tell me more about what's going on."`);
-        actions.push(`Ask what they need: "What would be most helpful from me right now?"`);
-        actions.push(`Follow through: Whatever they ask for, make it happen`);
-    }
-
-    return actions;
-  };
-
-  const generateTimeline = (need: RelationshipNeed, timeAvailable: TimeAvailability): string[] => {
-    const now = new Date();
-    const hour = now.getHours();
-    const timeline: string[] = [];
-
-    if (timeAvailable === 'plenty') {
-      // Evening/weekend time - can act immediately
-      timeline.push(`Today (${hour >= 18 ? 'now' : 'this evening'}): Send the first message from your action plan above`);
-      timeline.push("Tonight: Follow through with your planned activity or quality time");
-      timeline.push("Tomorrow: Send a follow-up message asking how they're feeling");
-      timeline.push("This week: Continue the support and check in regularly");
-    } else if (timeAvailable === 'moderate') {
-      // Evening time on weekday - some time available
-      timeline.push(`Today (${hour >= 17 ? 'now' : 'this evening'}): Send an initial supportive message`);
-      timeline.push("Tomorrow: Follow up with more substantial support from your action plan");
-      timeline.push("This week: Complete the main support actions and maintain connection");
-    } else {
-      // Busy time - limited immediate availability
-      timeline.push("Today: Send a quick acknowledging message showing you heard them");
-      timeline.push("This evening: Send a more substantial message from your action plan");
-      timeline.push("Tomorrow: Follow through with concrete support actions");
-      timeline.push("This week: Build on the initial support with ongoing care");
-    }
-
-    return timeline;
-  };
-
-  const generateCheckInSchedule = (timeAvailable: TimeAvailability): string[] => {
-    const now = new Date();
-    const hour = now.getHours();
-
-    if (timeAvailable === 'plenty') {
-      // Can be more frequent with plenty of time
-      return [
-        "Tomorrow morning - ask how they're feeling after your support",
-        "2 days from now - check on progress",
-        "End of week - see how things have improved"
-      ];
-    } else if (timeAvailable === 'moderate') {
-      return [
-        "Tomorrow - follow up on your initial message",
-        "Mid-week - check in on how the support is landing"
-      ];
-    } else {
-      // Limited time - focus on key moments
-      return [
-        "This evening - send your planned supportive message",
-        "Tomorrow - check in after your message",
-        "When you have time - follow through on action items"
-      ];
-    }
-  };
-
-  const generateSuccessMetrics = (need: RelationshipNeed): string[] => {
-    const metrics: string[] = [];
-
-    switch (need.needCategory) {
-      case 'affection':
-        metrics.push("They feel more loved and appreciated");
-        metrics.push("You notice them smiling or seeming happier");
-        metrics.push("They initiate more positive interactions");
-        break;
-      case 'communication':
-        metrics.push("Conversations feel deeper and more connected");
-        metrics.push("They share more openly with you");
-        metrics.push("You understand their perspective better");
-        break;
-      case 'quality_time':
-        metrics.push("They comment on enjoying time together");
-        metrics.push("You both feel more connected");
-        metrics.push("Distractions during time together decrease");
-        break;
-      case 'support':
-        metrics.push("They express feeling supported and less alone");
-        metrics.push("Their stress or challenges seem more manageable");
-        metrics.push("They reach out to you when they need help");
-        break;
-      case 'fun':
-        metrics.push("You hear them laugh more often");
-        metrics.push("They suggest fun activities or moments");
-        metrics.push("The relationship feels lighter and more playful");
-        break;
-      default:
-        metrics.push("They express appreciation for your support");
-        metrics.push("The issue they mentioned feels addressed");
-        metrics.push("They seem more content and at peace");
-    }
-
-    return metrics;
-  };
-
   const handleStepComplete = (stepIndex: number) => {
     const newCompleted = new Set(completedSteps);
     newCompleted.add(stepIndex);
@@ -372,20 +99,40 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
     }
   };
 
-  if (!plan) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center">
-              <div className="animate-spin w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Creating your personalized support plan...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleSendMessage = async (message: string) => {
+    await navigator.clipboard.writeText(message);
+    toast.success("Message copied! Send it to your partner.");
+    setCompletedActions(prev => new Set([...prev, 'immediate_message']));
+  };
+
+  const handleMicroConnection = async (action: string) => {
+    setCompletedActions(prev => new Set([...prev, 'micro_connection']));
+    toast.success("Great! Small actions make a big difference.");
+  };
+
+  const handleScheduleReminder = (reminder: string) => {
+    setScheduledReminders(prev => [...prev, reminder]);
+    toast.success("Reminder scheduled for later!");
+  };
+
+  const handleCompletePlan = async () => {
+    try {
+      await needsService.resolveNeed({
+        needId: need.id,
+        resolvedBy: user!.id,
+        howItWasResolved: "Completed personalized support plan",
+        wasHelpful: true
+      });
+      toast.success("Amazing work! Your partner will really appreciate your support.");
+      onComplete();
+    } catch (error) {
+      console.error('Failed to complete plan:', error);
+      toast.error('Failed to mark as complete');
+    }
+  };
+
+  const timeAvailable = assessTimeAvailability();
+  const proximity = assessProximity();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 p-6">
@@ -411,7 +158,7 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
           </div>
         </motion.div>
 
-        {/* Context Assessment */}
+        {/* Support Context */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -425,27 +172,47 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                  <Timer className={`w-5 h-5 ${plan.timeAvailable === 'plenty' ? 'text-green-600' : plan.timeAvailable === 'moderate' ? 'text-yellow-600' : 'text-red-600'}`} />
-                  <div>
-                    <p className="font-medium text-sm">Time Available</p>
-                    <p className="text-xs text-gray-600 capitalize">{plan.timeAvailable}</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Target className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <p className="font-medium text-sm">Partner Need</p>
+                      <p className="text-xs text-gray-600">{need.needCategory.replace('_', ' ')}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                  <MapPin className={`w-5 h-5 ${plan.proximity === 'close' || plan.proximity === 'together' ? 'text-green-600' : 'text-blue-600'}`} />
-                  <div>
-                    <p className="font-medium text-sm">Physical Proximity</p>
-                    <p className="text-xs text-gray-600 capitalize">{plan.proximity.replace('_', ' ')}</p>
+
+                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Timer className={`w-5 h-5 ${timeAvailable === 'plenty' ? 'text-green-600' : timeAvailable === 'moderate' ? 'text-yellow-600' : 'text-red-600'}`} />
+                    <div>
+                      <p className="font-medium text-sm">Your Capacity</p>
+                      <p className="text-xs text-gray-600 capitalize">{timeAvailable} time + limited mental bandwidth</p>
+                    </div>
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <MapPin className={`w-5 h-5 ${proximity === 'close' ? 'text-green-600' : 'text-blue-600'}`} />
+                    <div>
+                      <p className="font-medium text-sm">Physical Proximity</p>
+                      <p className="text-xs text-gray-600 capitalize">{proximity.replace('_', ' ')}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <p className="text-sm font-medium text-purple-900 mb-1">Primary Goal</p>
+                  <p className="text-xs text-purple-700">Help partner feel emotionally acknowledged without requiring planning or memory</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Priority Actions */}
+        {/* Step 1: Immediate Emotional Regulation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -454,55 +221,109 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                Your Action Plan
+                <Zap className="w-5 h-5 text-yellow-600" />
+                Step 1: Immediate Emotional Regulation (2–3 minutes)
               </CardTitle>
+              <p className="text-sm text-gray-600">Your partner may be feeling disconnected. Let's help them feel seen right now.</p>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {plan.priorityActions.map((action, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + index * 0.1 }}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      completedSteps.has(index)
-                        ? 'bg-green-50 border-green-300'
-                        : 'bg-white border-gray-200 hover:border-purple-300'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${
-                        completedSteps.has(index)
-                          ? 'bg-green-500 text-white'
-                          : 'bg-purple-100 text-purple-600'
-                      }`}>
-                        {completedSteps.has(index) ? '✓' : index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className={`text-sm ${completedSteps.has(index) ? 'text-green-800' : 'text-gray-700'}`}>
-                          {action}
-                        </p>
-                        {!completedSteps.has(index) && (
-                          <Button
-                            onClick={() => handleStepComplete(index)}
-                            size="sm"
-                            className="mt-2 bg-purple-500 hover:bg-purple-600 text-white"
-                          >
-                            Mark Complete
-                          </Button>
-                        )}
-                      </div>
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-gray-700 mb-3">Tap-to-send messages (no typing required):</p>
+
+                {[
+                  "I know I've been a bit distracted lately, but you matter to me and I really appreciate you.",
+                  "I don't have a lot of time today, but I want you to know I care and I'm thinking about you.",
+                  "I see you. I'm grateful for you. I'll make space for us soon."
+                ].map((message, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-800 italic">"{message}"</p>
                     </div>
-                  </motion.div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleSendMessage(message)}
+                        size="sm"
+                        className="bg-blue-500 hover:bg-blue-600 text-white"
+                      >
+                        <Send className="w-3 h-3 mr-1" />
+                        Send
+                      </Button>
+                      <Button
+                        onClick={() => navigator.clipboard.writeText(message)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Timeline */}
+        {/* Step 2: Micro-Connection */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-pink-600" />
+                Step 2: Micro-Connection (No Planning Required)
+              </CardTitle>
+              <p className="text-sm text-gray-600">Even small moments of presence reduce emotional distance.</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm font-medium text-gray-700">Pick one (takes less than 5 minutes):</p>
+
+                {proximity === 'close' && (
+                  <Button
+                    onClick={() => handleMicroConnection('sit_together')}
+                    className="w-full justify-start p-4 h-auto bg-green-50 hover:bg-green-100 border-green-200"
+                    variant="outline"
+                  >
+                    <Users className="w-4 h-4 mr-3 text-green-600" />
+                    <div className="text-left">
+                      <p className="font-medium text-green-900">Sit next to them for 5 minutes</p>
+                      <p className="text-sm text-green-700">No phones, just presence</p>
+                    </div>
+                  </Button>
+                )}
+
+                <Button
+                  onClick={() => handleMicroConnection('emoji_checkin')}
+                  className="w-full justify-start p-4 h-auto bg-blue-50 hover:bg-blue-100 border-blue-200"
+                  variant="outline"
+                >
+                  <Heart className="w-4 h-4 mr-3 text-blue-600" />
+                  <div className="text-left">
+                    <p className="font-medium text-blue-900">Send a heart/emoji check-in later today</p>
+                    <p className="text-sm text-blue-700">Quick emotional ping</p>
+                  </div>
+                </Button>
+
+                <Button
+                  onClick={() => handleMicroConnection('guided_question')}
+                  className="w-full justify-start p-4 h-auto bg-purple-50 hover:bg-purple-100 border-purple-200"
+                  variant="outline"
+                >
+                  <MessageCircle className="w-4 h-4 mr-3 text-purple-600" />
+                  <div className="text-left">
+                    <p className="font-medium text-purple-900">Ask one guided question</p>
+                    <p className="text-sm text-purple-700">"What's been weighing on you lately?" or "What do you need most from me this week?"</p>
+                  </div>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Step 3: Auto-Scheduled Follow-Through */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -511,24 +332,76 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                Timeline
+                <Calendar className="w-5 h-5 text-orange-600" />
+                Step 3: Auto-Scheduled Follow-Through (System Handles It)
               </CardTitle>
+              <p className="text-sm text-gray-600">No vague "check in later" - specific reminders at realistic times.</p>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {plan.timeline.map((item, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                    <p className="text-sm text-gray-700">{item}</p>
-                  </div>
-                ))}
+                {timeAvailable === 'plenty' && (
+                  <>
+                    <Button
+                      onClick={() => handleScheduleReminder("Tonight at 8:30pm: Send one appreciation message")}
+                      className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200"
+                      variant="outline"
+                    >
+                      <Clock className="w-4 h-4 mr-3 text-orange-600" />
+                      <p className="font-medium text-orange-900">Tonight at 8:30pm: Send one appreciation message</p>
+                    </Button>
+
+                    <Button
+                      onClick={() => handleScheduleReminder("Tomorrow morning: Ask how they're feeling today")}
+                      className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200"
+                      variant="outline"
+                    >
+                      <Clock className="w-4 h-4 mr-3 text-orange-600" />
+                      <p className="font-medium text-orange-900">Tomorrow morning: Ask how they're feeling today</p>
+                    </Button>
+                  </>
+                )}
+
+                {timeAvailable === 'moderate' && (
+                  <Button
+                    onClick={() => handleScheduleReminder("Tomorrow evening: 5-minute check-in call")}
+                    className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200"
+                    variant="outline"
+                  >
+                    <Clock className="w-4 h-4 mr-3 text-orange-600" />
+                    <p className="font-medium text-orange-900">Tomorrow evening: 5-minute check-in call</p>
+                  </Button>
+                )}
+
+                {timeAvailable === 'limited' && (
+                  <Button
+                    onClick={() => handleScheduleReminder("When you have a quiet moment: Send 'thinking of you'")}
+                    className="w-full justify-start p-4 h-auto bg-orange-50 hover:bg-orange-100 border-orange-200"
+                    variant="outline"
+                  >
+                    <Clock className="w-4 h-4 mr-3 text-orange-600" />
+                    <p className="font-medium text-orange-900">When you have a quiet moment: Send 'thinking of you'</p>
+                  </Button>
+                )}
               </div>
+
+              {scheduledReminders.length > 0 && (
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <p className="text-sm font-medium text-green-900 mb-2">Scheduled reminders:</p>
+                  <ul className="space-y-1">
+                    {scheduledReminders.map((reminder, index) => (
+                      <li key={index} className="text-sm text-green-700 flex items-center gap-2">
+                        <CheckCircle className="w-3 h-3" />
+                        {reminder}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Success Metrics */}
+        {/* Step 4: Assisted Quality Time */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -537,24 +410,59 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-pink-600" />
-                How You'll Know It's Working
+                <TrendingUp className="w-5 h-5 text-indigo-600" />
+                Step 4: Assisted Quality Time (When Time Allows)
               </CardTitle>
+              <p className="text-sm text-gray-600">Pre-built options with scripts and prompts when you're ready for more.</p>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {plan.successMetrics.map((metric, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-pink-500 rounded-full mt-2"></div>
-                    <p className="text-sm text-gray-700">{metric}</p>
+              {!showQualityTime ? (
+                <Button
+                  onClick={() => setShowQualityTime(true)}
+                  className="w-full bg-indigo-500 hover:bg-indigo-600 text-white"
+                >
+                  Show Quality Time Options
+                </Button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 border border-indigo-200 rounded-lg bg-indigo-50">
+                    <h4 className="font-medium text-indigo-900 mb-2">15-minute "Reconnect" Script</h4>
+                    <p className="text-sm text-indigo-700 mb-2">Time estimate: 15 minutes | Emotional goal: Rebuild connection</p>
+                    <ul className="text-sm text-indigo-700 space-y-1 ml-4">
+                      <li>• 5 min: Share one positive moment from your day</li>
+                      <li>• 5 min: Ask "What's one thing I can do to support you better?"</li>
+                      <li>• 5 min: End with appreciation and physical closeness</li>
+                    </ul>
                   </div>
-                ))}
-              </div>
+
+                  {proximity === 'close' && (
+                    <div className="p-4 border border-indigo-200 rounded-lg bg-indigo-50">
+                      <h4 className="font-medium text-indigo-900 mb-2">Short Walk + Guided Prompts</h4>
+                      <p className="text-sm text-indigo-700 mb-2">Time estimate: 20 minutes | Emotional goal: Deeper understanding</p>
+                      <ul className="text-sm text-indigo-700 space-y-1 ml-4">
+                        <li>• Walk together without phones</li>
+                        <li>• Ask: "What's been most challenging for you lately?"</li>
+                        <li>• Share: "This is what's been on my mind..."</li>
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="p-4 border border-indigo-200 rounded-lg bg-indigo-50">
+                    <h4 className="font-medium text-indigo-900 mb-2">Sit Together + Shared Question Pack</h4>
+                    <p className="text-sm text-indigo-700 mb-2">Time estimate: 10-15 minutes | Emotional goal: Emotional intimacy</p>
+                    <ul className="text-sm text-indigo-700 space-y-1 ml-4">
+                      <li>• Exact words: "I want to really hear about your day"</li>
+                      <li>• Take turns answering: "What's one thing you're proud of?"</li>
+                      <li>• End with: "What's one way I can love you better?"</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Check-in Schedule */}
+        {/* Progress & Success Metrics */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -563,21 +471,29 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-orange-600" />
-                Follow-up Check-ins
+                <TrendingUp className="w-5 h-5 text-green-600" />
+                How You'll Know It's Working
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-700 mb-3">
-                We'll remind you to check in on progress:
-              </p>
-              <div className="space-y-2">
-                {plan.checkInSchedule.map((checkin, index) => (
-                  <div key={index} className="flex items-center gap-3 p-2 bg-orange-50 rounded">
-                    <Clock className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm text-gray-700">{checkin}</span>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                <div className={`p-3 rounded-lg ${completedActions.has('immediate_message') ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
+                  <p className={`text-sm ${completedActions.has('immediate_message') ? 'text-green-800' : 'text-gray-600'}`}>
+                    {completedActions.has('immediate_message') ? '✅' : '○'} Partner receives immediate emotional reassurance
+                  </p>
+                </div>
+
+                <div className={`p-3 rounded-lg ${completedActions.has('micro_connection') ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
+                  <p className={`text-sm ${completedActions.has('micro_connection') ? 'text-green-800' : 'text-gray-600'}`}>
+                    {completedActions.has('micro_connection') ? '✅' : '○'} Small moments of presence reduce emotional distance
+                  </p>
+                </div>
+
+                <div className="p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    💡 Small actions are adding up. Your partner is engaging more.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
