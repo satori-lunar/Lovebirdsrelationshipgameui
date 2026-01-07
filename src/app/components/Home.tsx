@@ -27,7 +27,7 @@ import { Progress } from './ui/progress';
 import { useDailyQuestion } from '../hooks/useDailyQuestion';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
-import { useQuestionStats } from '../hooks/useQuestionStats';
+import { useActivityStats } from '../hooks/useActivityStats';
 import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
@@ -50,7 +50,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { hasAnswered, hasGuessed, canSeeFeedback } = useDailyQuestion();
-  const { totalCompleted, currentStreak } = useQuestionStats();
+  const { totalCompleted, currentStreak } = useActivityStats();
   const { partnerName: partnerNameFromOnboarding } = usePartnerOnboarding();
   const { unreadCount } = useUnreadMessages();
   const { pendingCount } = useUnreadRequests();
