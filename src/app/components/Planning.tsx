@@ -26,93 +26,54 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
 
-  // Query partner's needs that user is helping with (user is RECEIVER)
-  const { data: partnerNeeds, isLoading: isLoadingPartnerNeeds } = useQuery({
-    queryKey: ['partner-needs', relationship?.id, user?.id],
+  // Query partner's recent capacity check-ins (what they need support with)
+  const { data: partnerCapacityCheckins, isLoading: isLoadingPartnerCapacity } = useQuery({
+    queryKey: ['partner-capacity-checkins', relationship?.id, user?.id],
     queryFn: async () => {
       if (!relationship?.id || !user?.id) return [];
 
-      // Get all needs for the couple
-      const allNeeds = await needsService.getNeedsForCouple(relationship.id);
-      console.log('📋 Partner needs raw data:', allNeeds);
-      console.log('🔍 Looking for needs where receiverId equals:', user.id);
+      // Get partner's most recent capacity check-in
+      const { data, error } = await api.supabase
+        .from('capacity_checkins')
+        .select('*')
+        .eq('couple_id', relationship.id)
+        .neq('user_id', user.id) // Partner's check-ins, not ours
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      // Filter for needs where user is the RECEIVER (partner's needs they're helping with)
-      const partnerNeedsBeingHelped = allNeeds.filter(need => {
-        const receiverId = need.receiverId || (need as any).receiver_id;
-        const isReceiver = receiverId === user.id;
-        const isActive = need.status !== 'resolved';
-        console.log(`🔍 Partner need ${need.id}:`, {
-          requesterId: need.requesterId || (need as any).requester_id,
-          receiverId: receiverId,
-          userId: user.id,
-          isReceiver,
-          status: need.status,
-          isActive,
-          needCategory: need.needCategory || (need as any).need_category,
-          MATCH: isReceiver && isActive
-        });
-        return isReceiver && isActive;
-      });
-
-      console.log(`✅ Partner needs filtered: ${partnerNeedsBeingHelped.length} matches`);
-
-      // Return only the most recent need
-      if (partnerNeedsBeingHelped.length > 0) {
-        const sortedNeeds = partnerNeedsBeingHelped.sort((a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        console.log(`🎯 Returning most recent partner need: ${sortedNeeds[0].id}`);
-        return [sortedNeeds[0]];
+      if (error) {
+        console.error('Error fetching partner capacity check-ins:', error);
+        return [];
       }
 
-      console.log('❌ No partner needs match criteria');
-      return [];
+      console.log('📋 Partner capacity check-ins:', data);
+      return data || [];
     },
     enabled: !!relationship?.id && !!user?.id,
   });
 
-  // Query user's own needs that partner is helping with (user is REQUESTER)
-  const { data: myNeeds, isLoading: isLoadingMyNeeds } = useQuery({
-    queryKey: ['my-needs', relationship?.id, user?.id],
+  // Query user's own recent capacity check-ins (what support they need)
+  const { data: myCapacityCheckins, isLoading: isLoadingMyCapacity } = useQuery({
+    queryKey: ['my-capacity-checkins', relationship?.id, user?.id],
     queryFn: async () => {
       if (!relationship?.id || !user?.id) return [];
 
-      // Get all needs for the couple
-      const allNeeds = await needsService.getNeedsForCouple(relationship.id);
-      console.log('📋 My needs raw data:', allNeeds);
+      // Get user's most recent capacity check-in
+      const { data, error } = await api.supabase
+        .from('capacity_checkins')
+        .select('*')
+        .eq('couple_id', relationship.id)
+        .eq('user_id', user.id) // Our check-ins
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      // Filter for needs where user is the REQUESTER (their own needs partner is helping with)
-      const myNeedsBeingHelped = allNeeds.filter(need => {
-        const requesterId = need.requesterId || (need as any).requester_id;
-        const isRequester = requesterId === user.id;
-        const isActive = need.status !== 'resolved';
-        console.log(`🔍 My need ${need.id}:`, {
-          requesterId: requesterId,
-          receiverId: need.receiverId || (need as any).receiver_id,
-          userId: user.id,
-          isRequester,
-          status: need.status,
-          isActive,
-          needCategory: need.needCategory || (need as any).need_category,
-          MATCH: isRequester && isActive
-        });
-        return isRequester && isActive;
-      });
-
-      console.log(`✅ My needs filtered: ${myNeedsBeingHelped.length} matches`);
-
-      // Return only the most recent need
-      if (myNeedsBeingHelped.length > 0) {
-        const sortedNeeds = myNeedsBeingHelped.sort((a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-        console.log(`🎯 Returning most recent my need: ${sortedNeeds[0].id}`);
-        return [sortedNeeds[0]];
+      if (error) {
+        console.error('Error fetching my capacity check-ins:', error);
+        return [];
       }
 
-      console.log('❌ No my needs match criteria');
-      return [];
+      console.log('📋 My capacity check-ins:', data);
+      return data || [];
     },
     enabled: !!relationship?.id && !!user?.id,
   });
@@ -166,41 +127,37 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
               </p>
             </CardHeader>
             <CardContent>
-              {isLoadingPartnerNeeds ? (
+              {isLoadingPartnerCapacity ? (
                 <div className="text-center py-8">
                   <div className="animate-spin w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading partner needs...</p>
+                  <p className="text-gray-600">Loading partner capacity...</p>
                 </div>
-              ) : partnerNeeds && partnerNeeds.length > 0 ? (
+              ) : partnerCapacityCheckins && partnerCapacityCheckins.length > 0 ? (
                 <div className="space-y-4">
-                  {partnerNeeds.map((need) => (
+                  {partnerCapacityCheckins.map((checkin) => (
                     <div
-                      key={need.id}
+                      key={checkin.id}
                       className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${
-                          need.status === 'in_progress' ? 'bg-green-500' : 'bg-yellow-500'
+                          checkin.mood === 'energized' || checkin.mood === 'good' ? 'bg-green-500' :
+                          checkin.mood === 'okay' ? 'bg-yellow-500' : 'bg-red-500'
                         }`}></div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {need.needCategory || (need as any).need_category ?
-                             (need.needCategory || (need as any).need_category).replace('_', ' ') :
-                             'Unknown need'}
+                            {partnerName} is feeling {checkin.mood}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {need.status === 'resolved' ? 'Completed' :
-                             need.status === 'in_progress' ? 'You are working on this' :
-                             need.status === 'acknowledged' ? 'You acknowledged this' :
-                             'Waiting for your response'}
+                            Needs: {checkin.needs?.join(', ') || 'support'}
                           </p>
                         </div>
                       </div>
                       <Button
-                        onClick={() => onNavigate('need-support-plan', { need })}
+                        onClick={() => onNavigate('need-support-plan', { capacityCheckin: checkin })}
                         className="bg-purple-500 hover:bg-purple-600 text-white"
                       >
-                        Continue Helping
+                        Help Them
                       </Button>
                     </div>
                   ))}
@@ -241,41 +198,37 @@ export function Planning({ onBack, onNavigate, partnerName }: PlanningProps) {
               </p>
             </CardHeader>
             <CardContent>
-              {isLoadingMyNeeds ? (
+              {isLoadingMyCapacity ? (
                 <div className="text-center py-8">
                   <div className="animate-spin w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading your requests...</p>
+                  <p className="text-gray-600">Loading your capacity...</p>
                 </div>
-              ) : myNeeds && myNeeds.length > 0 ? (
+              ) : myCapacityCheckins && myCapacityCheckins.length > 0 ? (
                 <div className="space-y-4">
-                  {myNeeds.map((need) => (
+                  {myCapacityCheckins.map((checkin) => (
                     <div
-                      key={need.id}
+                      key={checkin.id}
                       className="flex items-center justify-between p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-3 h-3 rounded-full ${
-                          need.status === 'in_progress' ? 'bg-green-500' : 'bg-yellow-500'
+                          checkin.mood === 'energized' || checkin.mood === 'good' ? 'bg-green-500' :
+                          checkin.mood === 'okay' ? 'bg-yellow-500' : 'bg-red-500'
                         }`}></div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {need.needCategory || (need as any).need_category ?
-                             (need.needCategory || (need as any).need_category).replace('_', ' ') :
-                             'Unknown need'}
+                            You're feeling {checkin.mood}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {need.status === 'resolved' ? 'Completed' :
-                             need.status === 'in_progress' ? `${partnerName} is working on this` :
-                             need.status === 'acknowledged' ? `${partnerName} has seen this` :
-                             'Waiting for response'}
+                            Need: {checkin.needs?.join(', ') || 'support'}
                           </p>
                         </div>
                       </div>
                       <Button
-                        onClick={() => onNavigate('need-support-plan', { need })}
+                        onClick={() => onNavigate('need-support-plan', { capacityCheckin: checkin })}
                         className="bg-pink-500 hover:bg-pink-600 text-white"
                       >
-                        View Progress
+                        Get Support
                       </Button>
                     </div>
                   ))}

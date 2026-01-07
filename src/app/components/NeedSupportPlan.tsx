@@ -12,8 +12,19 @@ import { usePartner } from '../hooks/usePartner';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+interface CapacityCheckin {
+  id: string;
+  user_id: string;
+  couple_id: string;
+  mood: string;
+  needs: string[];
+  context?: string;
+  created_at: string;
+}
+
 interface NeedSupportPlanProps {
-  need: RelationshipNeed;
+  need?: RelationshipNeed;
+  capacityCheckin?: CapacityCheckin;
   partnerName: string;
   onBack: () => void;
   onComplete: () => void;
@@ -23,7 +34,7 @@ type TimeAvailability = 'limited' | 'moderate' | 'plenty';
 type ProximityType = 'together' | 'close' | 'distant' | 'long_distance';
 type MentalCapacity = 'low' | 'moderate' | 'high';
 
-export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedSupportPlanProps) {
+export function NeedSupportPlan({ need, capacityCheckin, partnerName, onBack, onComplete }: NeedSupportPlanProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { partnerId } = usePartner(relationship);
@@ -239,176 +250,108 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
   const proximity = assessProximity();
   const mentalCapacity = assessMentalCapacity();
 
-  // Generate capacity-aware actions based on need + user capacity
+  // Determine if this is for helping partner or getting support
+  const isHelpingPartner = capacityCheckin && capacityCheckin.user_id !== user?.id;
+  const currentCapacityData = capacityCheckin || { mood: 'moderate', needs: [] };
+
+  // Generate capacity-aware actions based on check-in data
   const generateCapacityAwareActions = () => {
-    const needCategory = need.needCategory || (need as any).need_category;
+    const mood = currentCapacityData.mood;
+    const needs = currentCapacityData.needs || [];
     const actions = {
       immediateMessages: [] as string[],
       microConnections: [] as { text: string; action: () => void }[],
       primaryGoal: ''
     };
 
-    // Generate capacity-aware actions based on need type
-    if (needCategory === 'space') {
-      actions.primaryGoal = 'Help partner feel respected and give them breathing room';
+    // Determine capacity level from mood
+    const capacityLevel = getCapacityLevelFromMood(mood);
 
-      // Immediate messages - always available regardless of capacity
-      actions.immediateMessages = [
-        "Take all the time you need. I'm here when you're ready.",
-        "I respect your need for space. Take care of yourself.",
-        "No pressure. Whenever you're ready to connect, I'm here."
-      ];
+    if (isHelpingPartner) {
+      // We're helping our partner based on their capacity check-in
+      actions.primaryGoal = `Help ${partnerName} based on their current capacity level`;
 
-      // Micro-connections based on capacity and proximity
-      if (mentalCapacity === 'high' && timeAvailable === 'plenty') {
-        // High capacity - can offer more support
-        actions.microConnections = [
-          {
-            text: proximity === 'close' ? "Give them a gentle hug if they're open to it" : "Send a quick 'thinking of you' text",
-            action: () => handleMicroConnection('gentle_affection')
-          },
-          {
-            text: "Plan a low-pressure check-in for tomorrow",
-            action: () => handleScheduleReminder("Tomorrow: Gentle check-in - 'How are you feeling?'")
-          }
-        ];
-      } else if (mentalCapacity === 'moderate' || timeAvailable === 'moderate') {
-        // Moderate capacity - balanced approach
-        actions.microConnections = [
-          {
-            text: "Send one emoji heart if it feels right",
-            action: () => handleMicroConnection('subtle_connection')
-          },
-          {
-            text: "Respect their space - no messages unless they initiate",
-            action: () => handleMicroConnection('space_respect')
-          }
-        ];
-      } else {
-        // Low capacity - minimal, respectful actions
-        actions.microConnections = [
-          {
-            text: "Simply acknowledge their need for space internally",
-            action: () => handleMicroConnection('internal_acknowledgment')
-          },
-          {
-            text: "Focus on giving them uninterrupted space",
-            action: () => handleMicroConnection('space_honoring')
-          }
-        ];
+      // Generate actions based on what they need and their capacity
+      if (needs.includes('comfort')) {
+        actions.immediateMessages.push(
+          capacityLevel === 'high' ? "I'm here for you. What kind of comfort do you need right now?" :
+          capacityLevel === 'moderate' ? "I care about you and want to support you." :
+          "I'm thinking of you and sending you care."
+        );
       }
-    } else if (needCategory === 'affection') {
-      actions.primaryGoal = 'Help partner feel loved and valued';
 
-      actions.immediateMessages = [
-        "You mean the world to me. I hope you know that.",
-        "I'm so grateful to have you in my life.",
-        "Thinking of you with a smile right now."
-      ];
-
-      if (mentalCapacity === 'high' && timeAvailable === 'plenty') {
-        actions.microConnections = [
-          {
-            text: proximity === 'close' ? "Share a specific compliment about them" : "Send a voice message with appreciation",
-            action: () => handleMicroConnection('personal_affection')
-          },
-          {
-            text: "Write down 3 things you love about them",
-            action: () => handleMicroConnection('reflection_affection')
-          }
-        ];
-      } else if (mentalCapacity === 'moderate' || timeAvailable === 'moderate') {
-        actions.microConnections = [
-          {
-            text: "Send a heart emoji with a simple 'thinking of you'",
-            action: () => handleMicroConnection('quick_affection')
-          },
-          {
-            text: "Look at a photo of them and smile",
-            action: () => handleMicroConnection('internal_affection')
-          }
-        ];
-      } else {
-        actions.microConnections = [
-          {
-            text: "Take a moment to appreciate them internally",
-            action: () => handleMicroConnection('quiet_affection')
-          },
-          {
-            text: "Send a simple heart emoji",
-            action: () => handleMicroConnection('minimal_affection')
-          }
-        ];
+      if (needs.includes('encouragement')) {
+        actions.microConnections.push({
+          text: capacityLevel === 'high' ? "Share something specific you're proud of about them" :
+                capacityLevel === 'moderate' ? "Send an encouraging message" :
+                "Send a simple 'You've got this' message",
+          action: () => handleMicroConnection('encouragement')
+        });
       }
-    } else if (needCategory === 'communication') {
-      actions.primaryGoal = 'Help partner feel heard and understood';
 
-      actions.immediateMessages = [
-        "I'm here to listen whenever you want to talk.",
-        "Your thoughts and feelings matter to me.",
-        "I want to understand your perspective better."
-      ];
-
-      if (mentalCapacity === 'high' && timeAvailable === 'plenty') {
-        actions.microConnections = [
-          {
-            text: "Ask open-ended questions about their day",
-            action: () => handleMicroConnection('deep_listening')
-          },
-          {
-            text: "Set aside focused time for conversation",
-            action: () => handleScheduleReminder("Tonight: 15-minute focused conversation")
-          }
-        ];
-      } else if (mentalCapacity === 'moderate' || timeAvailable === 'moderate') {
-        actions.microConnections = [
-          {
-            text: "Send 'How was your day?' and actually listen to response",
-            action: () => handleMicroConnection('balanced_listening')
-          },
-          {
-            text: "Practice active listening without distractions",
-            action: () => handleMicroConnection('present_listening')
-          }
-        ];
-      } else {
-        actions.microConnections = [
-          {
-            text: "Send 'I'm here if you want to talk'",
-            action: () => handleMicroConnection('available_signal')
-          },
-          {
-            text: "Put away phone during their responses",
-            action: () => handleMicroConnection('undivided_attention')
-          }
-        ];
+      // Add more need-based actions...
+      if (needs.length === 0) {
+        // General support based on capacity
+        actions.immediateMessages.push(
+          capacityLevel === 'high' ? "I'm here and available to talk or help in any way you need." :
+          capacityLevel === 'moderate' ? "Let me know if there's anything I can do to support you." :
+          "I'm thinking of you and want you to know you're not alone."
+        );
       }
     } else {
-      // Generic fallback for other need types
-      actions.primaryGoal = 'Support your partner with actions that match your current capacity';
+      // We need support based on our own capacity check-in
+      actions.primaryGoal = 'Get the support you need based on your current capacity';
 
-      actions.immediateMessages = [
-        "I'm thinking about you and care about how you're feeling.",
-        "You matter to me, and I'm here for you.",
-        "I appreciate you and our relationship."
-      ];
+      if (needs.includes('comfort')) {
+        actions.microConnections.push({
+          text: "Request comfort through a specific action",
+          action: () => handleMicroConnection('request_comfort')
+        });
+      }
 
-      actions.microConnections = [
-        {
-          text: "Send a supportive message matching your capacity",
-          action: () => handleMicroConnection('capacity_aware_support')
-        },
-        {
-          text: "Take one small action that feels manageable",
-          action: () => handleMicroConnection('appropriate_effort')
-        }
-      ];
+      if (needs.includes('space')) {
+        actions.immediateMessages.push("I need some space right now, but I'll reach out when I'm ready.");
+      }
+
+      // Add more self-support actions...
     }
 
     return actions;
   };
 
+  const getCapacityLevelFromMood = (mood: string): 'high' | 'moderate' | 'low' => {
+    switch (mood) {
+      case 'energized':
+      case 'good':
+        return 'high';
+      case 'okay':
+        return 'moderate';
+      case 'stretched':
+      case 'overwhelmed':
+      case 'exhausted':
+        return 'low';
+      default:
+        return 'moderate';
+    }
+  };
+
   const capacityActions = generateCapacityAwareActions();
+
+  // Use capacity actions if available, otherwise fallback
+  const actions = capacityCheckin ? capacityActions : {
+    immediateMessages: [
+      "I'm here for you.",
+      "I care about you.",
+      "You're not alone in this."
+    ],
+    microConnections: [
+      {
+        text: "Send a supportive message",
+        action: () => handleMicroConnection('general_support')
+      }
+    ],
+    primaryGoal: 'Provide supportive presence and care'
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-pink-50 px-4 py-6 sm:px-6">
@@ -429,8 +372,16 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
             Back
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Support Plan for {partnerName}</h1>
-            <p className="text-gray-600">Helping with: {need.needCategory || (need as any).need_category ? (need.needCategory || (need as any).need_category).replace('_', ' ') : 'Unknown need'}</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isHelpingPartner ? `Support Plan for ${partnerName}` : 'Your Support Plan'}
+            </h1>
+            <p className="text-gray-600">
+              {capacityCheckin ?
+                `${isHelpingPartner ? partnerName : 'You'} ${isHelpingPartner ? 'is' : 'are'} feeling ${capacityCheckin.mood}` :
+                need ? `Helping with: ${need.needCategory || (need as any).need_category ? (need.needCategory || (need as any).need_category).replace('_', ' ') : 'Unknown need'}` :
+                'Capacity-based support'
+              }
+            </p>
           </div>
         </motion.div>
 
@@ -459,8 +410,12 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
                   <div className="flex items-center gap-3">
                     <Target className="w-5 h-5 text-blue-600 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm">Partner Need</p>
-                      <p className="text-xs text-gray-600 break-words">{need.needCategory || (need as any).need_category ? (need.needCategory || (need as any).need_category).replace('_', ' ') : 'Unknown need'}</p>
+                      <p className="font-medium text-sm">{isHelpingPartner ? 'Partner\'s Capacity' : 'Your Capacity'}</p>
+                      <p className="text-xs text-gray-600 break-words">
+                        {capacityCheckin ? `Feeling ${capacityCheckin.mood}` :
+                         need ? (need.needCategory || (need as any).need_category ? (need.needCategory || (need as any).need_category).replace('_', ' ') : 'Unknown need') :
+                         'Unknown'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -497,9 +452,9 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
 
                 <div className="p-3 bg-purple-50 rounded-lg">
                   <p className="text-sm font-medium text-purple-900 mb-1">Tailored Approach</p>
-                  <p className="text-xs text-purple-700">{capacityActions.primaryGoal}</p>
+                  <p className="text-xs text-purple-700">{actions.primaryGoal}</p>
                   <p className="text-xs text-purple-600 mt-1">
-                    Based on your {mentalCapacity} capacity, {timeAvailable} time, and {proximity.replace('_', ' ')} proximity
+                    Based on {capacityCheckin ? `${capacityCheckin.mood} mood` : 'your'} capacity, {timeAvailable} time, and {proximity.replace('_', ' ')} proximity
                   </p>
                 </div>
               </div>
@@ -525,7 +480,7 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
               <div className="space-y-3">
                 <p className="text-sm font-medium text-gray-700 mb-3">Capacity-aware messages ({mentalCapacity} mental capacity, {timeAvailable} time):</p>
 
-                {capacityActions.immediateMessages.map((message, index) => (
+                {actions.immediateMessages.map((message, index) => (
                   <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-gray-50 rounded-lg">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-800 italic break-words">"{message}"</p>
@@ -573,7 +528,7 @@ export function NeedSupportPlan({ need, partnerName, onBack, onComplete }: NeedS
               <div className="space-y-4">
                 <p className="text-sm font-medium text-gray-700">Capacity-tailored actions (takes 1-2 minutes):</p>
 
-                {capacityActions.microConnections.map((connection, index) => {
+                {actions.microConnections.map((connection, index) => {
                   const colors = [
                     { bg: 'bg-green-50', hover: 'hover:bg-green-100', border: 'border-green-200', text: 'text-green-600', title: 'text-green-900', desc: 'text-green-700' },
                     { bg: 'bg-blue-50', hover: 'hover:bg-blue-100', border: 'border-blue-200', text: 'text-blue-600', title: 'text-blue-900', desc: 'text-blue-700' },
