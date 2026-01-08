@@ -24,6 +24,7 @@ import { ThingsToRemember } from './components/ThingsToRemember';
 import { CreateLockscreenGift } from './components/CreateLockscreenGift';
 import { ViewLockscreenGift } from './components/ViewLockscreenGift';
 import { WeeklySuggestions } from './components/WeeklySuggestions';
+import { CalendarPage } from './components/CalendarPage';
 import { AuthModal } from './components/AuthModal';
 import RelationshipModeSetup from './components/RelationshipModeSetup';
 import SoloModeSetup from './components/SoloModeSetup';
@@ -40,7 +41,7 @@ import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'need-support-plan' | 'planning';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'need-support-plan' | 'planning' | 'calendar';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -330,6 +331,10 @@ export default function App() {
           onNavigate={handleNavigate}
           onPartnerNameUpdate={() => refetchOnboarding()}
         />
+      )}
+
+      {currentView === 'calendar' && (
+        <CalendarPage onNavigate={handleNavigate} />
       )}
     </div>
   );

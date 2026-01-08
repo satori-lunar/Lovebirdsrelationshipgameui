@@ -39,7 +39,6 @@ import WeeklyRhythm from './WeeklyRhythm';
 import PartnerCapacityView from './PartnerCapacityView';
 import { PartnerNeedsView } from './PartnerNeedsView';
 import { ProfilePhotos } from './ProfilePhotos';
-import { CalendarSyncSetup } from './CalendarSyncSetup';
 
 interface HomeProps {
   userName: string;
@@ -64,7 +63,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   };
 
   const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [showCalendarSetup, setShowCalendarSetup] = useState(false);
 
   const { data: onboarding } = useQuery({
     queryKey: ['onboarding', user?.id],
@@ -180,20 +178,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  // Check if user has set up calendar/notification preferences
-  const { data: hasCalendarSetup } = useQuery({
-    queryKey: ['calendarSetup', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return false;
-      try {
-        const prefs = await api.notifications.getNotificationPreferences(user.id);
-        return !!prefs; // Return true if preferences exist
-      } catch (error) {
-        return false; // Preferences don't exist yet
-      }
-    },
-    enabled: !!user?.id,
-  });
 
 
 
@@ -238,16 +222,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   };
-
-  // Show calendar setup if user hasn't completed it yet
-  if (user && relationship && hasCalendarSetup === false) {
-    return (
-      <CalendarSyncSetup
-        onComplete={() => setShowCalendarSetup(false)}
-        onSkip={() => setShowCalendarSetup(false)}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
@@ -774,6 +748,16 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
               <Heart className="w-5 h-5 text-gray-500" />
             </div>
             <span className="text-[10px] font-medium text-gray-400">Support</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('calendar')}
+            className="flex flex-col items-center gap-1 py-2"
+          >
+            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
+              <Calendar className="w-5 h-5 text-gray-500" />
+            </div>
+            <span className="text-[10px] font-medium text-gray-400">Calendar</span>
           </button>
 
           <button
