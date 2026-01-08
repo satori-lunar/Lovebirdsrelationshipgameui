@@ -610,7 +610,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                   className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
                 >
                   <div className="flex items-center gap-4 mb-4">
-                    <div className={w-12 h-12 rounded-full flex items-center justify-center }>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center`}>
                       {myCapacity.energy_level >= 7 ? 'ðŸ˜Š' :
                        myCapacity.energy_level >= 4 ? 'ðŸ˜' : 'ðŸ˜ž'}
                     </div>
@@ -676,7 +676,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                     {partnerName}'s capacity today
                   </h3>
                   <div className="flex items-center gap-4">
-                    <div className={w-12 h-12 rounded-full flex items-center justify-center }>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center`}>
                       {partnerCapacity.energy_level >= 7 ? 'ðŸ˜Š' :
                        partnerCapacity.energy_level >= 4 ? 'ðŸ˜' : 'ðŸ˜ž'}
                     </div>
