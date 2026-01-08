@@ -818,7 +818,9 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
               transition={{ delay: 0.1 }}
             >
               <PartnerNeedsView
-                onNavigate={onNavigate}
+                userId={user?.id || ''}
+                partnerName={partnerName}
+                onViewDetails={onNavigate}
                 onStartNeedPlan={handleStartNeedPlan}
               />
             </motion.div>
@@ -928,7 +930,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-              <WeeklyRhythm onNavigate={onNavigate} />
+              <WeeklyRhythm couple={couple} user={user} onNavigate={onNavigate} />
             </motion.div>
 
             {/* Share Capacity Button */}
