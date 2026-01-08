@@ -320,8 +320,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const timeTogether = getTimeTogether();
-
   // Handler for starting need plans
   const handleStartNeedPlan = (needId: string) => {
     onNavigate('need-plan', { needId });
