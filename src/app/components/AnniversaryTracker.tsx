@@ -24,58 +24,34 @@ export function AnniversaryTracker({ partnerName, relationshipStart }: Anniversa
   const daysUntilAnniversary = differenceInDays(nextAnniversary, now);
 
   return (
-    <Card className="overflow-hidden bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 text-white border-0 shadow-lg">
-      <CardContent className="p-0">
-        <div className="relative">
-          {/* Background Image */}
-          <div className="absolute inset-0 opacity-20">
-            <img
-              src="/api/placeholder/400/200" // Placeholder - you can replace with actual image
-              alt="Couple"
-              className="w-full h-full object-cover"
-            />
+    <Card className="shadow-sm border-0 bg-white">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center">
+            <Heart className="w-5 h-5 text-pink-600 fill-pink-600" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Anniversary</h3>
+            <p className="text-sm text-gray-600">Celebrating your love</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Together for</span>
+            <span className="font-semibold text-gray-900">
+              {years}y {months}m {totalDays - (years * 365 + months * 30)}d
+            </span>
           </div>
 
-          {/* Content */}
-          <div className="relative p-6 sm:p-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Heart className="w-6 h-6 fill-white" />
-              <h2 className="text-2xl font-semibold">Together Forever</h2>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Started</span>
+            <span className="text-sm text-gray-900">{format(relationshipStart, 'MMM d, yyyy')}</span>
+          </div>
 
-            {/* Main Counter */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-                <div className="text-4xl font-bold mb-1">{years}</div>
-                <div className="text-sm opacity-90">Years</div>
-              </div>
-              <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-                <div className="text-4xl font-bold mb-1">{months}</div>
-                <div className="text-sm opacity-90">Months</div>
-              </div>
-              <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-                <div className="text-4xl font-bold mb-1">{totalDays}</div>
-                <div className="text-sm opacity-90">Days</div>
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <CalendarIcon className="w-5 h-5 flex-shrink-0" />
-                <div>
-                  <div className="text-sm opacity-90">Started Dating</div>
-                  <div className="font-semibold">{format(relationshipStart, 'MMM d, yyyy')}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                <Cake className="w-5 h-5 flex-shrink-0" />
-                <div>
-                  <div className="text-sm opacity-90">Next Anniversary</div>
-                  <div className="font-semibold">{daysUntilAnniversary} days away</div>
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600">Next anniversary</span>
+            <span className="text-sm font-medium text-pink-600">{daysUntilAnniversary} days</span>
           </div>
         </div>
       </CardContent>

@@ -229,27 +229,27 @@ export function CalendarPage({ onNavigate }: CalendarPageProps) {
     >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Button
               onClick={() => onNavigate('home')}
               variant="outline"
               size="icon"
-              className="flex-shrink-0"
+              className="flex-shrink-0 hover:bg-gray-50"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Calendar</h1>
-              <p className="text-gray-600">Plan dates and manage your schedule together</p>
+              <p className="text-gray-600 mt-1">Plan dates and manage your schedule together</p>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Button
               onClick={() => setShowCalendarSetup(true)}
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 hover:bg-pink-50 hover:border-pink-200"
             >
               <Plus className="w-4 h-4" />
               Add Event
@@ -258,15 +258,47 @@ export function CalendarPage({ onNavigate }: CalendarPageProps) {
               onClick={() => setShowSettings(true)}
               variant="outline"
               size="icon"
+              className="hover:bg-gray-50"
             >
               <Settings className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {/* Partner Profile and Anniversary */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <PartnerProfile partner={partner} />
+        {/* Quick Stats and Anniversary */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <Card className="shadow-sm border-0 bg-white">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center">
+                  <Heart className="w-6 h-6 text-white fill-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Together with {partner.name}</h3>
+                  <p className="text-sm text-gray-600">Planning dates and sharing moments</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className={`w-2 h-2 rounded-full ${partner.syncStatus === 'connected' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                    <span className="text-xs text-gray-500 capitalize">{partner.syncStatus}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm border-0 bg-gradient-to-br from-pink-50 to-purple-50">
+            <CardContent className="p-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-gray-900 mb-1">
+                  {events.filter(e => e.type === 'date').length}
+                </div>
+                <div className="text-sm text-gray-600">Upcoming Dates</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {events.filter(e => e.type === 'date' && e.date >= new Date()).length} planned
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <AnniversaryTracker
             partnerName={partner.name}
             relationshipStart={partner.relationshipStart}
@@ -275,9 +307,19 @@ export function CalendarPage({ onNavigate }: CalendarPageProps) {
 
         {/* Main Calendar Content */}
         <Tabs defaultValue="calendar" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-            <TabsTrigger value="suggestions">Date Suggestions</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-8 bg-gray-100 p-1 h-12">
+            <TabsTrigger
+              value="calendar"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium"
+            >
+              Calendar View
+            </TabsTrigger>
+            <TabsTrigger
+              value="suggestions"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium"
+            >
+              Date Suggestions
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="calendar" className="space-y-6">
