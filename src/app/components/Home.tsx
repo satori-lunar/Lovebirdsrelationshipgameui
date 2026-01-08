@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Heart,
   Sparkles,
@@ -18,7 +18,13 @@ import {
   Clock,
   Smile,
   Meh,
-  Frown
+  Frown,
+  BookHeart,
+  Flame,
+  Gift,
+  ChevronRight,
+  Calendar,
+  Bookmark
 } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { useAuth } from '../hooks/useAuth';
@@ -28,6 +34,11 @@ import { onboardingService } from '../services/onboardingService';
 import { api } from '../services/api';
 import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { useAdaptiveNotifications } from '../services/adaptiveNotifications';
+import { ProfilePhotos } from './ProfilePhotos';
+import { PartnerCapacityView } from './PartnerCapacityView';
+import { PartnerNeedsView } from './PartnerNeedsView';
+import { PartnerFormInvite } from './PartnerFormInvite';
+import { WeeklyRhythm } from './WeeklyRhythm';
 
 interface HomeProps {
   userName: string;
@@ -48,6 +59,12 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const { scheduleNotification, getOptimalTiming } = useAdaptiveNotifications();
   const [showDetails, setShowDetails] = useState(false);
   const [currentSupportAction, setCurrentSupportAction] = useState<string | null>(null);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [totalCompleted, setTotalCompleted] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [canSeeFeedback, setCanSeeFeedback] = useState(false);
+  const [hasCompletedDailyQuestion, setHasCompletedDailyQuestion] = useState(false);
 
   // Get partner information
   const { data: partnerProfile } = useQuery({
@@ -268,76 +285,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   // Query couple data (relationship contains couple data)
   const couple = relationship;
 
-  // Query partner profile data
-  const { data: partnerProfile } = useQuery({
-    queryKey: ['partnerProfile', relationship?.id, user?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
-      try {
-        // Determine partner's user_id from relationship
-        const partnerId = relationship.partner_a_id === user.id
-          ? relationship.partner_b_id
-          : relationship.partner_a_id;
-
-        if (!partnerId) {
-          console.log('No partner connected yet');
-          return null;
-        }
-
-        // Fetch partner's onboarding data directly
-        const partnerData = await onboardingService.getOnboarding(partnerId);
-        console.log('✅ Partner profile data:', partnerData);
-        return partnerData;
-      } catch (error) {
-        console.error('Failed to fetch partner profile:', error);
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
-  });
-
-  // Query partner's latest capacity check-in
-  const { data: partnerCapacity } = useQuery({
-    queryKey: ['partnerCapacity', relationship?.id, user?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
-      try {
-        // Determine partner's user_id from relationship
-        const partnerId = relationship.partner_a_id === user.id
-          ? relationship.partner_b_id
-          : relationship.partner_a_id;
-
-        if (!partnerId) {
-          console.log('No partner connected yet');
-          return null;
-        }
-
-        // Get partner's latest capacity check-in (not just today)
-        const { data, error } = await api.supabase
-          .from('capacity_checkins')
-          .select('*')
-          .eq('couple_id', relationship.id)
-          .eq('user_id', partnerId) // Filter by partner's user_id
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(); // Use maybeSingle to handle no results gracefully
-
-        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-          console.error('Failed to fetch partner capacity:', error);
-          return null;
-        }
-
-        console.log('✅ Partner capacity check-in:', data);
-        return data;
-      } catch (error) {
-        console.error('Failed to fetch partner capacity:', error);
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
-    refetchInterval: 30000, // Refresh every 30 seconds to catch new check-ins quickly
-  });
-
   // Query user's own latest capacity check-in
   const { data: myCapacity } = useQuery({
     queryKey: ['myCapacity', relationship?.id, user?.id],
@@ -373,49 +320,11 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-
-
-
-  // Calculate time together - uses actual relationship start date from onboarding if available
-  const getTimeTogether = () => {
-    // Use relationship_start_date (actual anniversary) if available, otherwise fall back to connected_at or created_at
-    const startDate = relationship?.relationship_start_date || relationship?.connected_at || relationship?.created_at;
-    if (!startDate) return null;
-
-    const start = new Date(startDate);
-    const now = new Date();
-    const diffMs = now.getTime() - start.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    // Calculate years, months, days
-    const years = Math.floor(diffDays / 365);
-    const remainingDays = diffDays % 365;
-    const months = Math.floor(remainingDays / 30);
-    const days = remainingDays % 30;
-
-    // Format the display
-    if (years > 0) {
-      if (months > 0) {
-        return `${years} ${years === 1 ? 'year' : 'years'}, ${months} ${months === 1 ? 'month' : 'months'}`;
-      }
-      return `${years} ${years === 1 ? 'year' : 'years'}`;
-    } else if (months > 0) {
-      if (days > 0) {
-        return `${months} ${months === 1 ? 'month' : 'months'}, ${days} ${days === 1 ? 'day' : 'days'}`;
-      }
-      return `${months} ${months === 1 ? 'month' : 'months'}`;
-    } else {
-      return `${diffDays} ${diffDays === 1 ? 'day' : 'days'}`;
-    }
-  };
-
   const timeTogether = getTimeTogether();
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+  // Handler for starting need plans
+  const handleStartNeedPlan = (needId: string) => {
+    onNavigate('need-plan', { needId });
   };
 
   return (
@@ -425,227 +334,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
         <div className="absolute top-20 left-10 w-32 h-32 bg-pink-200 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-200 rounded-full blur-3xl"></div>
       </div>
-
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6">
-          <div>
-            <h1 className="text-2xl font-light text-slate-800">
-              {new Date().getHours() < 12 ? 'Good morning' :
-               new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Together {timeTogether ? `for ${timeTogether}` : 'forever'}
-            </p>
-          </div>
-          <button
-            onClick={() => onNavigate('settings')}
-            className="p-2 rounded-full hover:bg-white/50 transition-colors"
-          >
-            <Settings className="w-5 h-5 text-slate-600" />
-          </button>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 px-6 pb-24">
-          {/* Partner State */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Card className="mb-6 shadow-sm border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-medium text-slate-800">How {partnerName} is doing</h2>
-                  <div className="flex items-center gap-2">
-                    {partnerCapacity && (
-                      <>
-                        {React.createElement(getMoodIcon(partnerCapacity.mood), {
-                          className: `w-5 h-5 ${getEnergyColor(partnerCapacity.energy_level)}`
-                        })}
-                        <span className="text-sm text-slate-600">
-                          {partnerCapacity.energy_level <= 3 ? 'Low energy' :
-                           partnerCapacity.energy_level >= 7 ? 'High energy' : 'Moderate energy'}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {!partnerCapacity && (
-                  <p className="text-sm text-slate-500 italic">
-                    {partnerName} hasn't checked in yet today
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* User State */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            <Card className="mb-6 shadow-sm border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-medium text-slate-800">How you're doing</h2>
-                  <div className="flex items-center gap-2">
-                    {userCapacity && (
-                      <>
-                        {React.createElement(getMoodIcon(userCapacity.mood), {
-                          className: `w-5 h-5 ${getEnergyColor(userCapacity.energy_level)}`
-                        })}
-                        <span className="text-sm text-slate-600">
-                          {userCapacity.energy_level <= 3 ? 'Low energy' :
-                           userCapacity.energy_level >= 7 ? 'High energy' : 'Moderate energy'}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {!userCapacity ? (
-                  <button
-                    onClick={() => onNavigate('capacity-checkin')}
-                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-                  >
-                    Share how you're feeling →
-                  </button>
-                ) : (
-                  <p className="text-sm text-slate-500">
-                    Last updated {new Date(userCapacity.created_at).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Primary Action */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <Card className={`shadow-sm border-0 ${supportAction.bgColor} backdrop-blur-sm cursor-pointer hover:shadow-md transition-shadow`}
-                  onClick={supportAction.action}>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-full ${supportAction.bgColor} border border-white/50`}>
-                    <supportAction.icon className={`w-6 h-6 ${supportAction.color}`} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className={`text-lg font-medium ${supportAction.color} mb-1`}>
-                      {supportAction.title}
-                    </h3>
-                    <p className="text-slate-600 text-sm mb-3">
-                      {supportAction.description}
-                    </p>
-                    <div className="text-sm font-medium text-slate-700">
-                      Tap to connect →
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Expandable Details */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="mt-6"
-          >
-            <button
-              onClick={() => setShowDetails(!showDetails)}
-              className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-colors"
-            >
-              <span className="text-sm font-medium text-slate-700">
-                {showDetails ? 'Less details' : 'More about today'}
-              </span>
-              {showDetails ?
-                <ChevronUp className="w-4 h-4 text-slate-500" /> :
-                <ChevronDown className="w-4 h-4 text-slate-500" />
-              }
-            </button>
-
-            {showDetails && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-4 space-y-3"
-              >
-                <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
-                  <CardContent className="p-4">
-                    <h4 className="font-medium text-slate-800 mb-2">Recent activity</h4>
-                    <div className="space-y-2 text-sm text-slate-600">
-                      {partnerCapacity && (
-                        <p>• {partnerName} checked in {new Date(partnerCapacity.created_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}</p>
-                      )}
-                      {userCapacity && (
-                        <p>• You checked in {new Date(userCapacity.created_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}</p>
-                      )}
-                      {!partnerCapacity && !userCapacity && (
-                        <p className="italic">No recent check-ins today</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200">
-          <div className="flex justify-around py-3 px-6">
-            <button
-              onClick={() => onNavigate('home')}
-              className="flex flex-col items-center gap-1 py-2"
-            >
-              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <Heart className="w-5 h-5 text-indigo-600" />
-              </div>
-              <span className="text-[10px] font-medium text-indigo-700">Home</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('messages')}
-              className="flex flex-col items-center gap-1 py-2"
-            >
-              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-                <MessageCircleHeart className="w-5 h-5 text-gray-500" />
-              </div>
-              <span className="text-[10px] font-medium text-gray-400">Messages</span>
-            </button>
-
-            <button
-              onClick={() => onNavigate('memories')}
-              className="flex flex-col items-center gap-1 py-2"
-            >
-              <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-                <BookHeart className="w-5 h-5 text-gray-500" />
-              </div>
-              <span className="text-[10px] font-medium text-gray-400">Memories</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 
       {/* Header */}
       <div className="relative z-10 px-6 pt-6 pb-4">
