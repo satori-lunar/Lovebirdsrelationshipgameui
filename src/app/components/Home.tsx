@@ -65,6 +65,9 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const [unreadCount, setUnreadCount] = useState(0);
   const [canSeeFeedback, setCanSeeFeedback] = useState(false);
   const [hasCompletedDailyQuestion, setHasCompletedDailyQuestion] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<'welcome' | 'capacity'>('welcome');
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   // Get partner information
   const { data: partnerProfile } = useQuery({
@@ -325,6 +328,29 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     onNavigate('need-plan', { needId });
   };
 
+  // Swipe handling
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientY);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientY);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isUpSwipe = distance > minSwipeDistance;
+
+    if (isUpSwipe && currentScreen === 'welcome') {
+      setCurrentScreen('capacity');
+    }
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -333,7 +359,20 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <AnimatePresence mode="wait">
+      {currentScreen === 'welcome' ? (
+        // Welcome Screen with Photo and Relationship Info
+        <motion.div
+          key="welcome"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, y: -50 }}
+          transition={{ duration: 0.5 }}
+          className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
       {/* Gentle background pattern */}
       <div className="absolute inset-0 opacity-30">
         <div className="absolute top-20 left-10 w-32 h-32 bg-pink-200 rounded-full blur-3xl"></div>
