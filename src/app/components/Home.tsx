@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Home Screen Component
  *
  * An emotionally intelligent space for couples to understand each other's
@@ -362,96 +362,281 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     <AnimatePresence mode="wait">
       {currentScreen === 'welcome' ? (
         // Welcome Screen with Photo and Relationship Info
+        // Welcome Screen - Hero with Photo and Relationship Info
         <motion.div
           key="welcome"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, y: -50 }}
           transition={{ duration: 0.5 }}
-          className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden"
+          className="min-h-screen relative overflow-hidden"
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-      {/* Gentle background pattern */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-20 left-10 w-32 h-32 bg-pink-200 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-200 rounded-full blur-3xl"></div>
-      </div>
+          {/* Hero Background Image */}
+          <div className="absolute inset-0 bg-gradient-to-br from-rose-400 via-pink-500 to-purple-600">
+            {/* User's chosen photo would go here - for now using a gradient overlay */}
+            <div className="absolute inset-0 bg-black/20"></div>
+          </div>
 
-      {/* Header */}
-      <div className="relative z-10 px-6 pt-6 pb-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          {/* Relationship Info Overlay */}
+          <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 text-white text-center">
+            {/* Greeting */}
             <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', duration: 0.8 }}
-              className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mb-8"
             >
-              <Heart className="w-7 h-7 text-white heartbeat" fill="white" />
+              <h1 className="text-3xl font-bold mb-2">
+                {getGreeting()}, {userName} 💕
+              </h1>
+              <p className="text-rose-100 text-lg">
+                How are you feeling today?
+              </p>
             </motion.div>
-            <div>
-              <span className="font-semibold text-xl bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
-                Lovebirds
-              </span>
+
+            {/* Relationship Stats */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 max-w-sm"
+            >
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Heart className="w-6 h-6 text-pink-200" fill="currentColor" />
+                <span className="text-xl font-semibold">Together</span>
+                <Heart className="w-6 h-6 text-pink-200" fill="currentColor" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold mb-1">
+                    {timeTogether || '—'}
+                  </div>
+                  <div className="text-sm text-rose-100">
+                    Time Together
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold mb-1">
+                    {currentStreak || 0}
+                  </div>
+                  <div className="text-sm text-rose-100">
+                    Day Streak
+                  </div>
+                </div>
+              </div>
+
+              {/* Anniversary Date */}
+              {relationship?.relationship_start_date && (
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <div className="text-sm text-rose-100 mb-1">
+                    Anniversary
+                  </div>
+                  <div className="text-lg font-semibold">
+                    {new Date(relationship.relationship_start_date).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Swipe Indicator */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="text-center"
+            >
+              <div className="text-rose-100 text-sm mb-3">
+                Swipe up to share your capacity
+              </div>
+              <motion.div
+                animate={{ y: [0, 8, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-8 h-8 mx-auto bg-white/20 rounded-full flex items-center justify-center"
+              >
+                <ChevronUp className="w-5 h-5 text-white" />
+              </motion.div>
+            </motion.div>
+
+            {/* Settings button */}
+            <button
+              onClick={() => onNavigate('settings')}
+              className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+            >
+              <Settings className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          {/* Hero Background Image */}
+          <div className="absolute inset-0 bg-gradient-to-br from-rose-400 via-pink-500 to-purple-600">
+            {/* User's chosen photo would go here - for now using a gradient overlay */}
+            <div className="absolute inset-0 bg-black/20"></div>
+          </div>
+
+          {/* Relationship Info Overlay */}
+          <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 text-white text-center">
+            {/* Greeting */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mb-8"
+            >
+              <h1 className="text-3xl font-bold mb-2">
+                {getGreeting()}, {userName} 💕
+              </h1>
+              <p className="text-rose-100 text-lg">
+                How are you feeling today?
+              </p>
+            </motion.div>
+
+            {/* Relationship Stats */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 max-w-sm"
+            >
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Heart className="w-6 h-6 text-pink-200" fill="currentColor" />
+                <span className="text-xl font-semibold">Together</span>
+                <Heart className="w-6 h-6 text-pink-200" fill="currentColor" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold mb-1">
+                    {timeTogether || '—'}
+                  </div>
+                  <div className="text-sm text-rose-100">
+                    Time Together
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold mb-1">
+                    {currentStreak || 0}
+                  </div>
+                  <div className="text-sm text-rose-100">
+                    Day Streak
+                  </div>
+                </div>
+              </div>
+
+              {/* Anniversary Date */}
+              {relationship?.relationship_start_date && (
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <div className="text-sm text-rose-100 mb-1">
+                    Anniversary
+                  </div>
+                  <div className="text-lg font-semibold">
+                    {new Date(relationship.relationship_start_date).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Swipe Indicator */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="text-center"
+            >
+              <div className="text-rose-100 text-sm mb-3">
+                Swipe up to share your capacity
+              </div>
+              <motion.div
+                animate={{ y: [0, 8, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-8 h-8 mx-auto bg-white/20 rounded-full flex items-center justify-center"
+              >
+                <ChevronUp className="w-5 h-5 text-white" />
+              </motion.div>
+            </motion.div>
+
+            {/* Settings button */}
+            <button
+              onClick={() => onNavigate('settings')}
+              className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+            >
+              <Settings className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        </motion.div>
+      ) : (
+        // Capacity Screen - Full screen capacity sharing
+        <motion.div
+          key="capacity"
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 50 }}
+          transition={{ duration: 0.5 }}
+          className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50"
+        >
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setCurrentScreen('welcome')}
+                className="w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+              >
+                <ChevronDown className="w-5 h-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Share Your Capacity
+              </h1>
+              <div className="w-10"></div> {/* Spacer for centering */}
             </div>
           </div>
-          <button
-            onClick={() => onNavigate('settings')}
-            className="w-10 h-10 rounded-xl bg-white/80 backdrop-blur-sm border border-rose-100 flex items-center justify-center hover:bg-rose-50 transition-colors shadow-sm"
-          >
-            <Settings className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-      </div>
 
-      {/* Profile Photos */}
-      <ProfilePhotos
-        userName={userName}
-        partnerName={partnerName}
-        onPhotosUpdated={() => {
-          // Optionally refetch any data that depends on photos
-        }}
-      />
-
-      {/* Main Content */}
-      <div className="relative z-10 px-6 pb-24">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Greeting */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-4"
-          >
-            <h1 className="text-2xl font-bold text-gray-900">
-              {getGreeting()}, {userName} 💕
-            </h1>
-            {timeTogether && (
-              <p className="text-gray-600 mt-1 flex items-center justify-center gap-2">
-                <Flame className="w-4 h-4 text-orange-500" />
-                Together {timeTogether}
-              </p>
-            )}
-          </motion.div>
-
-          {/* Partner Status Card */}
-          {relationship?.partner_b_id ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="bg-gradient-to-br from-rose-500 to-pink-500 text-white overflow-hidden border-0 shadow-xl shadow-rose-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
+          {/* Capacity Sharing Interface */}
+          <div className="px-6 pb-6">
+            <div className="max-w-2xl mx-auto space-y-6">
+              {/* Current capacity display */}
+              {myCapacity && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
+                >
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className={w-12 h-12 rounded-full flex items-center justify-center }>
+                      {myCapacity.energy_level >= 7 ? 'ðŸ˜Š' :
+                       myCapacity.energy_level >= 4 ? 'ðŸ˜' : 'ðŸ˜ž'}
+                    </div>
                     <div>
-                      <p className="text-rose-100 text-sm">Your Partner</p>
-                      <h2 className="text-2xl font-bold mt-1">{partnerName}</h2>
-                      <p className="text-rose-100 mt-2 text-sm">
-                        Streak: <span className="text-white font-medium">{currentStreak} days</span>
+                      <h3 className="font-semibold text-gray-900">
+                        Current: {myCapacity.mood_label || 'Not shared'}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Energy level: {myCapacity.energy_level}/10
                       </p>
                     </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Capacity check-in button */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <button
+                  onClick={() => onNavigate('capacity-checkin')}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <div className="flex items-center justify-center gap-4">
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{ duration: 2, repeat: Infinity }}
@@ -459,406 +644,93 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                     >
                       <Heart className="w-8 h-8 text-white" fill="white" />
                     </motion.div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 shadow-lg">
-                <CardContent className="p-6 text-center">
-                  <Gift className="w-12 h-12 mx-auto text-amber-500 mb-3" />
-                  <h3 className="font-semibold text-gray-900">Waiting for your partner</h3>
-                  <p className="text-gray-600 text-sm mt-1">Share your invite code to connect</p>
-                  <button
-                    onClick={() => onNavigate('settings')}
-                    className="mt-4 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium shadow-lg shadow-amber-200 hover:shadow-xl transition-all"
-                  >
-                    Share Invite
-                  </button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Daily Question Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-          >
-            <button
-              onClick={() => onNavigate('daily-question')}
-              className="w-full text-left"
-              disabled={!relationship}
-            >
-              <Card className="hover:shadow-xl transition-all cursor-pointer group overflow-hidden border-0 shadow-lg">
-                <CardContent className="p-0">
-                  <div className="bg-gradient-to-r from-purple-500 to-violet-500 p-4 text-white">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                          <Sparkles className="w-5 h-5" />
-                        </div>
-                        <span className="font-semibold text-lg">Daily Question</span>
-                      </div>
-                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    <div className="text-left">
+                      <h2 className="text-2xl font-bold mb-1">
+                        {myCapacity ? 'Update Your Capacity' : 'Share Your Capacity'}
+                      </h2>
+                      <p className="text-lg opacity-90">
+                        {myCapacity
+                          ? Let  know how you're doing now
+                          : Help  show up better for you
+                        }
+                      </p>
                     </div>
                   </div>
-                  <div className="p-4 bg-white">
-                    {canSeeFeedback ? (
-                      <>
-                        <p className="text-gray-800 font-medium">Results are ready! 🎉</p>
-                        <p className="text-sm text-gray-500 mt-1">See how well you know each other</p>
-                      </>
-                    ) : hasCompletedDailyQuestion ? (
-                      <>
-                        <p className="text-gray-800 font-medium">Waiting for {partnerName}...</p>
-                        <p className="text-sm text-gray-500 mt-1">We'll notify you when they respond</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-gray-800 font-medium">New question available!</p>
-                        <p className="text-sm text-gray-500 mt-1">Answer and guess each other's responses</p>
-                      </>
-                    )}
+                  <div className="mt-6 flex items-center justify-center">
+                    <div className="bg-white/20 rounded-full px-6 py-2">
+                      <span className="text-sm font-medium">Tap to share</span>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </button>
-          </motion.div>
-
-          {/* Partner Capacity Check-In */}
-          {partnerCapacity && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.17 }}
-            >
-              <PartnerCapacityView
-                checkin={partnerCapacity}
-                partnerName={partnerName}
-                isLongDistance={couple?.is_long_distance || false}
-              />
-            </motion.div>
-          )}
-
-          {/* Partner Needs - What they need from you */}
-          {user && relationship?.partner_b_id && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.20 }}
-            >
-              <PartnerNeedsView
-                userId={user.id}
-                partnerName={partnerName}
-                onStartNeedPlan={handleStartNeedPlan}
-              />
-            </motion.div>
-          )}
-
-          {/* My Capacity Today - Always visible to allow updates throughout the day */}
-          {relationship?.partner_b_id && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.23 }}
-            >
-              <button
-                onClick={() => onNavigate('capacity-checkin')}
-                className="w-full text-left"
-              >
-                <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all">
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-4">
-                      <motion.div
-                        animate={{ y: [-2, 2, -2] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-200"
-                      >
-                        <Heart className="w-6 h-6 text-white" fill="white" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">My Capacity Today</p>
-                        <h3 className="font-semibold text-gray-900 mt-1">
-                          {myCapacity ? 'Update how you\'re feeling' : 'Share how you\'re feeling'}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {myCapacity
-                            ? `Moods change throughout the day - let ${partnerName} know how you're doing now`
-                            : `Let ${partnerName} know your mood and what you need - it helps them show up better for you`
-                          }
-                        </p>
-                        {myCapacity && (
-                          <p className="text-xs text-purple-600 mt-2">
-                            Current: {myCapacity.mood_label || 'Shared earlier today'}
-                          </p>
-                        )}
-                        <div className="mt-3">
-                          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-sm font-medium rounded-xl shadow-md">
-                            <span>{myCapacity ? 'Update Your Capacity' : 'Share Your Capacity'}</span>
-                            <ChevronRight className="w-4 h-4" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-          )}
-
-
-
-          {/* Solo Mode - Partner Form Invite */}
-          {couple?.relationship_mode === 'solo' && !couple?.partner_form_completed && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <PartnerFormInvite couple={couple} />
-            </motion.div>
-          )}
-
-          {/* Long Distance Features */}
-          {couple?.is_long_distance && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <WeeklyRhythm couple={couple} user={user} />
-            </motion.div>
-          )}
-
-          {/* Quick Actions Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <button
-                onClick={() => onNavigate('messages')}
-                className="w-full"
-              >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="relative">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                        <MessageCircleHeart className="w-7 h-7 text-blue-500" />
-                      </div>
-                      {unreadCount > 0 && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          {unreadCount}
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Messages</h3>
-                    <p className="text-xs text-gray-500 mt-1">Send love notes</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <button
-                onClick={() => onNavigate('dates')}
-                className="w-full"
-              >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Calendar className="w-7 h-7 text-purple-500" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Plan a Date</h3>
-                    <p className="text-xs text-gray-500 mt-1">Date ideas</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <button
-                onClick={() => onNavigate('memories')}
-                className="w-full"
-              >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <BookHeart className="w-7 h-7 text-amber-500" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Memories</h3>
-                    <p className="text-xs text-gray-500 mt-1">Your love story</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <button
-                onClick={() => onNavigate('weekly-suggestions')}
-                className="w-full"
-              >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-pink-100 to-rose-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Sparkles className="w-7 h-7 text-pink-500" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Weekly</h3>
-                    <p className="text-xs text-gray-500 mt-1">AI suggestions</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-          </div>
-
-          {/* More Options - Collapsible */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-          >
-            <button
-              onClick={() => setShowMoreOptions(!showMoreOptions)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-md border border-gray-100 hover:bg-white transition-colors"
-            >
-              <span className="font-medium text-gray-700">More Options</span>
-              <motion.div
-                animate={{ rotate: showMoreOptions ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown className="w-5 h-5 text-gray-500" />
+                </button>
               </motion.div>
-            </button>
 
-            <AnimatePresence>
-              {showMoreOptions && (
+              {/* Partner's capacity if available */}
+              {partnerCapacity && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="overflow-hidden"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
                 >
-                  <div className="grid grid-cols-3 gap-3 pt-4">
-                    <button
-                      onClick={() => onNavigate('things-to-remember')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-400 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-md">
-                        <Bookmark className="w-5 h-5 text-white" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Remember</h3>
-                    </button>
+                  <h3 className="font-semibold text-gray-900 mb-4">
+                    {partnerName}'s capacity today
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    <div className={w-12 h-12 rounded-full flex items-center justify-center }>
+                      {partnerCapacity.energy_level >= 7 ? 'ðŸ˜Š' :
+                       partnerCapacity.energy_level >= 4 ? 'ðŸ˜' : 'ðŸ˜ž'}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {partnerCapacity.mood_label || 'Shared'}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Energy: {partnerCapacity.energy_level}/10
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(partnerCapacity.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               )}
-            </AnimatePresence>
-          </motion.div>
 
-          {/* Stats Row */}
-          {relationship && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="border-0 shadow-lg">
-                <CardContent className="p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4">Your Journey</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
-                        {currentStreak}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Day Streak</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-violet-500 bg-clip-text text-transparent">
-                        {totalCompleted}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Questions</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-                        {timeTogether || '—'}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Together</p>
-                    </div>
+              {/* Quick actions */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="grid grid-cols-2 gap-4"
+              >
+                <button
+                  onClick={() => onNavigate('messages')}
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:bg-white transition-colors"
+                >
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <MessageCircleHeart className="w-6 h-6 text-blue-500" />
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </div>
-      </div>
+                  <h3 className="font-semibold text-gray-900">Send Message</h3>
+                  <p className="text-sm text-gray-600">Share what's on your mind</p>
+                </button>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-rose-100 z-50 shadow-lg">
-        <div className="max-w-2xl mx-auto flex justify-around items-center h-16 px-4">
-          <button className="flex flex-col items-center gap-1 py-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
-              <Heart className="w-5 h-5 text-white" fill="white" />
+                <button
+                  onClick={() => onNavigate('daily-question')}
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:bg-white transition-colors"
+                >
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <Sparkles className="w-6 h-6 text-purple-500" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Daily Question</h3>
+                  <p className="text-sm text-gray-600">Connect deeper today</p>
+                </button>
+              </motion.div>
             </div>
-            <span className="text-[10px] font-semibold text-rose-500">Home</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('daily-question')}
-            className="flex flex-col items-center gap-1 py-2"
-          >
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <Sparkles className="w-5 h-5 text-gray-500" />
-            </div>
-            <span className="text-[10px] font-medium text-gray-400">Daily Q</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('messages')}
-            className="flex flex-col items-center gap-1 py-2 relative"
-          >
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <MessageCircleHeart className="w-5 h-5 text-gray-500" />
-            </div>
-            {unreadCount > 0 && (
-              <div className="absolute top-1 right-1 w-4 h-4 bg-rose-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </div>
-            )}
-            <span className="text-[10px] font-medium text-gray-400">Messages</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('memories')}
-            className="flex flex-col items-center gap-1 py-2"
-          >
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <BookHeart className="w-5 h-5 text-gray-500" />
-            </div>
-            <span className="text-[10px] font-medium text-gray-400">Memories</span>
-          </button>
-        </div>
-      </nav>
-
-    </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
