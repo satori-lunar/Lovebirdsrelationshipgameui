@@ -87,7 +87,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
   const { data: partnerProfile } = useQuery({
     queryKey: ['partnerProfile', relationship?.id, user?.id],
     queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
+      if (!relationship?.id || !user?.id || !relationship || !user) return null;
       try {
         const partnerId = relationship.partner_a_id === user.id
           ? relationship.partner_b_id
@@ -108,7 +108,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
   const { data: partnerCapacity } = useQuery({
     queryKey: ['partnerCapacity', relationship?.id],
     queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
+      if (!relationship?.id || !user?.id || !relationship || !user) return null;
       try {
         const partnerId = relationship.partner_a_id === user.id
           ? relationship.partner_b_id
@@ -142,7 +142,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
   const { data: userCapacity } = useQuery({
     queryKey: ['userCapacity', relationship?.id, user?.id],
     queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
+      if (!relationship?.id || !user?.id || !relationship || !user) return null;
       try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -306,7 +306,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
   const { data: myCapacity } = useQuery({
     queryKey: ['myCapacity', relationship?.id, user?.id],
     queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
+      if (!relationship?.id || !user?.id || !relationship || !user) return null;
       try {
         // Get user's latest capacity check-in from today
         const today = new Date();
