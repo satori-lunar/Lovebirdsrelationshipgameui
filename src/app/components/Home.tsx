@@ -325,6 +325,13 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
     onNavigate('need-plan', { needId });
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Gentle background pattern */}
