@@ -26,6 +26,8 @@ import { useRelationship } from '../hooks/useRelationship';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 import { api } from '../services/api';
+import { useSharedCalendar } from '../hooks/useSharedCalendar';
+import { useAdaptiveNotifications } from '../services/adaptiveNotifications';
 
 interface HomeProps {
   userName: string;
@@ -42,6 +44,8 @@ interface EmotionalState {
 export function Home({ userName, partnerName: partnerNameProp, onNavigate }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
+  const { insights: calendarInsights } = useSharedCalendar();
+  const { scheduleNotification, getOptimalTiming } = useAdaptiveNotifications();
   const [showDetails, setShowDetails] = useState(false);
   const [currentSupportAction, setCurrentSupportAction] = useState<string | null>(null);
 
@@ -150,34 +154,47 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const timeTogether = getTimeTogether();
   const partnerName = partnerProfile?.name || partnerNameProp;
 
-  // Determine primary support action based on partner state
+  // Determine primary support action based on partner state and shared context
   useEffect(() => {
     if (partnerCapacity && userCapacity) {
-      // Simple logic for now - can be expanded with ML later
       const partnerEnergy = partnerCapacity.energy_level;
       const partnerMood = partnerCapacity.mood;
       const userEnergy = userCapacity.energy_level;
+      const hasSharedTime = calendarInsights?.overlapHours > 1;
+      const hasPotentialDateTime = calendarInsights?.suggestedDateTimes.length > 0;
 
+      // Intelligent support action selection based on emotional intelligence principles
       if (partnerEnergy <= 3 && partnerMood <= 3) {
+        // Low mood + low energy = gentle, non-demanding support
         setCurrentSupportAction('gentle_check_in');
-      } else if (partnerEnergy >= 7) {
+      } else if (partnerEnergy >= 8 && partnerMood >= 7) {
+        // High energy + good mood = celebratory support
         setCurrentSupportAction('celebrate_energy');
-      } else if (userEnergy >= 6 && partnerEnergy >= 5) {
+      } else if (hasSharedTime && userEnergy >= 6 && partnerEnergy >= 5 && hasPotentialDateTime) {
+        // Good shared availability + decent energy levels + potential date times
         setCurrentSupportAction('quality_time');
-      } else {
+      } else if (partnerMood <= 5 && userEnergy >= 4) {
+        // Partner could use a lift, user has capacity to help
         setCurrentSupportAction('thoughtful_message');
+      } else {
+        // Default to checking in together
+        setCurrentSupportAction('check_in');
       }
     } else {
       setCurrentSupportAction('check_in');
     }
-  }, [partnerCapacity, userCapacity]);
+  }, [partnerCapacity, userCapacity, calendarInsights]);
 
   const getSupportAction = () => {
+    const hasSharedTime = calendarInsights?.overlapHours > 1;
+
     switch (currentSupportAction) {
       case 'gentle_check_in':
         return {
           title: "A gentle check-in might help",
-          description: "They seem to be having a challenging moment",
+          description: hasSharedTime
+            ? "They seem to need some quiet care right now"
+            : "A soft message when they're ready",
           icon: Heart,
           action: () => onNavigate('messages'),
           color: "text-rose-600",
@@ -186,7 +203,9 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
       case 'celebrate_energy':
         return {
           title: "Celebrate their good energy",
-          description: "They're feeling great today",
+          description: hasSharedTime
+            ? "They're feeling great - share in their joy"
+            : "Acknowledge their positive moment",
           icon: Sparkles,
           action: () => onNavigate('messages'),
           color: "text-amber-600",
@@ -195,7 +214,9 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
       case 'quality_time':
         return {
           title: "Share some quality time",
-          description: "You both seem available for connection",
+          description: calendarInsights?.suggestedDateTimes.length
+            ? "You both have time this evening"
+            : "You both seem available for connection",
           icon: Clock,
           action: () => onNavigate('dates'),
           color: "text-blue-600",
@@ -204,7 +225,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
       case 'thoughtful_message':
         return {
           title: "Send a thoughtful message",
-          description: "A simple note can make their day better",
+          description: "A kind note can brighten their day",
           icon: MessageCircleHeart,
           action: () => onNavigate('messages'),
           color: "text-pink-600",
