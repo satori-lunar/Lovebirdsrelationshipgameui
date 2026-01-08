@@ -650,8 +650,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                       </h2>
                       <p className="text-lg opacity-90">
                         {myCapacity
-                          ? Let  know how you're doing now
-                          : Help  show up better for you
+                          ? `Let ${partnerName} know how you're doing now`
+                          : `Help ${partnerName} show up better for you`
                         }
                       </p>
                     </div>
