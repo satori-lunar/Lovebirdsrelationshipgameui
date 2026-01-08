@@ -35,10 +35,10 @@ import { api } from '../services/api';
 import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { useAdaptiveNotifications } from '../services/adaptiveNotifications';
 import { ProfilePhotos } from './ProfilePhotos';
-import { PartnerCapacityView } from './PartnerCapacityView';
+import PartnerCapacityView from './PartnerCapacityView';
 import { PartnerNeedsView } from './PartnerNeedsView';
-import { PartnerFormInvite } from './PartnerFormInvite';
-import { WeeklyRhythm } from './WeeklyRhythm';
+import PartnerFormInvite from './PartnerFormInvite';
+import WeeklyRhythm from './WeeklyRhythm';
 
 interface HomeProps {
   userName: string;
