@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Flame,
   Settings,
+  Calendar,
   Bookmark,
   Target
 } from 'lucide-react';
