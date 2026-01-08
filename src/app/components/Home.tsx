@@ -612,7 +612,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
             </button>
           </div>
         </motion.div>
-      ) : (
+      ) : currentScreen === 'capacity' ? (
         // Capacity Screen - Full screen capacity sharing
         <motion.div
           key="capacity"
@@ -769,8 +769,8 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
             </div>
           </div>
         </motion.div>
-      ) : currentScreen === 'capacity' ? (
-        // Capacity Screen - Full screen capacity sharing
+      ) : (
+        // Full Home Screen with all features
         <motion.div
           key="home"
           initial={{ opacity: 0 }}
