@@ -73,31 +73,6 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
 
   const [currentScreen, setCurrentScreen] = useState<'welcome' | 'capacity' | 'home'>('welcome');
 
-  // Determine initial screen based on user state
-  useEffect(() => {
-    if (myCapacity) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const capacityDate = new Date(myCapacity.created_at);
-      capacityDate.setHours(0, 0, 0, 0);
-
-      // If user has shared capacity today, show home screen
-      if (capacityDate.getTime() === today.getTime()) {
-        setCurrentScreen('home');
-        return;
-      }
-    }
-
-    // If user has seen welcome and has capacity data, show home
-    if (hasSeenWelcome && myCapacity) {
-      setCurrentScreen('home');
-      return;
-    }
-
-    // Otherwise show welcome
-    setCurrentScreen('welcome');
-  }, [myCapacity, hasSeenWelcome]);
-
   // Mark welcome as seen when user navigates to capacity
   useEffect(() => {
     if (currentScreen === 'capacity') {
@@ -361,6 +336,31 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
     enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
+
+  // Determine initial screen based on user state
+  useEffect(() => {
+    if (myCapacity) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const capacityDate = new Date(myCapacity.created_at);
+      capacityDate.setHours(0, 0, 0, 0);
+
+      // If user has shared capacity today, show home screen
+      if (capacityDate.getTime() === today.getTime()) {
+        setCurrentScreen('home');
+        return;
+      }
+    }
+
+    // If user has seen welcome and has capacity data, show home
+    if (hasSeenWelcome && myCapacity) {
+      setCurrentScreen('home');
+      return;
+    }
+
+    // Otherwise show welcome
+    setCurrentScreen('welcome');
+  }, [myCapacity, hasSeenWelcome]);
 
   // Handler for starting need plans
   const handleStartNeedPlan = (needId: string) => {
