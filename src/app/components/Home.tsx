@@ -44,6 +44,7 @@ interface HomeProps {
   userName: string;
   partnerName: string;
   onNavigate: (page: string, data?: any) => void;
+  showWelcomeFlow?: boolean;
 }
 
 interface EmotionalState {
@@ -52,7 +53,7 @@ interface EmotionalState {
   lastUpdated: Date;
 }
 
-export function Home({ userName, partnerName: partnerNameProp, onNavigate }: HomeProps) {
+export function Home({ userName, partnerName: partnerNameProp, onNavigate, showWelcomeFlow = false }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const { insights: calendarInsights } = useSharedCalendar();
@@ -65,7 +66,45 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
   const [unreadCount, setUnreadCount] = useState(0);
   const [canSeeFeedback, setCanSeeFeedback] = useState(false);
   const [hasCompletedDailyQuestion, setHasCompletedDailyQuestion] = useState(false);
-  const [currentScreen, setCurrentScreen] = useState<'welcome' | 'capacity'>('welcome');
+  // Check if user has completed the welcome flow
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(() => {
+    return localStorage.getItem('lovebirds-has-seen-welcome') === 'true';
+  });
+
+  const [currentScreen, setCurrentScreen] = useState<'welcome' | 'capacity' | 'home'>('welcome');
+
+  // Determine initial screen based on user state
+  useEffect(() => {
+    if (myCapacity) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const capacityDate = new Date(myCapacity.created_at);
+      capacityDate.setHours(0, 0, 0, 0);
+
+      // If user has shared capacity today, show home screen
+      if (capacityDate.getTime() === today.getTime()) {
+        setCurrentScreen('home');
+        return;
+      }
+    }
+
+    // If user has seen welcome and has capacity data, show home
+    if (hasSeenWelcome && myCapacity) {
+      setCurrentScreen('home');
+      return;
+    }
+
+    // Otherwise show welcome
+    setCurrentScreen('welcome');
+  }, [myCapacity, hasSeenWelcome]);
+
+  // Mark welcome as seen when user navigates to capacity
+  useEffect(() => {
+    if (currentScreen === 'capacity') {
+      setHasSeenWelcome(true);
+      localStorage.setItem('lovebirds-has-seen-welcome', 'true');
+    }
+  }, [currentScreen]);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
@@ -587,7 +626,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
           <div className="px-6 pt-6 pb-4">
             <div className="flex items-center justify-between">
               <button
-                onClick={() => setCurrentScreen('welcome')}
+                onClick={() => setCurrentScreen('home')}
                 className="w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
               >
                 <ChevronDown className="w-5 h-5 text-gray-600" />
@@ -728,6 +767,193 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate }: Hom
                 </button>
               </motion.div>
             </div>
+          </div>
+        </motion.div>
+      ) : (
+        // Full Home Screen with all features
+        <motion.div
+          key="home"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50"
+        >
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {getGreeting()}, {userName} 💕
+              </h1>
+              <button
+                onClick={() => onNavigate('settings')}
+                className="w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+              >
+                <Settings className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="px-6 pb-6 space-y-6">
+            {/* Partner Capacity Section */}
+            {partnerCapacity && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
+              >
+                <PartnerCapacityView
+                  capacity={partnerCapacity}
+                  partnerName={partnerName}
+                  onNavigate={onNavigate}
+                />
+              </motion.div>
+            )}
+
+            {/* Partner Needs Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <PartnerNeedsView
+                onNavigate={onNavigate}
+                onStartNeedPlan={handleStartNeedPlan}
+              />
+            </motion.div>
+
+            {/* Daily Question */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="bg-white/80 backdrop-blur-sm border-white/50 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">Daily Question</h3>
+                      <p className="text-sm text-gray-600">Connect deeper today</p>
+                    </div>
+                    {unreadCount > 0 && (
+                      <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                        <span className="text-xs text-white font-bold">{unreadCount}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {hasCompletedDailyQuestion ? (
+                    <div className="text-center py-4">
+                      <div className="text-green-600 mb-2">✅ Completed!</div>
+                      <p className="text-sm text-gray-600">Great job connecting today</p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => onNavigate('daily-question')}
+                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl p-4 font-medium hover:shadow-lg transition-shadow"
+                    >
+                      Answer Today's Question
+                    </button>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Quick Actions */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="grid grid-cols-2 gap-4"
+            >
+              <button
+                onClick={() => onNavigate('messages')}
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:bg-white transition-colors"
+              >
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <MessageCircleHeart className="w-6 h-6 text-blue-500" />
+                </div>
+                <h3 className="font-semibold text-gray-900">Messages</h3>
+                <p className="text-sm text-gray-600">Share what's on your mind</p>
+              </button>
+
+              <button
+                onClick={() => onNavigate('dates')}
+                className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:bg-white transition-colors"
+              >
+                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Heart className="w-6 h-6 text-red-500" />
+                </div>
+                <h3 className="font-semibold text-gray-900">Date Ideas</h3>
+                <p className="text-sm text-gray-600">Plan something special</p>
+              </button>
+            </motion.div>
+
+            {/* Streak & Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
+            >
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-orange-600 mb-1">
+                    {currentStreak || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Day Streak</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-600 mb-1">
+                    {totalCompleted || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Completed</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-purple-600 mb-1">
+                    {unreadCount || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">Unread</div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Weekly Rhythm */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <WeeklyRhythm onNavigate={onNavigate} />
+            </motion.div>
+
+            {/* Share Capacity Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-6 shadow-lg"
+            >
+              <button
+                onClick={() => onNavigate('capacity-checkin')}
+                className="w-full text-white text-center"
+              >
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <Heart className="w-8 h-8" fill="white" />
+                  <h3 className="text-xl font-bold">Share Your Capacity</h3>
+                </div>
+                <p className="text-white/90 text-sm">
+                  {myCapacity
+                    ? `Let ${partnerName} know how you're doing now`
+                    : `Help ${partnerName} show up better for you`
+                  }
+                </p>
+              </button>
+            </motion.div>
           </div>
         </motion.div>
       )}
