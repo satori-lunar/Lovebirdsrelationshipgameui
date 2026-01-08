@@ -804,7 +804,7 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
                 className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
               >
                 <PartnerCapacityView
-                  capacity={partnerCapacity}
+                  checkin={partnerCapacity}
                   partnerName={partnerName}
                   onNavigate={onNavigate}
                 />
