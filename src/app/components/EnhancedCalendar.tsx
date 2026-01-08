@@ -6,7 +6,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { Button } from './ui/button';
-import { RelationshipStats } from './relationship-stats';
+import { RelationshipStats } from './RelationshipStats';
 
 interface Event {
   id: string;
