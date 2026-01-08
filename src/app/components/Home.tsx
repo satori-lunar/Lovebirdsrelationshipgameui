@@ -398,8 +398,10 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
   };
 
   return (
-    <AnimatePresence mode="wait">
-      {currentScreen === 'welcome' ? (
+    <div className="relative">
+      {/* Welcome Screen - Always rendered as base */}
+      <AnimatePresence mode="wait">
+        {currentScreen === 'welcome' ? (
         // Welcome Screen with Photo and Relationship Info
         // Welcome Screen - Hero with Photo and Relationship Info
         <motion.div
@@ -612,13 +614,13 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
             </button>
           </div>
         </motion.div>
-      ) : currentScreen === 'capacity' ? (
-        // Capacity Screen - Full screen capacity sharing
+      ) : (
+        // Full Home Screen with all features
         <motion.div
-          key="capacity"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 50 }}
+          key="home"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
           className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50"
         >
@@ -959,6 +961,165 @@ export function Home({ userName, partnerName: partnerNameProp, onNavigate, showW
           </div>
         </motion.div>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
+
+      {/* Capacity Screen Modal - Appears over welcome screen */}
+      <AnimatePresence>
+        {currentScreen === 'capacity' && (
+          <motion.div
+            key="capacity-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setCurrentScreen('home')}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="px-6 pt-6 pb-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setCurrentScreen('home')}
+                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  >
+                    <ChevronDown className="w-5 h-5 text-gray-600" />
+                  </button>
+                  <h1 className="text-xl font-semibold text-gray-900">
+                    Share Your Capacity
+                  </h1>
+                  <div className="w-10"></div> {/* Spacer */}
+                </div>
+              </div>
+
+              {/* Capacity Sharing Interface */}
+              <div className="px-6 pb-6">
+                <div className="space-y-6">
+                  {/* Current capacity display */}
+                  {myCapacity && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-gray-50 rounded-2xl p-4"
+                    >
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center`}>
+                          {myCapacity.energy_level >= 7 ? '😊' :
+                           myCapacity.energy_level >= 4 ? '😐' : '😞'}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            Current: {myCapacity.mood_label || 'Not shared'}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Energy level: {myCapacity.energy_level}/10
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Capacity check-in button */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <button
+                      onClick={() => onNavigate('capacity-checkin')}
+                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all"
+                    >
+                      <div className="flex items-center justify-center gap-4">
+                        <motion.div
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                          className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center"
+                        >
+                          <Heart className="w-6 h-6 text-white" fill="white" />
+                        </motion.div>
+                        <div className="text-left">
+                          <h2 className="text-xl font-bold mb-1">
+                            {myCapacity ? 'Update Your Capacity' : 'Share Your Capacity'}
+                          </h2>
+                          <p className="text-sm opacity-90">
+                            {myCapacity
+                              ? `Let ${partnerName} know how you're doing now`
+                              : `Help ${partnerName} show up better for you`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  </motion.div>
+
+                  {/* Partner's capacity if available */}
+                  {partnerCapacity && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="bg-gray-50 rounded-2xl p-4"
+                    >
+                      <h3 className="font-semibold text-gray-900 mb-4">
+                        {partnerName}'s capacity today
+                      </h3>
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center`}>
+                          {partnerCapacity.energy_level >= 7 ? '😊' :
+                           partnerCapacity.energy_level >= 4 ? '😐' : '😞'}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {partnerCapacity.mood_label || 'Shared'}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Energy: {partnerCapacity.energy_level}/10
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Quick actions */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="grid grid-cols-2 gap-4"
+                  >
+                    <button
+                      onClick={() => onNavigate('messages')}
+                      className="bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <MessageCircleHeart className="w-6 h-6 text-blue-500" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 text-sm">Messages</h3>
+                    </button>
+
+                    <button
+                      onClick={() => onNavigate('daily-question')}
+                      className="bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <Sparkles className="w-6 h-6 text-purple-500" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 text-sm">Daily Question</h3>
+                    </button>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
