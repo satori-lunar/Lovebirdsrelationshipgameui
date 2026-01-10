@@ -209,9 +209,9 @@ export default function App() {
       />
 
       {currentView === 'home' && (
-        <Home 
+        <Home
           userName={userData?.name || 'there'}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
           onNavigate={handleNavigate}
         />
       )}
@@ -219,14 +219,14 @@ export default function App() {
       {currentView === 'daily-question' && (
         <DailyQuestion
           onComplete={handleBack}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
         />
       )}
 
       {currentView === 'love-language' && userData && (
         <LoveLanguageSuggestions
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData.partnerName || 'Partner'}
         />
       )}
 
@@ -237,14 +237,14 @@ export default function App() {
       {currentView === 'dates' && (
         <DatesWrapper
           onBack={handleBack}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
         />
       )}
 
       {currentView === 'gifts' && userData && (
         <GiftGuidance
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData.partnerName || 'Partner'}
         />
       )}
 
@@ -266,14 +266,14 @@ export default function App() {
       {currentView === 'weekly-wishes' && userData && (
         <WeeklyWishes
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData.partnerName || 'Partner'}
         />
       )}
 
       {currentView === 'tracker' && userData && (
         <RelationshipTracker
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData.partnerName || 'Partner'}
         />
       )}
 
@@ -305,7 +305,7 @@ export default function App() {
       {currentView === 'need-support-plan' && supportPlanNeed && (
         <NeedSupportPlan
           need={supportPlanNeed}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
           onBack={() => setCurrentView('home')}
           onComplete={() => {
             setSupportPlanNeed(null);
@@ -317,7 +317,7 @@ export default function App() {
       {currentView === 'settings' && (
         <Settings
           onBack={handleBack}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
           onNavigate={handleNavigate}
           onPartnerNameUpdate={() => refetchOnboarding()}
         />
