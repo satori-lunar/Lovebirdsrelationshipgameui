@@ -16,6 +16,8 @@ import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 import { api } from '../services/api';
 import { useSharedCalendar } from '../hooks/useSharedCalendar';
+import { useMoodUpdates } from '../hooks/useMoodUpdates';
+import { toast } from 'sonner';
 
 interface HomeProps {
   userName: string;
@@ -31,13 +33,8 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [capacityLevel, setCapacityLevel] = useState<number>(50);
 
-  // Fetch partner's capacity data
-  const { data: partnerCapacity } = useQuery({
-    queryKey: ['partner-capacity', user?.id],
-    queryFn: () => api.getPartnerCapacity(user!.id),
-    enabled: !!user?.id,
-    refetchInterval: 300000, // Refresh every 5 minutes
-  });
+  // Use mood updates hook for capacity management
+  const { partnerMood, updateMood, isUpdating } = useMoodUpdates();
 
   // Fetch user's onboarding data for profile photo
   const { data: onboardingData } = useQuery({
@@ -87,23 +84,22 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
   // Get partner's mood display
   const getPartnerMood = () => {
-    if (!partnerCapacity) return 'Not Updated';
+    if (!partnerMood) return 'Not Updated';
 
-    const moodMap: Record<string, string> = {
-      'great': 'Feeling Great',
-      'good': 'Feeling Good',
-      'okay': 'Feeling Okay',
-      'low': 'Feeling Low',
-      'struggling': 'Needs Support'
-    };
-
-    return moodMap[partnerCapacity.mood] || 'Unknown';
+    // Convert 1-10 mood scale to descriptive text
+    const mood = partnerMood.mood;
+    if (mood >= 8) return 'Feeling Great';
+    if (mood >= 6) return 'Feeling Good';
+    if (mood >= 4) return 'Feeling Okay';
+    if (mood >= 2) return 'Feeling Low';
+    return 'Needs Support';
   };
 
-  // Get partner's capacity percentage
+  // Get partner's capacity percentage (convert 1-10 scale to 0-100%)
   const getPartnerCapacityLevel = () => {
-    if (!partnerCapacity) return null;
-    return partnerCapacity.capacity_level || partnerCapacity.energy_level || null;
+    if (!partnerMood || !partnerMood.energy_level) return null;
+    // Convert 1-10 scale to percentage
+    return Math.round((partnerMood.energy_level / 10) * 100);
   };
 
   const handleTabNavigation = (tab: string) => {
@@ -123,13 +119,27 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   };
 
   const handleUpdateCapacity = () => {
-    // Just update capacity locally without navigating
-    // In the future, this could save to the database
-    console.log('Capacity updated:', {
-      capacityLevel,
-      energyLevel: getEnergyLevel(capacityLevel),
-    });
-    // TODO: Add API call to save capacity when backend is ready
+    if (!user?.id || !relationship?.id) {
+      toast.error('Please sign in to update your capacity');
+      return;
+    }
+
+    // Convert 0-100 percentage to 1-10 scale for database
+    const energyLevel = Math.round((capacityLevel / 100) * 10);
+    const mood = Math.round((capacityLevel / 100) * 10); // Use same scale for mood
+
+    updateMood(
+      { mood, energy_level: energyLevel },
+      {
+        onSuccess: () => {
+          toast.success(`Capacity updated: ${getEnergyLevel(capacityLevel)}`);
+        },
+        onError: (error) => {
+          toast.error('Failed to update capacity. Please try again.');
+          console.error('Capacity update error:', error);
+        }
+      }
+    );
   };
 
   return (
@@ -333,13 +343,14 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
             <button
               onClick={handleUpdateCapacity}
-              className="w-full text-white rounded-2xl py-3 font-['Nunito_Sans',sans-serif] text-[16px] hover:opacity-90 transition-all shadow-md"
+              disabled={isUpdating}
+              className="w-full text-white rounded-2xl py-3 font-['Nunito_Sans',sans-serif] text-[16px] hover:opacity-90 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 fontVariationSettings: "'YTLC' 500, 'wdth' 100",
                 backgroundColor: getCapacityColor(capacityLevel)
               }}
             >
-              Update Capacity
+              {isUpdating ? 'Updating...' : 'Update Capacity'}
             </button>
           </div>
         </div>
