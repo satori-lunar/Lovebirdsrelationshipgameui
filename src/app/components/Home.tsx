@@ -237,9 +237,9 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               </p>
             </button>
 
-            {/* Love Language */}
+            {/* Icebreakers */}
             <button
-              onClick={() => onNavigate('love-language')}
+              onClick={() => onNavigate('icebreakers')}
               className="bg-white rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-[#06B6D4]/10"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center shadow-lg">
@@ -248,7 +248,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                 </svg>
               </div>
               <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                Love<br/>Language
+                Ice-<br/>breakers
               </p>
             </button>
           </div>
