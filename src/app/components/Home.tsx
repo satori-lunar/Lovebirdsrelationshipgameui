@@ -100,11 +100,21 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
     return moodMap[partnerMood.mood] || 'Unknown';
   };
 
-  // Get partner's capacity percentage
+  // Get partner's capacity percentage from mood string
   const getPartnerCapacityLevel = () => {
-    if (!partnerMood || !partnerMood.energy_level) return null;
-    // Energy level is already stored as a percentage (0-100)
-    return partnerMood.energy_level;
+    if (!partnerMood || !partnerMood.mood) return null;
+
+    // Convert mood string to percentage for display
+    const moodToPercentage: Record<string, number> = {
+      'great': 90,
+      'good': 70,
+      'okay': 50,
+      'low': 30,
+      'struggling': 15,
+      'numb': 5
+    };
+
+    return moodToPercentage[partnerMood.mood] || 50;
   };
 
   const handleTabNavigation = (tab: string) => {
@@ -147,7 +157,6 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
           user_id: user.id,
           couple_id: relationship.id,
           mood: moodString,
-          energy_level: capacityLevel, // Store the actual percentage
         });
 
       if (error) throw error;
