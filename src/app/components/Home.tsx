@@ -296,28 +296,14 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
           <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c] mb-3 px-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
             Your Journey
           </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-3xl p-5 text-center shadow-md">
-              <div className="text-3xl mb-2">🔥</div>
-              <p className="font-['Nunito_Sans',sans-serif] text-[28px] text-[#FF2D55] mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                {relationship?.streak || 0}
-              </p>
-              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                Daily streak
-              </p>
-            </div>
-            <div
-              className="bg-white rounded-3xl p-5 text-center shadow-md cursor-pointer hover:shadow-xl transition-all"
-              onClick={() => onNavigate('dragon')}
-            >
-              <div className="text-3xl mb-2">🐉</div>
-              <p className="font-['Nunito_Sans',sans-serif] text-[28px] text-[#8B5CF6] mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                Pet
-              </p>
-              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                Your dragon
-              </p>
-            </div>
+          <div className="bg-white rounded-3xl p-5 text-center shadow-md">
+            <div className="text-3xl mb-2">🔥</div>
+            <p className="font-['Nunito_Sans',sans-serif] text-[28px] text-[#FF2D55] mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              {relationship?.streak || 0}
+            </p>
+            <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Daily streak
+            </p>
           </div>
         </div>
       </div>
