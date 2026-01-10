@@ -123,12 +123,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   };
 
   const handleUpdateCapacity = () => {
-    // Navigate to capacity check-in with capacity level and energy description
-    onNavigate('capacity-checkin', {
-      capacityLevel: capacityLevel,
+    // Just update capacity locally without navigating
+    // In the future, this could save to the database
+    console.log('Capacity updated:', {
+      capacityLevel,
       energyLevel: getEnergyLevel(capacityLevel),
-      mood: selectedMood
     });
+    // TODO: Add API call to save capacity when backend is ready
   };
 
   return (
@@ -144,7 +145,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pb-20">
+      <div className="flex-1 overflow-y-auto pb-32">
         {/* Couple Photo with Anniversary Tracker */}
         <div className="relative w-full h-[200px] mb-6 px-5">
           <div className="relative w-full h-full rounded-3xl overflow-hidden">
