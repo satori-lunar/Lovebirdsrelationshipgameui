@@ -32,6 +32,7 @@ import CapacityCheckIn from './components/CapacityCheckIn';
 import { PartnerProfileOnboarding } from './components/PartnerProfileOnboarding';
 import { NeedSupportPlan } from './components/NeedSupportPlan';
 import { useAuth } from './hooks/useAuth';
+import { useRelationship } from './hooks/useRelationship';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
 import { useQuery } from '@tanstack/react-query';
@@ -75,9 +76,26 @@ export default function App() {
     refetchOnWindowFocus: false,
   });
 
+  // Get relationship to find partner's user ID
+  const { relationship } = useRelationship();
+
+  // Get partner's user ID from relationship
+  const partnerId = relationship && user ? (
+    relationship.partner_a_id === user.id ? relationship.partner_b_id : relationship.partner_a_id
+  ) : null;
+
+  // Fetch partner's onboarding data to get their actual name
+  const { data: partnerOnboarding } = useQuery({
+    queryKey: ['partner-onboarding', partnerId],
+    queryFn: () => onboardingService.getOnboarding(partnerId!),
+    enabled: !!partnerId,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const userData = onboarding ? {
     name: onboarding.name,
-    partnerName: onboarding.partner_name || 'Partner',
+    partnerName: partnerOnboarding?.name || 'Partner',
   } : null;
 
   const handleOnboardingComplete = () => {
