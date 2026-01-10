@@ -32,9 +32,10 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [capacityLevel, setCapacityLevel] = useState<number>(50);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // Use mood updates hook for capacity management
-  const { partnerMood, updateMood, isUpdating } = useMoodUpdates();
+  // Use mood updates hook for partner's capacity
+  const { partnerMood } = useMoodUpdates();
 
   // Fetch user's onboarding data for profile photo
   const { data: onboardingData } = useQuery({
@@ -86,20 +87,24 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const getPartnerMood = () => {
     if (!partnerMood) return 'Not Updated';
 
-    // Convert 1-10 mood scale to descriptive text
-    const mood = partnerMood.mood;
-    if (mood >= 8) return 'Feeling Great';
-    if (mood >= 6) return 'Feeling Good';
-    if (mood >= 4) return 'Feeling Okay';
-    if (mood >= 2) return 'Feeling Low';
-    return 'Needs Support';
+    // Map mood string to display text
+    const moodMap: Record<string, string> = {
+      'great': 'Feeling Great',
+      'good': 'Feeling Good',
+      'okay': 'Feeling Okay',
+      'low': 'Feeling Low',
+      'struggling': 'Struggling',
+      'numb': 'Disconnected'
+    };
+
+    return moodMap[partnerMood.mood] || 'Unknown';
   };
 
-  // Get partner's capacity percentage (convert 1-10 scale to 0-100%)
+  // Get partner's capacity percentage
   const getPartnerCapacityLevel = () => {
     if (!partnerMood || !partnerMood.energy_level) return null;
-    // Convert 1-10 scale to percentage
-    return Math.round((partnerMood.energy_level / 10) * 100);
+    // Energy level is already stored as a percentage (0-100)
+    return partnerMood.energy_level;
   };
 
   const handleTabNavigation = (tab: string) => {
@@ -118,28 +123,42 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
     }
   };
 
-  const handleUpdateCapacity = () => {
+  const handleUpdateCapacity = async () => {
     if (!user?.id || !relationship?.id) {
       toast.error('Please sign in to update your capacity');
       return;
     }
 
-    // Convert 0-100 percentage to 1-10 scale for database
-    const energyLevel = Math.round((capacityLevel / 100) * 10);
-    const mood = Math.round((capacityLevel / 100) * 10); // Use same scale for mood
+    // Convert percentage to mood string that matches database schema
+    let moodString: string;
+    if (capacityLevel >= 80) moodString = 'great';
+    else if (capacityLevel >= 60) moodString = 'good';
+    else if (capacityLevel >= 40) moodString = 'okay';
+    else if (capacityLevel >= 20) moodString = 'low';
+    else if (capacityLevel >= 10) moodString = 'struggling';
+    else moodString = 'numb';
 
-    updateMood(
-      { mood, energy_level: energyLevel },
-      {
-        onSuccess: () => {
-          toast.success(`Capacity updated: ${getEnergyLevel(capacityLevel)}`);
-        },
-        onError: (error) => {
-          toast.error('Failed to update capacity. Please try again.');
-          console.error('Capacity update error:', error);
-        }
-      }
-    );
+    setIsUpdating(true);
+
+    try {
+      const { error } = await api.supabase
+        .from('capacity_checkins')
+        .insert({
+          user_id: user.id,
+          couple_id: relationship.id,
+          mood: moodString,
+          energy_level: capacityLevel, // Store the actual percentage
+        });
+
+      if (error) throw error;
+
+      toast.success(`Capacity updated: ${getEnergyLevel(capacityLevel)}`);
+    } catch (error) {
+      toast.error('Failed to update capacity. Please try again.');
+      console.error('Capacity update error:', error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (
