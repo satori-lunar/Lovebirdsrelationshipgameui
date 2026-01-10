@@ -195,7 +195,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
 
             {/* Anniversary Tracker Overlay */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-2xl px-5 py-3 min-w-[240px] text-center shadow-lg">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 min-w-[240px] text-center shadow-lg border border-white/60">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Heart className="w-4 h-4 text-[#FF2D55]" fill="#FF2D55" />
                 <p className="font-['Lora',serif] text-[16px] text-[#2c2c2c]">Together for</p>
@@ -253,7 +253,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Daily Questions */}
             <button
               onClick={() => onNavigate('daily-question')}
-              className="bg-white rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-[#8B5CF6]/10"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center shadow-lg">
                 <MessageCircle className="w-8 h-8 text-white" strokeWidth={2.5} />
@@ -266,7 +266,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Couples Challenges */}
             <button
               onClick={() => onNavigate('weekly-suggestions')}
-              className="bg-white rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-[#FF2D55]/10"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] flex items-center justify-center shadow-lg">
                 <Heart className="w-8 h-8 text-white" strokeWidth={2.5} fill="white" />
@@ -279,7 +279,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Icebreakers */}
             <button
               onClick={() => onNavigate('icebreakers')}
-              className="bg-white rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-[#06B6D4]/10"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -295,7 +295,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
         {/* Set Your Capacity */}
         <div className="px-5 mb-5">
-          <div className="bg-white rounded-3xl p-5 shadow-md">
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 shadow-md border border-white/60">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -501,7 +501,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
           <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c] mb-3 px-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
             Your Journey
           </h3>
-          <div className="bg-white rounded-3xl p-5 text-center shadow-md">
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 text-center shadow-md border border-white/60">
             <div className="text-3xl mb-2">🔥</div>
             <p className="font-['Nunito_Sans',sans-serif] text-[28px] text-[#FF2D55] mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
               {relationship?.streak || 0}
@@ -514,7 +514,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
       </div>
 
       {/* Bottom Navigation Tabs */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-6 pt-2 px-4">
+      <div className="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-white/40 pb-6 pt-2 px-4 shadow-lg">
         <div className="flex justify-around items-center max-w-[430px] mx-auto">
           <button
             onClick={() => handleTabNavigation('calendar')}
