@@ -29,6 +29,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const { relationship } = useRelationship();
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [capacityLevel, setCapacityLevel] = useState<number>(50);
 
   // Fetch partner's capacity data
   const { data: partnerCapacity } = useQuery({
@@ -66,6 +67,24 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
     }
   };
 
+  // Convert capacity percentage to energy level description
+  const getEnergyLevel = (percentage: number): string => {
+    if (percentage >= 80) return 'High Energy';
+    if (percentage >= 60) return 'Good Energy';
+    if (percentage >= 40) return 'Moderate Energy';
+    if (percentage >= 20) return 'Low Energy';
+    return 'Numb and Disconnected';
+  };
+
+  // Get color for capacity level
+  const getCapacityColor = (percentage: number): string => {
+    if (percentage >= 80) return '#10B981'; // green
+    if (percentage >= 60) return '#3B82F6'; // blue
+    if (percentage >= 40) return '#F59E0B'; // orange
+    if (percentage >= 20) return '#EF4444'; // red
+    return '#6B7280'; // gray
+  };
+
   // Get partner's mood display
   const getPartnerMood = () => {
     if (!partnerCapacity) return 'Not Updated';
@@ -79,6 +98,12 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
     };
 
     return moodMap[partnerCapacity.mood] || 'Unknown';
+  };
+
+  // Get partner's capacity percentage
+  const getPartnerCapacityLevel = () => {
+    if (!partnerCapacity) return null;
+    return partnerCapacity.capacity_level || partnerCapacity.energy_level || null;
   };
 
   const handleTabNavigation = (tab: string) => {
@@ -98,12 +123,12 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   };
 
   const handleUpdateCapacity = () => {
-    if (selectedMood) {
-      // Navigate to capacity check-in with pre-selected mood
-      onNavigate('capacity-checkin', { mood: selectedMood });
-    } else {
-      onNavigate('capacity-checkin');
-    }
+    // Navigate to capacity check-in with capacity level and energy description
+    onNavigate('capacity-checkin', {
+      capacityLevel: capacityLevel,
+      energyLevel: getEnergyLevel(capacityLevel),
+      mood: selectedMood
+    });
   };
 
   return (
@@ -153,16 +178,29 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                     <span className="text-2xl">{partnerName.charAt(0).toUpperCase()}</span>
                   </div>
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="font-['Nunito_Sans',sans-serif] text-[18px] text-white" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                     {partnerName}
                   </p>
                   <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                     {getPartnerMood()}
                   </p>
+                  {getPartnerCapacityLevel() !== null && (
+                    <div className="mt-2">
+                      <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-white/90 mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        {getEnergyLevel(getPartnerCapacityLevel()!)} • {getPartnerCapacityLevel()}%
+                      </p>
+                      <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white transition-all duration-300"
+                          style={{ width: `${getPartnerCapacityLevel()}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <Heart className="w-8 h-8 text-white" fill="white" />
+              <Heart className="w-8 h-8 text-white flex-shrink-0" fill="white" />
             </div>
           </div>
         </div>
@@ -219,46 +257,86 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         {/* Set Your Capacity */}
         <div className="px-5 mb-5">
           <div className="bg-white rounded-3xl p-5 shadow-md">
-            <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c] mb-3" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-              Set Your Capacity
-            </h3>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center text-white font-bold text-xl">
-                  {userName.charAt(0).toUpperCase()}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center text-white font-bold text-xl">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
                 </div>
-              </div>
-              <div className="flex-1">
-                <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#6d6d6d] mb-2" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                  How are you feeling?
-                </p>
-                <div className="flex gap-2">
-                  {[
-                    { emoji: '😊', mood: 'great' },
-                    { emoji: '😐', mood: 'okay' },
-                    { emoji: '😔', mood: 'low' },
-                    { emoji: '😴', mood: 'tired' },
-                    { emoji: '🤗', mood: 'loving' }
-                  ].map((item, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedMood(item.mood)}
-                      className={`w-9 h-9 rounded-full ${
-                        selectedMood === item.mood
-                          ? 'bg-[#8B5CF6]/30 ring-2 ring-[#8B5CF6]'
-                          : 'bg-[#F5F0F6] hover:bg-[#8B5CF6]/20'
-                      } flex items-center justify-center transition-colors text-lg`}
-                    >
-                      {item.emoji}
-                    </button>
-                  ))}
+                <div>
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Set Your Capacity
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    {userName}
+                  </p>
                 </div>
               </div>
             </div>
+
+            {/* Capacity Slider */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Energy Level
+                </p>
+                <p
+                  className="font-['Nunito_Sans',sans-serif] text-[16px] font-bold"
+                  style={{
+                    fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                    color: getCapacityColor(capacityLevel)
+                  }}
+                >
+                  {capacityLevel}%
+                </p>
+              </div>
+
+              {/* Slider */}
+              <div className="relative mb-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={capacityLevel}
+                  onChange={(e) => setCapacityLevel(Number(e.target.value))}
+                  className="w-full h-3 rounded-full appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, ${getCapacityColor(capacityLevel)} 0%, ${getCapacityColor(capacityLevel)} ${capacityLevel}%, #E5E7EB ${capacityLevel}%, #E5E7EB 100%)`
+                  }}
+                />
+              </div>
+
+              {/* Energy Level Description */}
+              <div className="text-center py-3 px-4 rounded-xl" style={{ backgroundColor: `${getCapacityColor(capacityLevel)}15` }}>
+                <p
+                  className="font-['Nunito_Sans',sans-serif] text-[15px] font-semibold"
+                  style={{
+                    fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                    color: getCapacityColor(capacityLevel)
+                  }}
+                >
+                  {getEnergyLevel(capacityLevel)}
+                </p>
+              </div>
+
+              {/* Energy Level Labels */}
+              <div className="flex justify-between mt-3 text-[11px] text-[#9CA3AF] px-1">
+                <span>Numb</span>
+                <span>Low</span>
+                <span>Moderate</span>
+                <span>Good</span>
+                <span>High</span>
+              </div>
+            </div>
+
             <button
               onClick={handleUpdateCapacity}
-              className="w-full bg-[#8B5CF6] text-white rounded-2xl py-3 font-['Nunito_Sans',sans-serif] text-[16px] hover:bg-[#7C3AED] transition-all shadow-md"
-              style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}
+              className="w-full text-white rounded-2xl py-3 font-['Nunito_Sans',sans-serif] text-[16px] hover:opacity-90 transition-all shadow-md"
+              style={{
+                fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                backgroundColor: getCapacityColor(capacityLevel)
+              }}
             >
               Update Capacity
             </button>
