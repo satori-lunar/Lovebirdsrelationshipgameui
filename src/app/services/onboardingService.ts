@@ -178,7 +178,7 @@ export const onboardingService = {
 
   async updateOnboarding(userId: string, data: Partial<OnboardingData>): Promise<OnboardingResponse> {
     const updateData: any = {};
-    
+
     // New onboarding fields
     if (data.name !== undefined) updateData.name = data.name;
     if (data.birthday !== undefined) updateData.birthday = data.birthday;
@@ -213,16 +213,35 @@ export const onboardingService = {
 
     updateData.updated_at = new Date().toISOString();
 
-    const response = await handleSupabaseError(
-      api.supabase
+    try {
+      // Use upsert instead of update to handle cases where no record exists
+      const { data: result, error } = await api.supabase
         .from('onboarding_responses')
-        .update(updateData)
-        .eq('user_id', userId)
+        .upsert({
+          user_id: userId,
+          ...updateData
+        }, {
+          onConflict: 'user_id'
+        })
         .select()
-        .single()
-    );
+        .single();
 
-    return response;
+      if (error) {
+        console.error('❌ [updateOnboarding] Upsert failed:', error);
+        throw new Error(error.message || 'Failed to update onboarding data');
+      }
+
+      if (!result) {
+        console.warn('⚠️ [updateOnboarding] No result returned for user:', userId);
+        throw new Error('Failed to update onboarding data - no result returned');
+      }
+
+      console.log('✅ [updateOnboarding] Successfully upserted data for:', userId);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [updateOnboarding] Exception during upsert:', error);
+      throw error;
+    }
   },
 };
 
