@@ -9,16 +9,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation } from 'lucide-react';
+import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation, Edit } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { useLocation } from '../hooks/useLocation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 import { api } from '../services/api';
 import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { useMoodUpdates } from '../hooks/useMoodUpdates';
 import { toast } from 'sonner';
+import { PhotoUpload } from './PhotoUpload';
 
 interface HomeProps {
   userName: string;
@@ -30,15 +31,39 @@ interface HomeProps {
 export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
+  const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState('home');
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [capacityLevel, setCapacityLevel] = useState<number>(50);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showCouplePhotoUpload, setShowCouplePhotoUpload] = useState(false);
 
   // Debug: Log props received by Home component
   useEffect(() => {
     console.log('🏠 Home component received props:', { userName, partnerName });
   }, [userName, partnerName]);
+
+  // Handle couple photo upload
+  const handleCouplePhotoUploaded = async (photoUrl: string) => {
+    if (!relationship?.id) return;
+
+    try {
+      const { error } = await api.supabase
+        .from('relationships')
+        .update({ couple_photo_url: photoUrl })
+        .eq('id', relationship.id);
+
+      if (error) throw error;
+
+      // Refresh relationship data
+      queryClient.invalidateQueries({ queryKey: ['relationship'] });
+      toast.success('Couple photo updated!');
+      setShowCouplePhotoUpload(false);
+    } catch (error) {
+      console.error('Error updating couple photo:', error);
+      toast.error('Failed to update couple photo');
+    }
+  };
 
   // Use mood updates hook for partner's capacity
   const { partnerMood } = useMoodUpdates();
@@ -257,13 +282,21 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
       <div className="flex-1 overflow-y-auto">
         {/* Couple Photo with Anniversary Tracker */}
         <div className="relative w-full h-[200px] mb-6 px-5">
-          <div className="relative w-full h-full rounded-3xl overflow-hidden">
+          <div className="relative w-full h-full rounded-3xl overflow-hidden group">
             <img
-              src="https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80"
+              src={relationship?.couple_photo_url || "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80"}
               alt="Couple"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
+
+            {/* Edit Photo Button */}
+            <button
+              onClick={() => setShowCouplePhotoUpload(true)}
+              className="absolute top-3 right-3 bg-white/80 backdrop-blur-xl p-2 rounded-full shadow-lg border border-white/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+            >
+              <Edit className="w-4 h-4 text-[#2c2c2c]" />
+            </button>
 
             {/* Anniversary Tracker Overlay */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 min-w-[240px] text-center shadow-lg border border-white/60">
@@ -277,6 +310,32 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             </div>
           </div>
         </div>
+
+        {/* Couple Photo Upload Dialog */}
+        {showCouplePhotoUpload && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-['Nunito_Sans',sans-serif] text-[20px] font-semibold">
+                  Upload Couple Photo
+                </h3>
+                <button
+                  onClick={() => setShowCouplePhotoUpload(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <Camera className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+              <PhotoUpload
+                currentPhotoUrl={relationship?.couple_photo_url}
+                onPhotoUploaded={handleCouplePhotoUploaded}
+                title="Choose Couple Photo"
+                placeholder="Upload a photo of you two together"
+                className="mb-4"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Partner's Capacity */}
         <div className="px-5 mb-5">
