@@ -7,6 +7,7 @@ import { Onboarding } from './components/Onboarding';
 import { Home } from './components/Home';
 import { DailyQuestion } from './components/DailyQuestion';
 import { LoveLanguageSuggestions } from './components/LoveLanguageSuggestions';
+import { LoveLanguageQuiz } from './components/LoveLanguageQuiz';
 import { DatePlanning } from './components/DatePlanning';
 import { DatePlanner } from './components/DatePlanner';
 import { DateChallenge } from './components/DateChallenge';
@@ -41,7 +42,7 @@ import { widgetGiftService } from './services/widgetGiftService';
 import { api } from './services/api';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'need-support-plan';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'need-support-plan';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -287,6 +288,16 @@ export default function App() {
         <LoveLanguageSuggestions
           onBack={handleBack}
           partnerName={userData.partnerName || 'Partner'}
+        />
+      )}
+
+      {currentView === 'love-language-quiz' && user && (
+        <LoveLanguageQuiz
+          onComplete={() => {
+            setCurrentView('settings');
+            toast.success('Love language quiz completed!');
+          }}
+          onBack={() => setCurrentView('settings')}
         />
       )}
 
