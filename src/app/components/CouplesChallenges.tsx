@@ -199,13 +199,23 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
     }
   };
 
-  const goToNextChallenge = () => {
+  const goToNextChallenge = async () => {
+    // Auto-submit if there's content
+    if (responseText.trim()) {
+      await handleSubmitResponse();
+    }
+
     if (currentChallengeIndex < challenges.length - 1) {
       setCurrentChallengeIndex(currentChallengeIndex + 1);
     }
   };
 
-  const goToPreviousChallenge = () => {
+  const goToPreviousChallenge = async () => {
+    // Auto-submit if there's content
+    if (responseText.trim()) {
+      await handleSubmitResponse();
+    }
+
     if (currentChallengeIndex > 0) {
       setCurrentChallengeIndex(currentChallengeIndex - 1);
     }
@@ -433,40 +443,61 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
             </Button>
           </div>
 
-          {/* Partner's Response */}
-          {currentChallenge.partnerResponse?.is_visible_to_partner && (
-            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-6 shadow-md border border-purple-100">
-              <div className="flex items-center gap-2 mb-3">
-                <Heart className="w-5 h-5 text-purple-600" fill="currentColor" />
-                <h4 className="font-['Nunito_Sans',sans-serif] text-[16px] font-semibold text-purple-900" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                  {partnerName}'s Response
-                </h4>
-              </div>
-
-              {/* Partner's Media */}
-              {currentChallenge.partnerResponse.media_url && (
-                <div className="mb-3">
-                  {currentChallenge.partnerResponse.media_type === 'video' ? (
-                    <video
-                      src={currentChallenge.partnerResponse.media_url}
-                      controls
-                      className="w-full rounded-xl max-h-[300px] object-cover"
-                    />
-                  ) : (
-                    <img
-                      src={currentChallenge.partnerResponse.media_url}
-                      alt="Partner's media"
-                      className="w-full rounded-xl max-h-[300px] object-cover"
-                    />
-                  )}
-                </div>
-              )}
-
-              <p className="font-['Nunito_Sans',sans-serif] text-[15px] text-gray-700 leading-relaxed" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                {currentChallenge.partnerResponse.response}
-              </p>
+          {/* Partner's Response Section */}
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-6 shadow-md border border-purple-100">
+            <div className="flex items-center gap-2 mb-3">
+              <Heart className="w-5 h-5 text-purple-600" fill="currentColor" />
+              <h4 className="font-['Nunito_Sans',sans-serif] text-[16px] font-semibold text-purple-900" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                {partnerName}'s Response
+              </h4>
             </div>
-          )}
+
+            {currentChallenge.partnerResponse?.is_visible_to_partner ? (
+              <>
+                {/* Partner's Media */}
+                {currentChallenge.partnerResponse.media_url && (
+                  <div className="mb-3">
+                    {currentChallenge.partnerResponse.media_type === 'video' ? (
+                      <video
+                        src={currentChallenge.partnerResponse.media_url}
+                        controls
+                        className="w-full rounded-xl max-h-[300px] object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={currentChallenge.partnerResponse.media_url}
+                        alt="Partner's media"
+                        className="w-full rounded-xl max-h-[300px] object-cover"
+                      />
+                    )}
+                  </div>
+                )}
+
+                <p className="font-['Nunito_Sans',sans-serif] text-[15px] text-gray-700 leading-relaxed" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  {currentChallenge.partnerResponse.response}
+                </p>
+              </>
+            ) : currentChallenge.partnerResponse && !currentChallenge.partnerResponse.is_visible_to_partner ? (
+              <div className="text-center py-4">
+                <Lock className="w-8 h-8 text-purple-300 mx-auto mb-2" />
+                <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-purple-700" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  {partnerName} has responded but kept it private
+                </p>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-2">
+                  <MessageCircle className="w-6 h-6 text-purple-400" />
+                </div>
+                <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-purple-700 mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  {partnerName} hasn't responded yet
+                </p>
+                <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-purple-500" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Their response will appear here when they complete this challenge
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
