@@ -12,6 +12,8 @@ export type NeedType =
 
 export type NeedIntensity = 'slight' | 'moderate' | 'significant';
 
+export type DurationOfIssue = 'just_started' | 'few_weeks' | 'few_months' | 'several_months' | 'over_a_year';
+
 export interface RelationshipNeed {
   id: string;
   user_id: string;
@@ -19,6 +21,13 @@ export interface RelationshipNeed {
   need_type: NeedType;
   intensity: NeedIntensity;
   notes?: string;
+  wish_partner_would_do?: string;
+  wish_partner_understood?: string;
+  duration_of_issue?: DurationOfIssue;
+  have_talked_about_it?: boolean;
+  conversation_details?: string;
+  how_it_affects_me?: string;
+  ideal_outcome?: string;
   is_active: boolean;
   resolved_at?: string;
   created_at: string;
@@ -61,6 +70,14 @@ export const needTypeDescriptions: Record<NeedType, string> = {
   support: 'Encouragement, help, and being there when needed',
 };
 
+export const durationLabels: Record<DurationOfIssue, string> = {
+  just_started: 'Just started noticing',
+  few_weeks: 'A few weeks',
+  few_months: 'A few months',
+  several_months: 'Several months',
+  over_a_year: 'Over a year',
+};
+
 export const relationshipNeedsService = {
   /**
    * Report a need in the relationship
@@ -69,8 +86,17 @@ export const relationshipNeedsService = {
     relationshipId: string,
     userId: string,
     needType: NeedType,
-    intensity: NeedIntensity = 'moderate',
-    notes?: string
+    data: {
+      intensity?: NeedIntensity;
+      notes?: string;
+      wish_partner_would_do?: string;
+      wish_partner_understood?: string;
+      duration_of_issue?: DurationOfIssue;
+      have_talked_about_it?: boolean;
+      conversation_details?: string;
+      how_it_affects_me?: string;
+      ideal_outcome?: string;
+    }
   ): Promise<RelationshipNeed> {
     // Check if this need already exists and is active
     const { data: existing } = await api.supabase
@@ -82,15 +108,24 @@ export const relationshipNeedsService = {
       .eq('is_active', true)
       .maybeSingle();
 
+    const updateData = {
+      intensity: data.intensity || 'moderate',
+      notes: data.notes,
+      wish_partner_would_do: data.wish_partner_would_do,
+      wish_partner_understood: data.wish_partner_understood,
+      duration_of_issue: data.duration_of_issue,
+      have_talked_about_it: data.have_talked_about_it,
+      conversation_details: data.conversation_details,
+      how_it_affects_me: data.how_it_affects_me,
+      ideal_outcome: data.ideal_outcome,
+      updated_at: new Date().toISOString(),
+    };
+
     if (existing) {
       // Update existing need
-      const { data, error } = await api.supabase
+      const { data: result, error } = await api.supabase
         .from('relationship_needs')
-        .update({
-          intensity,
-          notes,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existing.id)
         .select()
         .single();
@@ -100,17 +135,16 @@ export const relationshipNeedsService = {
         throw new Error(error.message || 'Failed to update need');
       }
 
-      return data;
+      return result;
     } else {
       // Insert new need
-      const { data, error } = await api.supabase
+      const { data: result, error } = await api.supabase
         .from('relationship_needs')
         .insert({
           user_id: userId,
           relationship_id: relationshipId,
           need_type: needType,
-          intensity,
-          notes,
+          ...updateData,
         })
         .select()
         .single();
@@ -120,7 +154,7 @@ export const relationshipNeedsService = {
         throw new Error(error.message || 'Failed to report need');
       }
 
-      return data;
+      return result;
     }
   },
 
