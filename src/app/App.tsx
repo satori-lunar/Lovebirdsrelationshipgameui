@@ -85,18 +85,36 @@ export default function App() {
   ) : null;
 
   // Fetch partner's onboarding data to get their actual name
-  const { data: partnerOnboarding } = useQuery({
+  const { data: partnerOnboarding, isLoading: isLoadingPartner, error: partnerError } = useQuery({
     queryKey: ['partner-onboarding', partnerId],
     queryFn: () => onboardingService.getOnboarding(partnerId!),
     enabled: !!partnerId,
-    retry: false,
-    refetchOnWindowFocus: false,
+    retry: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Always refetch to get latest data
   });
+
+  // Debug: Log partner data
+  useEffect(() => {
+    if (partnerId) {
+      console.log('🔍 Partner ID:', partnerId);
+      console.log('🔍 Is Loading Partner Data:', isLoadingPartner);
+      console.log('🔍 Partner Error:', partnerError);
+      console.log('🔍 Partner Onboarding Data:', partnerOnboarding);
+      console.log('🔍 Partner Name from Data:', partnerOnboarding?.name);
+    }
+  }, [partnerId, isLoadingPartner, partnerError, partnerOnboarding]);
 
   const userData = onboarding ? {
     name: onboarding.name,
     partnerName: partnerOnboarding?.name || 'Partner',
   } : null;
+
+  // Debug: Log final userData
+  useEffect(() => {
+    console.log('🎯 Final userData:', userData);
+    console.log('🎯 Final partnerName being used:', userData?.partnerName);
+  }, [userData]);
 
   const handleOnboardingComplete = () => {
     setCurrentView('home');
