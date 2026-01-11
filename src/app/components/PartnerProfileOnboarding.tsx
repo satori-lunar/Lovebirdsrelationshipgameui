@@ -372,6 +372,7 @@ export function PartnerProfileOnboarding({
   const [cohabitationStatus, setCohabitationStatus] = useState<CohabitationStatus | null>(null);
   const [proximityStatus, setProximityStatus] = useState<ProximityStatus | null>(null);
   const [seeingFrequency, setSeeingFrequency] = useState<SeeingFrequency | null>(null);
+  const [anniversaryDate, setAnniversaryDate] = useState('');
 
   // Basic info
   const [displayName, setDisplayName] = useState('');
@@ -566,6 +567,27 @@ export function PartnerProfileOnboarding({
         }
       }
 
+      // Update relationship with anniversary date
+      if (anniversaryDate) {
+        try {
+          // Find the relationship where this user is a partner
+          const { data: relationshipData, error: relationshipError } = await api.supabase
+            .from('relationships')
+            .select('id')
+            .or(`partner_a_id.eq.${userId},partner_b_id.eq.${userId}`)
+            .maybeSingle();
+
+          if (relationshipData && !relationshipError) {
+            await api.supabase
+              .from('relationships')
+              .update({ relationship_start_date: anniversaryDate })
+              .eq('id', relationshipData.id);
+          }
+        } catch (error) {
+          console.error('Failed to update relationship anniversary date:', error);
+        }
+      }
+
       // Also save to onboarding_responses for compatibility
       const onboardingData = {
         user_id: userId,
@@ -588,7 +610,8 @@ export function PartnerProfileOnboarding({
           stress_needs: stressNeeds,
           frequency_preference: frequencyPreference,
           preferred_checkin_times: checkinTimes,
-          personality_type: personalityType
+          personality_type: personalityType,
+          anniversary_date: anniversaryDate
         }
       };
 
@@ -914,6 +937,27 @@ export function PartnerProfileOnboarding({
                       ))}
                     </div>
                   </div>
+
+                  {/* Anniversary Date */}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                      When did you start dating? (Your anniversary)
+                    </h3>
+                    <div className="max-w-md mx-auto">
+                      <Input
+                        type="date"
+                        id="anniversary-date"
+                        value={anniversaryDate}
+                        onChange={(e) => setAnniversaryDate(e.target.value)}
+                        max={new Date().toISOString().split('T')[0]}
+                        className="h-12 text-center"
+                        placeholder="Select your anniversary date"
+                      />
+                      <p className="text-xs text-gray-500 text-center mt-2">
+                        We'll display how long you've been together on your home screen
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-6">
@@ -927,7 +971,7 @@ export function PartnerProfileOnboarding({
                   </Button>
                   <Button
                     onClick={() => setStep('basic_info')}
-                    disabled={!relationshipStatus || !cohabitationStatus || !proximityStatus || !seeingFrequency}
+                    disabled={!relationshipStatus || !cohabitationStatus || !proximityStatus || !seeingFrequency || !anniversaryDate}
                     className="flex-1 h-12 bg-gradient-to-r from-rose-500 to-pink-500 text-white"
                   >
                     Continue
