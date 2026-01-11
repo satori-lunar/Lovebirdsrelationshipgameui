@@ -128,13 +128,18 @@ export const onboardingService = {
     // Note: Session validation is handled at the component level
 
     try {
+      console.log('🔍 Fetching onboarding for user_id:', userId);
+
       const { data, error } = await api.supabase
         .from('onboarding_responses')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle(); // Use maybeSingle instead of single to avoid 406 on empty results
 
+      console.log('🔍 Onboarding query result:', { data, error, userId });
+
       if (error) {
+        console.error('❌ Error fetching onboarding:', error);
         // If no rows found, return null (user hasn't completed onboarding)
         if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
           return null;
@@ -152,6 +157,29 @@ export const onboardingService = {
       // If table doesn't exist or other error, return null
       console.warn('Error fetching onboarding:', error.message);
       // Don't throw - return null so app can continue
+      return null;
+    }
+  },
+
+  async getPartnerNameFromUsers(partnerId: string): Promise<string | null> {
+    try {
+      console.log('🔍 Fetching partner name from users table for:', partnerId);
+
+      const { data, error } = await api.supabase
+        .from('users')
+        .select('name')
+        .eq('id', partnerId)
+        .maybeSingle();
+
+      console.log('🔍 Partner name from users table:', { data, error });
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data.name;
+    } catch (error: any) {
+      console.error('Error fetching partner name from users:', error);
       return null;
     }
   },
