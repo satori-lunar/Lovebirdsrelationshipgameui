@@ -75,18 +75,9 @@ export default function App() {
     refetchOnWindowFocus: false,
   });
 
-  // Debug: Log onboarding data to check partner_name field
-  useEffect(() => {
-    if (onboarding) {
-      console.log('🔍 Onboarding Data:', onboarding);
-      console.log('🔍 Partner Name from onboarding:', onboarding.partner_name);
-      console.log('🔍 User Name from onboarding:', onboarding.name);
-    }
-  }, [onboarding]);
-
   const userData = onboarding ? {
     name: onboarding.name,
-    partnerName: onboarding.partner_name || 'Partner',
+    partnerName: onboarding.partner_name,
   } : null;
 
   const handleOnboardingComplete = () => {
