@@ -177,6 +177,12 @@ export const onboardingService = {
   },
 
   async updateOnboarding(userId: string, data: Partial<OnboardingData>): Promise<OnboardingResponse> {
+    // Check if any data is actually being updated
+    const hasDataToUpdate = Object.keys(data).length > 0;
+    if (!hasDataToUpdate) {
+      throw new Error('No data provided to update');
+    }
+
     const updateData: any = {};
 
     // New onboarding fields
@@ -211,23 +217,37 @@ export const onboardingService = {
     if (data.healthAccessibility !== undefined) updateData.health_accessibility = data.healthAccessibility;
     if (data.relationshipGoals !== undefined) updateData.relationship_goals = data.relationshipGoals;
 
+    // Always update the timestamp
     updateData.updated_at = new Date().toISOString();
 
     try {
-      // Use upsert instead of update to handle cases where no record exists
+      // First, check if the user has an existing onboarding record
+      const { data: existingRecord, error: fetchError } = await api.supabase
+        .from('onboarding_responses')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('❌ [updateOnboarding] Error checking existing record:', fetchError);
+        throw new Error(fetchError.message || 'Failed to check existing onboarding record');
+      }
+
+      if (!existingRecord) {
+        console.warn('⚠️ [updateOnboarding] No existing onboarding record found for user:', userId);
+        throw new Error('Cannot update onboarding - no existing record found. Please complete full onboarding first.');
+      }
+
+      // User has an existing record, so we can safely update it
       const { data: result, error } = await api.supabase
         .from('onboarding_responses')
-        .upsert({
-          user_id: userId,
-          ...updateData
-        }, {
-          onConflict: 'user_id'
-        })
+        .update(updateData)
+        .eq('user_id', userId)
         .select()
         .single();
 
       if (error) {
-        console.error('❌ [updateOnboarding] Upsert failed:', error);
+        console.error('❌ [updateOnboarding] Update failed:', error);
         throw new Error(error.message || 'Failed to update onboarding data');
       }
 
@@ -236,10 +256,10 @@ export const onboardingService = {
         throw new Error('Failed to update onboarding data - no result returned');
       }
 
-      console.log('✅ [updateOnboarding] Successfully upserted data for:', userId);
+      console.log('✅ [updateOnboarding] Successfully updated data for:', userId);
       return result;
     } catch (error: any) {
-      console.error('❌ [updateOnboarding] Exception during upsert:', error);
+      console.error('❌ [updateOnboarding] Exception during update:', error);
       throw error;
     }
   },
