@@ -3,7 +3,8 @@
 -- Run this in Supabase SQL Editor to update your daily questions
 
 -- First, clear existing questions to avoid duplicates
-TRUNCATE TABLE public.daily_questions;
+-- Use CASCADE to also clear dependent question_answers
+TRUNCATE TABLE public.daily_questions CASCADE;
 
 -- Insert updated questions with more specific, concrete "getting to know you" topics
 INSERT INTO public.daily_questions (question_text, question_date, relationship_id) VALUES
