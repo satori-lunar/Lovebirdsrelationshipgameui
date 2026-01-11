@@ -133,29 +133,44 @@ export const onboardingService = {
     // Note: Session validation is handled at the component level
 
     try {
+      console.log('🔍 [getOnboarding] Fetching for user_id:', userId);
+      console.log('🔍 [getOnboarding] Current auth user:', (await api.supabase.auth.getUser()).data.user?.id);
+
       const { data, error } = await api.supabase
         .from('onboarding_responses')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle(); // Use maybeSingle instead of single to avoid 406 on empty results
 
+      console.log('🔍 [getOnboarding] Query result:', {
+        userId,
+        hasData: !!data,
+        data: data ? { name: data.name, partner_name: data.partner_name } : null,
+        error: error ? { code: error.code, message: error.message, details: error.details, hint: error.hint } : null
+      });
+
       if (error) {
+        console.error('❌ [getOnboarding] Error fetching onboarding:', error);
         // If no rows found, return null (user hasn't completed onboarding)
         if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+          console.log('⚠️ [getOnboarding] No rows found for user:', userId);
           return null;
         }
         // Handle 406 errors specifically
         if (error.status === 406 || error.code === '406') {
-          console.warn('406 error fetching onboarding - table might not exist or RLS issue:', error);
+          console.warn('⚠️ [getOnboarding] 406 error - table might not exist or RLS issue:', error);
           return null;
         }
+        console.error('❌ [getOnboarding] Throwing error:', error.message);
         throw new Error(error.message);
       }
 
+      console.log('✅ [getOnboarding] Successfully fetched data for:', userId);
       return data;
     } catch (error: any) {
       // If table doesn't exist or other error, return null
-      console.warn('Error fetching onboarding:', error.message);
+      console.error('❌ [getOnboarding] Caught exception:', error);
+      console.warn('⚠️ [getOnboarding] Error message:', error.message);
       // Don't throw - return null so app can continue
       return null;
     }
