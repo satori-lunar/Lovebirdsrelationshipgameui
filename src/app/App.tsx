@@ -123,16 +123,21 @@ export default function App() {
     }
   }, [partnerId, isLoadingPartner, partnerError, partnerOnboarding, partnerNameFromUsers]);
 
+  // Compute partner name with fallback chain
+  const partnerName = partnerOnboarding?.name || partnerNameFromUsers || 'Partner';
+
   const userData = onboarding ? {
     name: onboarding.name,
-    partnerName: partnerOnboarding?.name || partnerNameFromUsers || 'Partner',
+    partnerName: partnerName,
   } : null;
 
   // Debug: Log final userData
   useEffect(() => {
     console.log('🎯 Final userData:', userData);
     console.log('🎯 Final partnerName being used:', userData?.partnerName);
-  }, [userData]);
+    console.log('🎯 Computed partnerName value:', partnerName);
+    console.log('🎯 partnerOnboarding?.name:', partnerOnboarding?.name);
+  }, [userData, partnerName, partnerOnboarding]);
 
   const handleOnboardingComplete = () => {
     setCurrentView('home');
