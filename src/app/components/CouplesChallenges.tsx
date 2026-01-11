@@ -199,13 +199,23 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
     }
   };
 
-  const goToNextChallenge = () => {
+  const goToNextChallenge = async () => {
+    // Auto-submit if there's content
+    if (responseText.trim()) {
+      await handleSubmitResponse();
+    }
+
     if (currentChallengeIndex < challenges.length - 1) {
       setCurrentChallengeIndex(currentChallengeIndex + 1);
     }
   };
 
-  const goToPreviousChallenge = () => {
+  const goToPreviousChallenge = async () => {
+    // Auto-submit if there's content
+    if (responseText.trim()) {
+      await handleSubmitResponse();
+    }
+
     if (currentChallengeIndex > 0) {
       setCurrentChallengeIndex(currentChallengeIndex - 1);
     }
