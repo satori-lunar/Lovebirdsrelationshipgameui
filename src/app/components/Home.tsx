@@ -279,7 +279,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
       {/* Status Bar */}
       <div className="bg-transparent h-[44px] px-6 relative flex items-center">
         <p className="text-[16px]">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
-        <div className="absolute right-6 flex gap-3 items-center">
+        <div className="absolute right-2 flex gap-3 items-center">
           <button
             onClick={() => onNavigate('settings')}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
