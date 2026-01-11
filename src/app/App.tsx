@@ -38,6 +38,7 @@ import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
+import { api } from './services/api';
 import type { PushNotificationData } from './services/pushNotificationService';
 
 type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'need-support-plan';
@@ -94,6 +95,22 @@ export default function App() {
     staleTime: 0, // Always refetch to get latest data
   });
 
+  // Fallback: Fetch partner's name from users table if onboarding is null
+  const { data: partnerNameFromUsers } = useQuery({
+    queryKey: ['partner-name-from-users', partnerId],
+    queryFn: async () => {
+      const { data } = await api.supabase
+        .from('users')
+        .select('name')
+        .eq('id', partnerId!)
+        .single();
+      console.log('🔍 Partner name from users table:', data?.name);
+      return data?.name || null;
+    },
+    enabled: !!partnerId && !partnerOnboarding?.name,
+    staleTime: 60000, // Cache for 1 minute
+  });
+
   // Debug: Log partner data
   useEffect(() => {
     if (partnerId) {
@@ -102,12 +119,13 @@ export default function App() {
       console.log('🔍 Partner Error:', partnerError);
       console.log('🔍 Partner Onboarding Data:', partnerOnboarding);
       console.log('🔍 Partner Name from Data:', partnerOnboarding?.name);
+      console.log('🔍 Partner Name from Users Table:', partnerNameFromUsers);
     }
-  }, [partnerId, isLoadingPartner, partnerError, partnerOnboarding]);
+  }, [partnerId, isLoadingPartner, partnerError, partnerOnboarding, partnerNameFromUsers]);
 
   const userData = onboarding ? {
     name: onboarding.name,
-    partnerName: partnerOnboarding?.name || 'Partner',
+    partnerName: partnerOnboarding?.name || partnerNameFromUsers || 'Partner',
   } : null;
 
   // Debug: Log final userData
