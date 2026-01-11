@@ -239,7 +239,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pb-32">
+      <div className="flex-1 overflow-y-auto">
         {/* Couple Photo with Anniversary Tracker */}
         <div className="relative w-full h-[200px] mb-6 px-5">
           <div className="relative w-full h-full rounded-3xl overflow-hidden">
@@ -642,7 +642,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
       </div>
 
       {/* Bottom Navigation Tabs */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-white/40 pb-6 pt-2 px-4 shadow-lg">
+      <div className="bg-white/80 backdrop-blur-xl border-t border-white/40 pb-6 pt-2 px-4 shadow-lg">
         <div className="flex justify-around items-center max-w-[430px] mx-auto">
           <button
             onClick={() => handleTabNavigation('calendar')}
@@ -704,11 +704,11 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             </p>
           </button>
         </div>
-      </div>
 
-      {/* Home Indicator */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[34px] w-full pointer-events-none">
-        <div className="bg-black h-[5px] w-[98px] rounded-full mx-auto mt-6" />
+        {/* Home Indicator */}
+        <div className="flex justify-center mt-4">
+          <div className="bg-black h-[5px] w-[98px] rounded-full" />
+        </div>
       </div>
     </div>
   );
