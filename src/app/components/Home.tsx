@@ -35,6 +35,11 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const [capacityLevel, setCapacityLevel] = useState<number>(50);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Debug: Log props received by Home component
+  useEffect(() => {
+    console.log('🏠 Home component received props:', { userName, partnerName });
+  }, [userName, partnerName]);
+
   // Use mood updates hook for partner's capacity
   const { partnerMood } = useMoodUpdates();
 
