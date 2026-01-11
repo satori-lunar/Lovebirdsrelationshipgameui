@@ -93,15 +93,6 @@ export default function App() {
     refetchOnWindowFocus: false,
   });
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔍 Debug - Relationship:', relationship);
-    console.log('🔍 Debug - User ID:', user?.id);
-    console.log('🔍 Debug - Partner ID:', partnerId);
-    console.log('🔍 Debug - Partner Onboarding Data:', partnerOnboarding);
-    console.log('🔍 Debug - Partner Name:', partnerOnboarding?.name);
-  }, [relationship, user, partnerId, partnerOnboarding]);
-
   const userData = onboarding ? {
     name: onboarding.name,
     partnerName: partnerOnboarding?.name || 'Partner',
