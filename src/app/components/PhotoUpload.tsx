@@ -106,6 +106,12 @@ export function PhotoUpload({
     setIsUploading(true);
 
     try {
+      // Get current user ID
+      const { data: { user }, error: userError } = await api.supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error('Please sign in to upload photos');
+      }
+
       // Create a preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -113,10 +119,12 @@ export function PhotoUpload({
       };
       reader.readAsDataURL(file);
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage with user ID in path for RLS
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `profile-photos/${fileName}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      console.log('📸 Uploading photo to:', filePath);
 
       const { data, error } = await api.supabase.storage
         .from('photos')
@@ -138,6 +146,8 @@ export function PhotoUpload({
           throw new Error(`Upload failed: ${error.message}`);
         }
       }
+
+      console.log('✅ Photo uploaded successfully');
 
       // Get public URL
       const { data: { publicUrl } } = api.supabase.storage
