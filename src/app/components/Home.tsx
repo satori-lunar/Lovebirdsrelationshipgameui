@@ -279,7 +279,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
       {/* Status Bar */}
       <div className="bg-transparent h-[44px] px-6 relative flex items-center">
         <p className="text-[16px]">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
-        <div className="absolute right-6 flex gap-3 items-center">
+        <div className="absolute right-2 flex gap-3 items-center">
           <button
             onClick={() => onNavigate('settings')}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -549,7 +549,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
             {/* Couples Challenges */}
             <button
-              onClick={() => onNavigate('weekly-suggestions')}
+              onClick={() => onNavigate('couples-challenges')}
               className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] flex items-center justify-center shadow-lg">
