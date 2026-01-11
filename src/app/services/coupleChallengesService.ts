@@ -17,6 +17,8 @@ export interface ChallengeResponse {
   user_id: string;
   response: string;
   is_visible_to_partner: boolean;
+  media_url?: string;
+  media_type?: 'image' | 'video';
   created_at: string;
   updated_at: string;
 }
@@ -88,6 +90,40 @@ export const coupleChallengesService = {
   },
 
   /**
+   * Upload media file for a challenge response
+   */
+  async uploadMedia(
+    userId: string,
+    file: File,
+    challengeId: string
+  ): Promise<{ url: string; type: 'image' | 'video' }> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${challengeId}-${Date.now()}.${fileExt}`;
+    const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+
+    const { data, error } = await api.supabase.storage
+      .from('challenge-media')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Error uploading media:', error);
+      throw new Error(error.message || 'Failed to upload media');
+    }
+
+    const { data: urlData } = api.supabase.storage
+      .from('challenge-media')
+      .getPublicUrl(data.path);
+
+    return {
+      url: urlData.publicUrl,
+      type: mediaType,
+    };
+  },
+
+  /**
    * Submit a response to a challenge
    */
   async submitResponse(
@@ -95,7 +131,9 @@ export const coupleChallengesService = {
     relationshipId: string,
     userId: string,
     response: string,
-    isVisibleToPartner: boolean = true
+    isVisibleToPartner: boolean = true,
+    mediaUrl?: string,
+    mediaType?: 'image' | 'video'
   ): Promise<ChallengeResponse> {
     // Check if response already exists
     const { data: existing } = await api.supabase
@@ -105,15 +143,22 @@ export const coupleChallengesService = {
       .eq('user_id', userId)
       .maybeSingle();
 
+    const updateData: any = {
+      response,
+      is_visible_to_partner: isVisibleToPartner,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (mediaUrl !== undefined) {
+      updateData.media_url = mediaUrl;
+      updateData.media_type = mediaType;
+    }
+
     if (existing) {
       // Update existing response
       const { data, error } = await api.supabase
         .from('couple_challenge_responses')
-        .update({
-          response,
-          is_visible_to_partner: isVisibleToPartner,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existing.id)
         .select()
         .single();
@@ -126,15 +171,22 @@ export const coupleChallengesService = {
       return data;
     } else {
       // Insert new response
+      const insertData: any = {
+        challenge_id: challengeId,
+        relationship_id: relationshipId,
+        user_id: userId,
+        response,
+        is_visible_to_partner: isVisibleToPartner,
+      };
+
+      if (mediaUrl) {
+        insertData.media_url = mediaUrl;
+        insertData.media_type = mediaType;
+      }
+
       const { data, error } = await api.supabase
         .from('couple_challenge_responses')
-        .insert({
-          challenge_id: challengeId,
-          relationship_id: relationshipId,
-          user_id: userId,
-          response,
-          is_visible_to_partner: isVisibleToPartner,
-        })
+        .insert(insertData)
         .select()
         .single();
 

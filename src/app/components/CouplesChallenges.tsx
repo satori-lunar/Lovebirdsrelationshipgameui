@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Heart, MessageCircle, Sparkles, MapPin, Star, Lock, Unlock, CheckCircle2, Sparkle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Heart, MessageCircle, Sparkles, MapPin, Star, Lock, Unlock, CheckCircle2, Sparkle, Image as ImageIcon, Video, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { usePartner } from '../hooks/usePartner';
@@ -69,6 +69,10 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
   const [responseText, setResponseText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVisibleToPartner, setIsVisibleToPartner] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (selectedCategory && user && relationship && partnerId) {
@@ -98,13 +102,51 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
   };
 
   useEffect(() => {
-    // Update response text when challenge changes
+    // Update response text and media when challenge changes
     if (challenges.length > 0 && currentChallengeIndex < challenges.length) {
       const currentChallenge = challenges[currentChallengeIndex];
       setResponseText(currentChallenge.myResponse?.response || '');
       setIsVisibleToPartner(currentChallenge.myResponse?.is_visible_to_partner ?? true);
+      setMediaPreview(currentChallenge.myResponse?.media_url || null);
+      setSelectedFile(null);
     }
   }, [currentChallengeIndex, challenges]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime', 'video/x-msvideo'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please select a valid image or video file');
+      return;
+    }
+
+    // Validate file size (50MB max)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('File size must be less than 50MB');
+      return;
+    }
+
+    setSelectedFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setMediaPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveMedia = () => {
+    setSelectedFile(null);
+    setMediaPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmitResponse = async () => {
     if (!user || !relationship || !responseText.trim()) {
@@ -116,21 +158,44 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
     if (!currentChallenge) return;
 
     setIsSubmitting(true);
+    setIsUploading(!!selectedFile);
+
     try {
+      let mediaUrl: string | undefined;
+      let mediaType: 'image' | 'video' | undefined;
+
+      // Upload media if file is selected
+      if (selectedFile) {
+        toast.loading('Uploading media...');
+        const uploadResult = await coupleChallengesService.uploadMedia(
+          user.id,
+          selectedFile,
+          currentChallenge.id
+        );
+        mediaUrl = uploadResult.url;
+        mediaType = uploadResult.type;
+        toast.dismiss();
+      }
+
       await coupleChallengesService.submitResponse(
         currentChallenge.id,
         relationship.id,
         user.id,
         responseText.trim(),
-        isVisibleToPartner
+        isVisibleToPartner,
+        mediaUrl,
+        mediaType
       );
       toast.success('Response saved!');
       await loadChallenges();
+      setSelectedFile(null);
     } catch (error) {
       console.error('Error submitting response:', error);
       toast.error('Failed to save response');
+      toast.dismiss();
     } finally {
       setIsSubmitting(false);
+      setIsUploading(false);
     }
   };
 
@@ -296,6 +361,50 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
               className="min-h-[150px] mb-4 text-[15px]"
             />
 
+            {/* Media Upload */}
+            <div className="mb-4">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="media-upload"
+              />
+
+              {!mediaPreview ? (
+                <label
+                  htmlFor="media-upload"
+                  className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#FF2D55] hover:bg-gray-50 transition-all"
+                >
+                  <ImageIcon className="w-5 h-5 text-gray-500" />
+                  <span className="text-[15px] text-gray-600">Add Photo or Video</span>
+                </label>
+              ) : (
+                <div className="relative">
+                  {selectedFile?.type.startsWith('video/') || currentChallenge.myResponse?.media_type === 'video' ? (
+                    <video
+                      src={mediaPreview}
+                      controls
+                      className="w-full rounded-xl max-h-[300px] object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={mediaPreview}
+                      alt="Preview"
+                      className="w-full rounded-xl max-h-[300px] object-cover"
+                    />
+                  )}
+                  <button
+                    onClick={handleRemoveMedia}
+                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Visibility Toggle */}
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl mb-4">
               <div className="flex items-center gap-3">
@@ -333,6 +442,26 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
                   {partnerName}'s Response
                 </h4>
               </div>
+
+              {/* Partner's Media */}
+              {currentChallenge.partnerResponse.media_url && (
+                <div className="mb-3">
+                  {currentChallenge.partnerResponse.media_type === 'video' ? (
+                    <video
+                      src={currentChallenge.partnerResponse.media_url}
+                      controls
+                      className="w-full rounded-xl max-h-[300px] object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={currentChallenge.partnerResponse.media_url}
+                      alt="Partner's media"
+                      className="w-full rounded-xl max-h-[300px] object-cover"
+                    />
+                  )}
+                </div>
+              )}
+
               <p className="font-['Nunito_Sans',sans-serif] text-[15px] text-gray-700 leading-relaxed" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                 {currentChallenge.partnerResponse.response}
               </p>
