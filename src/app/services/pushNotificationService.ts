@@ -13,7 +13,7 @@ import { widgetGiftService } from './widgetGiftService';
 
 // Types for push notification data
 export interface PushNotificationData {
-  type: 'widget_gift' | 'message' | 'nudge' | 'general';
+  type: 'widget_gift' | 'message' | 'general';
   gift_id?: string;
   sender_id?: string;
   [key: string]: unknown;

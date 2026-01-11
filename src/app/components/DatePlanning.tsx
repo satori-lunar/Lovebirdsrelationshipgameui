@@ -28,24 +28,28 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
   const [mode, setMode] = useState<DateMode>(initialMode);
   const [swipeStage, setSwipeStage] = useState<SwipeStage>('welcome');
   const [currentSwipeIndex, setCurrentSwipeIndex] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
-  const [finalDate, setFinalDate] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<number | string | null>(null);
+  const [finalDate, setFinalDate] = useState<number | string | null>(null);
   const [decisionMethod, setDecisionMethod] = useState<'coin' | 'dice' | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const [challengeDate, setChallengeDate] = useState<typeof dateIdeas[0] | null>(null);
 
   // Local state for tracking likes when no relationship exists
-  const [localLikes, setLocalLikes] = useState<Set<number>>(new Set());
+  const [localLikes, setLocalLikes] = useState<Set<number | string>>(new Set());
 
   // Determine if current user is partner A
   const isPartnerA = relationship ? user?.id === relationship.partner_a_id : true;
 
-  // Fetch swipe date ideas - always load dates even without relationship
+  // Fetch swipe date ideas - get or create database records for relationship
   const { data: swipeDateIdeas = [], isLoading: swipeIdeasLoading } = useQuery({
     queryKey: ['swipe-date-ideas', relationship?.id],
     queryFn: async () => {
-      // Return all date ideas for swiping
-      return dateIdeas;
+      if (!relationship?.id) {
+        // If no relationship, return static date ideas
+        return dateIdeas;
+      }
+      // Get or create date ideas in the database for this relationship
+      return dateService.getOrCreateSwipeDateIdeas(relationship.id);
     },
     enabled: swipeStage === 'swiping',
   });
@@ -545,11 +549,11 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
     if (swipeStage === 'matches') {
       // Get matched date ideas (use local likes if no relationship)
       const matchedDateIds = relationship?.id
-        ? dateMatches.map(match => match.date_idea_id)
+        ? dateMatches.map(match => match.date_idea_id) // UUIDs from database
         : Array.from(localLikes);
 
       const matchedDateIdeas = swipeDateIdeas.filter(idea =>
-        matchedDateIds.includes(idea.id)
+        matchedDateIds.includes(idea.id as any)
       );
 
       return (
@@ -575,7 +579,7 @@ export function DatePlanning({ onBack, partnerName, initialMode = 'select' }: Da
 
     // Final Result Screen
     if (swipeStage === 'final' && finalDate) {
-      const date = dateIdeas.find(d => d.id === finalDate)!;
+      const date = swipeDateIdeas.find(d => (d.id as any) === finalDate)!;
       return (
         <FinalDateScreen
           date={date}

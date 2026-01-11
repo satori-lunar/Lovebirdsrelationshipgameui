@@ -24,9 +24,9 @@ export const WORDS_TEMPLATES: Record<SuggestionType, SuggestionTemplate> = {
     reserved: "You're on my mind."
   },
   affection: {
-    direct: "I love you. I hope you know how much you mean to me.",
-    gentle: "I don't say it enough, but I really care about you.",
-    playful: "You're kind of amazing, you know that? 😌",
+    direct: "I love you. I hope you know how much you mean to me. Can I send you a lockscreen love message?",
+    gentle: "I don't say it enough, but I really care about you. You mean everything to me.",
+    playful: "You're kind of amazing, you know that? Surprise lockscreen love note incoming 😌",
     reserved: "Glad you're mine."
   },
   appreciation: {
@@ -48,10 +48,10 @@ export const WORDS_TEMPLATES: Record<SuggestionType, SuggestionTemplate> = {
     reserved: "I'm with you."
   },
   celebration: {
-    direct: "I'm so proud of you. You did an amazing job.",
-    gentle: "I wanted to celebrate this moment with you.",
-    playful: "You absolute legend! Let's gooo 🎉",
-    reserved: "Well done."
+    direct: "I'm so proud of you. You did an amazing job - let's celebrate this win together.",
+    gentle: "I wanted to celebrate this moment with you. What would make this feel special?",
+    playful: "You absolute legend! Let's mark this win with something fun 🎉",
+    reserved: "Well done. Proud of you."
   },
   reconnection: {
     direct: "I miss us. Can we reconnect?",
@@ -60,9 +60,9 @@ export const WORDS_TEMPLATES: Record<SuggestionType, SuggestionTemplate> = {
     reserved: "Feel off. You good?"
   },
   check_in: {
-    direct: "How are you really doing?",
-    gentle: "Just checking in. How's your heart?",
-    playful: "Vibe check: how's my person doing? 💛",
+    direct: "How are you really doing? I'm here if you want to talk or video call.",
+    gentle: "Just checking in. How's your heart? Send me a lockscreen message if you want.",
+    playful: "Vibe check: how's my person doing? Lock screen love note if you're missing me 💛",
     reserved: "You okay?"
   }
 };
@@ -90,9 +90,9 @@ export const QUALITY_TIME_TEMPLATES: Record<SuggestionType, SuggestionTemplate> 
     reserved: "Time with you matters."
   },
   quality_time: {
-    direct: "I need undivided attention from you tonight.",
-    gentle: "Could we plan a moment that's just about us?",
-    playful: "Exclusive access requested. You, me, no interruptions 📵",
+    direct: "I need undivided attention from you tonight. Video call or in-person date?",
+    gentle: "Could we plan a moment that's just about us? I want your full presence.",
+    playful: "Exclusive access requested. Video date night or surprise quality time? 📵",
     reserved: "Want your focus."
   },
   support: {
@@ -102,15 +102,15 @@ export const QUALITY_TIME_TEMPLATES: Record<SuggestionType, SuggestionTemplate> 
     reserved: "Need you."
   },
   celebration: {
-    direct: "Let's celebrate together. Make time for this?",
-    gentle: "Would you want to mark this moment with me?",
-    playful: "Victory lap together? You in? 🎉",
+    direct: "Let's celebrate together. I want to make this moment special for you.",
+    gentle: "Would you want to mark this moment with me? I have something fun in mind.",
+    playful: "Let's celebrate your win! Game night, special dinner, or something just for you? 🎉",
     reserved: "Celebrate with me?"
   },
   reconnection: {
-    direct: "We need a real date. Not texts, actual time.",
-    gentle: "I miss spending quality time with you.",
-    playful: "Permission to kidnap you for a bit? 😌",
+    direct: "We need a real date. Video call, in-person, or something special - let's reconnect.",
+    gentle: "I miss spending quality time with you. Can we plan something this week?",
+    playful: "Permission to kidnap you for a bit? Virtual date night or surprise adventure? 😌",
     reserved: "Miss us."
   },
   check_in: {
@@ -156,9 +156,9 @@ export const ACTS_TEMPLATES: Record<SuggestionType, SuggestionTemplate> = {
     reserved: "What do you need?"
   },
   celebration: {
-    direct: "Let me plan something special to celebrate you.",
-    gentle: "I want to do something nice for you. You deserve it.",
-    playful: "Victory treat incoming. What sounds good? 🎉",
+    direct: "Let me plan something special to celebrate you. What would make this win feel amazing?",
+    gentle: "I want to do something nice for you. You deserve to feel celebrated.",
+    playful: "Victory treat incoming! Lock screen love message, surprise delivery, or your favorite thing? 🎉",
     reserved: "Let me handle tonight."
   },
   reconnection: {
@@ -210,9 +210,9 @@ export const GIFTS_TEMPLATES: Record<SuggestionType, SuggestionTemplate> = {
     reserved: "This is for you."
   },
   celebration: {
-    direct: "You earned this. Enjoy your gift.",
-    gentle: "I wanted to celebrate you properly.",
-    playful: "Victory spoils! You've been crushing it 🏆",
+    direct: "You earned this. Enjoy your gift - you deserve to feel celebrated.",
+    gentle: "I wanted to celebrate you properly. Surprise delivery or lockscreen message?",
+    playful: "Victory spoils! Lock screen celebration message or surprise treat? You've been crushing it 🏆",
     reserved: "Congrats. Here."
   },
   reconnection: {
@@ -264,9 +264,9 @@ export const TOUCH_TEMPLATES: Record<SuggestionType, SuggestionTemplate> = {
     reserved: "Wish I was there."
   },
   celebration: {
-    direct: "When we're together next, we're celebrating properly.",
-    gentle: "Saving up all my celebratory hugs for you.",
-    playful: "Victory hugs pending. Mark your calendar 🎉",
+    direct: "When we're together next, we're celebrating properly. Until then, virtual celebration?",
+    gentle: "Saving up all my celebratory hugs for you. Can I send a lockscreen love message to celebrate?",
+    playful: "Victory hugs pending! For now, surprise lock screen celebration message? Mark your calendar 🎉",
     reserved: "Hugs coming."
   },
   reconnection: {

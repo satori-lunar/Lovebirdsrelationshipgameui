@@ -27,6 +27,16 @@ import {
   NEED_TO_SUGGESTION_TYPE
 } from './suggestionTemplates';
 
+/**
+ * Simple AI suggestion for UI components
+ */
+export interface AISuggestion {
+  id: string;
+  text: string;
+  emoji: string;
+  category?: string;
+}
+
 class AISuggestionService {
   /**
    * Generate message suggestions for a partner
@@ -78,6 +88,71 @@ class AISuggestionService {
   }
 
   /**
+   * Refresh suggestions for UI components
+   */
+  async refreshSuggestions(
+    type: SuggestionType,
+    userId: string,
+    targetId: string,
+    messageType?: string
+  ): Promise<AISuggestion[]> {
+    try {
+      console.log('💡 refreshSuggestions called:', { type, userId, targetId });
+
+      // Get partner's onboarding data for context
+      const { data: partnerData, error: fetchError } = await api.supabase
+        .from('onboarding_responses')
+        .select('love_language_primary, communication_style, name')
+        .eq('user_id', targetId)
+        .maybeSingle();
+
+      console.log('👤 Partner data fetched:', { partnerData, fetchError });
+
+      const loveLanguage = (partnerData?.love_language_primary as LoveLanguage) || 'quality_time';
+      const communicationStyle = (partnerData?.communication_style as CommunicationStyle) || 'gentle';
+      const partnerName = partnerData?.name || 'them';
+
+      console.log('✨ Using:', { loveLanguage, communicationStyle, partnerName, type });
+
+      // Get ALL suggestion types to provide variety
+      const allTypes: SuggestionType[] = ['affection', 'appreciation', 'quality_time', 'support', 'celebration', 'reconnection', 'check_in', 'reassurance'];
+
+      // Shuffle and pick 3 different types including the requested one
+      const typesToUse = this.shuffleArray([type, ...allTypes.filter(t => t !== type)]).slice(0, 3);
+
+      const suggestions: AISuggestion[] = [];
+
+      for (const suggestionType of typesToUse) {
+        const variations = getAllVariations(loveLanguage, suggestionType);
+
+        if (!variations) {
+          console.warn('⚠️ No variations for:', { loveLanguage, suggestionType });
+          continue;
+        }
+
+        // Randomly pick one of the communication styles
+        const styles: CommunicationStyle[] = ['gentle', 'playful', 'direct', 'reserved'];
+        const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+
+        const text = variations[randomStyle] || variations.gentle || 'No suggestion available';
+
+        suggestions.push({
+          id: this.generateId(),
+          text: text.replace('{name}', partnerName),
+          emoji: this.getEmojiForType(suggestionType),
+          category: suggestionType,
+        });
+      }
+
+      console.log('✅ Generated suggestions:', suggestions);
+      return suggestions;
+    } catch (error) {
+      console.error('❌ Error generating suggestions:', error);
+      return [];
+    }
+  }
+
+  /**
    * Generate response to a relationship need
    */
   async generateNeedResponse(need: RelationshipNeed, partnerProfile: {
@@ -85,42 +160,61 @@ class AISuggestionService {
     communicationStyle: CommunicationStyle;
     customPreferences?: Record<string, any>;
   }): Promise<AINeedSuggestion> {
+    console.log('🤖 Generating AI need response:', {
+      needCategory: need.needCategory,
+      loveLanguage: partnerProfile.loveLanguage,
+      communicationStyle: partnerProfile.communicationStyle,
+      context: need.context
+    });
+
     // Special case: Space
     if (need.needCategory === 'space') {
       return this.generateSpaceResponse(need, partnerProfile);
     }
 
-    // Map need category to suggestion type
-    const suggestionType = NEED_TO_SUGGESTION_TYPE[need.needCategory];
+    // Extract preferences
+    const prefs = partnerProfile.customPreferences || {};
+    const favoriteActivities = prefs.favoriteActivities || [];
+    const partnerName = prefs.partnerName || 'them';
+    const budgetComfort = prefs.budgetComfort;
+    const energyLevel = prefs.energyLevel;
 
-    // Generate message suggestions
-    const context: SuggestionContext = {
-      triggerReason: `Partner expressed need for ${need.needCategory}`,
-      partnerLoveLanguage: partnerProfile.loveLanguage,
-      partnerCommunicationStyle: partnerProfile.communicationStyle,
-      customPreferences: partnerProfile.customPreferences
-    };
-
-    const messages = await this.generateMessageSuggestions(context, suggestionType);
-
-    // Generate action suggestions
-    const actions = this.generateActionSuggestions(
+    // Generate personalized, detailed suggestions based on context
+    const personalizedSuggestions = this.generatePersonalizedMessages(
       need,
-      partnerProfile.loveLanguage
+      partnerProfile,
+      favoriteActivities,
+      budgetComfort,
+      energyLevel
     );
 
-    // Create receiver message (gentle summary)
-    const receiverMessage = this.generateReceiverMessage(need, partnerProfile);
+    // Generate detailed action suggestions
+    const actions = this.generateDetailedActionSuggestions(
+      need,
+      partnerProfile,
+      favoriteActivities,
+      budgetComfort,
+      energyLevel
+    );
 
-    return {
+    // Create detailed receiver message
+    const receiverMessage = this.generateDetailedReceiverMessage(need, partnerProfile);
+
+    // Generate detailed reasoning
+    const reasoning = this.generateDetailedReasoning(need, partnerProfile, favoriteActivities);
+
+    const result = {
       receiverMessage,
-      suggestedMessages: messages.slice(0, 3), // Top 3
+      suggestedMessages: personalizedSuggestions,
       suggestedActions: actions,
-      reasoning: this.generateNeedReasoning(need, partnerProfile),
+      reasoning,
       safetyNote: need.urgency === 'important'
         ? "If this feels urgent, consider reaching out directly beyond the app."
         : undefined
     };
+
+    console.log('✅ Final AI suggestion:', result);
+    return result;
   }
 
   /**
@@ -192,10 +286,896 @@ class AISuggestionService {
     return data.id;
   }
 
+  // ==================== PERSONALIZED SUGGESTION GENERATORS ====================
+
+  /**
+   * Generate personalized messages based on need context and partner preferences
+   */
+  private generatePersonalizedMessages(
+    need: RelationshipNeed,
+    partnerProfile: any,
+    favoriteActivities: string[],
+    budgetComfort: string,
+    energyLevel: string
+  ): MessageSuggestion[] {
+    const { needCategory, context } = need;
+    const { loveLanguage, communicationStyle } = partnerProfile;
+    const partnerName = partnerProfile.customPreferences?.partnerName || 'them';
+
+    const suggestions: MessageSuggestion[] = [];
+
+        // Create short, conversational messages that can be sent immediately
+    const hasContext = context && context.trim().length > 0;
+
+    switch (needCategory) {
+      case 'affection':
+        if (communicationStyle === 'playful') {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Missing my favorite person 💛`,
+            reasoning: `Short, sweet affirmation they can send immediately`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `You make my heart so full. Just wanted you to know 😊`,
+            reasoning: `Quick love note perfect for sending right away`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 90
+          });
+        } else if (communicationStyle === 'gentle') {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Thinking of you. You mean everything to me 💕`,
+            reasoning: `Soft, meaningful message ready to send`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Just wanted to remind you how much I care about you`,
+            reasoning: `Simple, genuine expression of love`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 90
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I love you. That's all. 💕`,
+            reasoning: `Direct, powerful message they can send immediately`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `You're my person. Just wanted you to know that.`,
+            reasoning: `Simple declaration of commitment`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'affection',
+            confidence: 90
+          });
+        }
+        break;
+
+      case 'quality_time':
+        const activity = favoriteActivities.length > 0 ? favoriteActivities[0] : 'something together';
+        if (hasContext) {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I hear you - ${context}. Let's plan some real, intentional time together. How about we ${activity === 'something together' ? 'do something you love' : activity.toLowerCase()}? You have my full focus.`,
+            reasoning: `Uses their favorite activity and addresses their specific concern`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'quality_time',
+            confidence: 95
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I want to give you more quality time. How about we plan ${activity === 'something together' ? 'a date night' : 'to ' + activity.toLowerCase()}? Just us, fully present.`,
+            reasoning: `Suggests their favorite activity for quality time`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'quality_time',
+            confidence: 90
+          });
+        }
+        break;
+
+      case 'communication':
+        if (hasContext) {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `You're right - ${context}. I want to be better at checking in and really talking. Can we set aside time tonight to connect? I want to hear everything.`,
+            reasoning: `Acknowledges their specific communication need`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'reconnection',
+            confidence: 95
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I feel like we haven't been connecting deeply lately. Can we talk tonight? I miss our real conversations.`,
+            reasoning: `Opens dialogue for deeper connection`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'reconnection',
+            confidence: 88
+          });
+        }
+        break;
+
+      case 'appreciation':
+        if (hasContext) {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I'm so sorry - ${context}. You do so much and I haven't been showing my appreciation. Everything you do means the world to me.`,
+            reasoning: `Specifically acknowledges what they mentioned`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'appreciation',
+            confidence: 95
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I don't say it enough, but I see everything you do. You're amazing, and I appreciate you more than I show.`,
+            reasoning: `General appreciation message`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'appreciation',
+            confidence: 85
+          });
+        }
+        break;
+
+      case 'fun':
+        // Short, conversational messages perfect for sending
+        if (communicationStyle === 'playful') {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Game night? You in? 🎲`,
+            reasoning: `Fun, casual invitation they can send immediately`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Movie marathon tonight? Your pick 🎬`,
+            reasoning: `Quick invitation for shared entertainment`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 90
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Let's do something silly. Ideas? 😜`,
+            reasoning: `Invites creativity and playfulness`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 88
+          });
+        } else if (communicationStyle === 'gentle') {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Would you like to watch a comedy together tonight?`,
+            reasoning: `Soft invitation to share laughter`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `How about a game night this week? I'd love that.`,
+            reasoning: `Gentle suggestion for quality time`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 90
+          });
+        } else {
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `Let's plan something fun together.`,
+            reasoning: `Direct invitation to create joy`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 95
+          });
+          suggestions.push({
+            id: this.generateId(),
+            tone: communicationStyle,
+            message: `I want to make you laugh tonight.`,
+            reasoning: `Shows intention to bring joy`,
+            loveLanguageAlignment: loveLanguage,
+            suggestionType: 'fun',
+            confidence: 90
+          });
+        }
+        break;
+    }
+
+    // Add 2 more alternative style messages
+    const alternativeStyles = this.getAlternativeStyles(communicationStyle).slice(0, 2);
+    alternativeStyles.forEach(style => {
+      const baseTemplate = getAllVariations(loveLanguage, NEED_TO_SUGGESTION_TYPE[needCategory]);
+      if (baseTemplate && baseTemplate[style]) {
+        suggestions.push({
+          id: this.generateId(),
+          tone: style,
+          message: baseTemplate[style].replace('{name}', partnerName),
+          reasoning: `Alternative ${style} communication style`,
+          loveLanguageAlignment: loveLanguage,
+          suggestionType: NEED_TO_SUGGESTION_TYPE[needCategory],
+          confidence: 75
+        });
+      }
+    });
+
+    return suggestions.slice(0, 3);
+  }
+
+  /**
+   * Generate detailed action suggestions based on preferences
+   */
+  private generateDetailedActionSuggestions(
+    need: RelationshipNeed,
+    partnerProfile: any,
+    favoriteActivities: string[],
+    budgetComfort: string,
+    energyLevel: string
+  ): ActionSuggestion[] {
+    const { needCategory, context, urgency } = need;
+    const { loveLanguage } = partnerProfile;
+    const actions: ActionSuggestion[] = [];
+    const hasContext = context && context.trim().length > 0;
+
+    switch (needCategory) {
+      case 'quality_time':
+        // Prioritize immediate, virtual quality time
+        if (urgency === 'important') {
+          actions.push({
+            type: 'send_message',
+            description: `Call or video call them today. Don't wait. Let them hear your voice and see your face. Make it happen within the next few hours.`,
+            reasoning: `They marked this as important - immediate virtual connection shows you're taking it seriously`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'send_message',
+            description: `Start a daily 15-minute video call ritual - morning coffee check-in or evening debrief. Virtual but consistent quality time builds deep connection.`,
+            reasoning: `Small, consistent touchpoints often mean more than occasional big gestures - and video calls work anytime`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
+
+        // Virtual activity together
+        if (favoriteActivities.length > 0) {
+          const activity = favoriteActivities[0];
+          actions.push({
+            type: 'schedule_date',
+            description: `Schedule virtual ${activity.toLowerCase()} time - watch it together over video, share screens, or find an online version you can both do simultaneously.`,
+            reasoning: `You know they love ${activity}, and doing it together virtually shows you're making an effort despite distance or busy schedules`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else if (energyLevel === 'low_energy' || energyLevel === 'varies') {
+          actions.push({
+            type: 'schedule_date',
+            description: `Set up a cozy virtual date - order food to their place and yours, press play on the same movie, and video call. Low energy, high connection.`,
+            reasoning: `They appreciate low-key quality time, and virtual dates remove the commute/prep stress while maximizing presence`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan an engaging virtual experience - online escape room, virtual museum tour, or cook the same recipe together over video. Creative digital dates create memories too.`,
+            reasoning: `They have energy for adventure, and virtual experiences can be just as engaging while being schedule-friendly`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
+
+        // Optional in-person if time allows
+        actions.push({
+          type: 'schedule_date',
+          description: `When schedules align, plan in-person time too - but don't let "finding the perfect time" delay virtual connection now.`,
+          reasoning: `In-person is great, but waiting for it can mean missing opportunities for connection today`,
+          loveLanguageAlignment: 'quality_time'
+        });
+        break;
+
+      case 'affection':
+        if (loveLanguage === 'words') {
+          actions.push({
+            type: 'send_message',
+            description: `Write them a message right now with 3 specific things you love about them. Not generic - mention actual moments, qualities, or things they've done that made you feel loved.`,
+            reasoning: `Their love language is words, and specificity makes affirmation feel more genuine and personal`,
+            loveLanguageAlignment: 'words'
+          });
+          actions.push({
+            type: 'send_message',
+            description: `Send them random "I love you" or appreciation texts throughout this week - not in response to anything, just spontaneous reminders that you're thinking of them.`,
+            reasoning: `Unprompted affection feels more authentic than reactive compliments`,
+            loveLanguageAlignment: 'words'
+          });
+        } else if (loveLanguage === 'gifts') {
+          if (budgetComfort === 'budget_friendly') {
+            actions.push({
+              type: 'send_gift',
+              description: `Make them something personal - a playlist of songs that remind you of them, a photo collage of your memories, or a handwritten letter. The effort matters more than the cost.`,
+              reasoning: `They value gifts but appreciate thoughtfulness over expense - handmade shows extra care`,
+              loveLanguageAlignment: 'gifts'
+            });
+          } else {
+            actions.push({
+              type: 'send_gift',
+              description: `Order their favorite treat, coffee, or meal to be delivered to them. Include a note saying "Just wanted to brighten your day." Surprise them when they're not expecting it.`,
+              reasoning: `Unexpected gifts show you're thinking about them even when you're apart`,
+              loveLanguageAlignment: 'gifts'
+            });
+          }
+        } else if (loveLanguage === 'touch') {
+          actions.push({
+            type: 'send_message',
+            description: `Send them something tactile that bridges the distance - mail them a hoodie/shirt you've worn, a handwritten letter they can hold, or order a weighted blanket/comfort item with a note saying "until I can hug you myself."`,
+            reasoning: `Physical touch is their language - when you can't be there physically, sending something tangible they can touch helps. Then plan your next in-person visit.`,
+            loveLanguageAlignment: 'touch'
+          });
+        } else if (loveLanguage === 'quality_time') {
+          actions.push({
+            type: 'schedule_date',
+            description: `Schedule a video date this week - even 30-60 minutes of focused, phone-down, camera-on time. Virtual coffee, meal together, or just talking. Full attention matters more than location.`,
+            reasoning: `For them, quality time IS affection - your undivided presence (even virtual) is how they feel loved. Don't wait for the "perfect" in-person moment.`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else if (loveLanguage === 'acts') {
+          actions.push({
+            type: 'send_message',
+            description: `Ask them "What's one thing I could do this week that would make your life easier?" Then actually do it - follow through is everything.`,
+            reasoning: `They feel loved through helpful actions - asking shows care, doing it proves it`,
+            loveLanguageAlignment: 'acts'
+          });
+        }
+
+        // Universal affection action
+        actions.push({
+          type: 'send_message',
+          description: `Tell them directly: "I want you to feel more loved. What would make you feel most cared for right now?" Then listen and actually do what they say.`,
+          reasoning: `Sometimes the best way to show affection is to ask and then follow through`,
+          loveLanguageAlignment: loveLanguage
+        });
+        break;
+
+      case 'appreciation':
+        actions.push({
+          type: 'send_message',
+          description: `Message them today with 3 specific things they did this week that you noticed and appreciate. Be detailed - "Thank you for [specific action] when [specific situation]."`,
+          reasoning: `Specific appreciation > generic "thank you" - details prove you're paying attention`,
+          loveLanguageAlignment: 'words'
+        });
+
+        if (loveLanguage === 'acts') {
+          actions.push({
+            type: 'send_message',
+            description: `Take over one of their regular tasks this week without being asked. If they usually do something, you do it. Show appreciation through action, not just words.`,
+            reasoning: `They value acts of service, so reciprocating their efforts speaks volumes`,
+            loveLanguageAlignment: 'acts'
+          });
+        } else if (loveLanguage === 'gifts') {
+          actions.push({
+            type: 'send_gift',
+            description: `Get them their favorite [coffee/snack/treat] and deliver it or have it sent with a note listing what you appreciate about them. Pair the gift with words of gratitude.`,
+            reasoning: `Combining gifts with appreciation doubles the impact for their love language`,
+            loveLanguageAlignment: 'gifts'
+          });
+        } else {
+          actions.push({
+            type: 'send_message',
+            description: `Tell someone else how great they are - brag about your partner to a mutual friend or family member, and let your partner know you did it. Public appreciation hits different.`,
+            reasoning: `Knowing you appreciate them to others, not just to their face, feels more genuine`,
+            loveLanguageAlignment: 'words'
+          });
+        }
+
+        actions.push({
+          type: 'send_message',
+          description: `Start a weekly appreciation ritual - every Sunday or Friday, share one thing they did that week that made your life better. Make it a consistent practice.`,
+          reasoning: `Regular appreciation prevents taking each other for granted`,
+          loveLanguageAlignment: 'words'
+        });
+        break;
+
+      case 'communication':
+        actions.push({
+          type: 'schedule_date',
+          description: `Schedule a weekly "us" check-in - pick the same day/time each week. Ask each other: "How's your heart? How's us? What do you need from me?" Make it a non-negotiable ritual.`,
+          reasoning: `Regular, structured communication prevents small issues from becoming big ones`,
+          loveLanguageAlignment: 'quality_time'
+        });
+
+        actions.push({
+          type: 'send_message',
+          description: `Start deeper conversations - tonight, ask them something meaningful: "What's been on your mind lately?" or "How are you REALLY doing?" Then actually listen without fixing or judging.`,
+          reasoning: `They're craving depth, not surface-level check-ins - your curiosity shows you care`,
+          loveLanguageAlignment: 'words'
+        });
+
+        if (hasContext) {
+          actions.push({
+            type: 'send_message',
+            description: `Reference what they shared with you specifically. Say: "You mentioned ${context.substring(0, 30)}... can we talk about that more? I want to understand better." Show you were listening.`,
+            reasoning: `Referencing their exact words proves you heard them and care about their concerns`,
+            loveLanguageAlignment: 'words'
+          });
+        } else {
+          actions.push({
+            type: 'send_message',
+            description: `Send them a voice message or video explaining how you're feeling about the relationship. Be vulnerable. Model the depth of sharing you want from them.`,
+            reasoning: `Vulnerability invites vulnerability - show them the level of openness you want`,
+            loveLanguageAlignment: 'words'
+          });
+        }
+        break;
+
+      case 'reassurance':
+        actions.push({
+          type: 'send_message',
+          description: `Tell them directly: "We're solid. I'm not going anywhere. Here's why I'm committed to us: [list 2-3 specific reasons]." Be clear and concrete, not vague.`,
+          reasoning: `When someone needs reassurance, specific commitment > generic "I love you"`,
+          loveLanguageAlignment: 'words'
+        });
+
+        actions.push({
+          type: 'send_message',
+          description: `Address the elephant in the room. If something feels off between you, name it and talk about it. Reassurance comes from addressing concerns, not avoiding them.`,
+          reasoning: `Ignoring tension creates more insecurity - acknowledgment builds trust`,
+          loveLanguageAlignment: 'words'
+        });
+
+        actions.push({
+          type: 'schedule_date',
+          description: `Plan something in the future together - a trip, an event, a goal. Concrete future plans signal you see them in your future, which is inherently reassuring.`,
+          reasoning: `Planning ahead together sends the message "I'm not going anywhere"`,
+          loveLanguageAlignment: 'quality_time'
+        });
+        break;
+
+      case 'support':
+        actions.push({
+          type: 'send_message',
+          description: `Ask them specifically: "What would actually help right now - do you need me to listen, give advice, help problem-solve, or just distract you?" Then do exactly that.`,
+          reasoning: `Different situations need different support - asking prevents unhelpful "fixing"`,
+          loveLanguageAlignment: 'words'
+        });
+
+        actions.push({
+          type: 'send_message',
+          description: `Check in daily while they're going through this. A simple "How are you holding up?" text shows consistent presence. Show up reliably, not just dramatically.`,
+          reasoning: `Consistent small support often means more than one grand gesture`,
+          loveLanguageAlignment: 'quality_time'
+        });
+
+        if (loveLanguage === 'acts') {
+          actions.push({
+            type: 'send_message',
+            description: `Take one thing off their plate - offer to handle something specific they're stressed about. "I can take care of [specific task]. Let me do this for you."`,
+            reasoning: `Acts of service are their love language - practical help IS emotional support for them`,
+            loveLanguageAlignment: 'acts'
+          });
+        } else {
+          actions.push({
+            type: 'send_message',
+            description: `Validate their feelings first before trying to help. "That sounds really hard" or "You have every right to feel that way." Sometimes that's all they need.`,
+            reasoning: `Validation before solutions - they need to feel heard before they can feel helped`,
+            loveLanguageAlignment: 'words'
+          });
+        }
+        break;
+
+      case 'understanding':
+        actions.push({
+          type: 'send_message',
+          description: `Ask them to explain their perspective fully. Say: "Help me understand how you see this. I want to get it from your point of view." Then repeat back what you heard to confirm.`,
+          reasoning: `Understanding starts with curiosity, not defense - seeking to understand shows respect`,
+          loveLanguageAlignment: 'words'
+        });
+
+        actions.push({
+          type: 'send_message',
+          description: `Acknowledge your part in the misunderstanding. Even if it's small, own it: "I can see how I [specific action] contributed to this. I'm sorry for that." Accountability builds connection.`,
+          reasoning: `Defensiveness blocks understanding - taking responsibility opens dialogue`,
+          loveLanguageAlignment: 'words'
+        });
+
+        actions.push({
+          type: 'schedule_date',
+          description: `Have a conversation where you ONLY listen and ask clarifying questions - no defending, explaining, or correcting. Your job is to understand, not to be understood. Save your side for later.`,
+          reasoning: `They need to feel fully heard before they can hear you - prioritize understanding over being right`,
+          loveLanguageAlignment: 'quality_time'
+        });
+        break;
+
+      case 'consistency':
+        actions.push({
+          type: 'send_message',
+          description: `Commit to one specific, repeatable action: "I'll check in every morning with a good morning text" or "I'll call you every Thursday at 8pm." Pick something sustainable and DO IT.`,
+          reasoning: `Consistency is built through small, repeated actions - one reliable thing beats many sporadic gestures`,
+          loveLanguageAlignment: 'quality_time'
+        });
+
+        actions.push({
+          type: 'send_message',
+          description: `Acknowledge where you've been inconsistent. "I know I've been unpredictable with [specific behavior]. That's on me. Here's how I'm going to be more reliable..." Then follow through.`,
+          reasoning: `Naming the pattern shows awareness - committing to change shows you care`,
+          loveLanguageAlignment: 'words'
+        });
+
+        actions.push({
+          type: 'schedule_date',
+          description: `Create a shared routine - a standing date night, morning check-in, or weekend ritual. Put it in both calendars. Treat it as non-negotiable as a work meeting.`,
+          reasoning: `Routines create security - predictable connection reduces anxiety in the relationship`,
+          loveLanguageAlignment: 'quality_time'
+        });
+        break;
+
+      case 'physical_intimacy':
+        actions.push({
+          type: 'schedule_date',
+          description: `Plan your next in-person visit with specific dates if you're long distance. Book the ticket/plan the trip. If you're local, plan private time together - closeness requires intention and space.`,
+          reasoning: `Physical intimacy needs planning and privacy - hoping it happens isn't enough`,
+          loveLanguageAlignment: 'touch'
+        });
+
+        actions.push({
+          type: 'send_message',
+          description: `Until you can be together physically, increase virtual intimacy - longer video calls, falling asleep on FaceTime, watching shows simultaneously. Bridge the gap however you can.`,
+          reasoning: `Virtual presence isn't the same as physical, but it's better than emotional distance`,
+          loveLanguageAlignment: 'quality_time'
+        });
+
+        actions.push({
+          type: 'send_message',
+          description: `Talk openly about what you both need physically. "I miss holding you" or "I've been craving more closeness." Name it - awkward conversations beat silent longing.`,
+          reasoning: `Physical needs are valid relationship needs - talking about them reduces shame and builds intimacy`,
+          loveLanguageAlignment: 'words'
+        });
+        break;
+
+      case 'fun':
+        // Prioritize immediate, playful activities
+        if (urgency === 'important') {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan an immediate fun activity tonight - watch a comedy movie together, play a board game, or do a silly TikTok dance challenge. Make it happen within the next few hours.`,
+            reasoning: `They marked this as important - immediate playfulness shows you're taking their need for joy seriously`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'schedule_date',
+            description: `Set up a game night this week - board games, card games, drinking games, or online multiplayer games. Include snacks and turn off phones for focused fun.`,
+            reasoning: `Games create natural laughter and bonding - low effort, high connection`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
+
+        // Virtual or in-person comedy/movie night
+        if (favoriteActivities.some(a => a.toLowerCase().includes('movie') || a.toLowerCase().includes('tv'))) {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan a comedy marathon - pick a funny show or movie series, make popcorn, and laugh together. Virtual works great for this too.`,
+            reasoning: `Since they love movies/TV, combining it with comedy creates their favorite activity with extra joy`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'schedule_date',
+            description: `Organize a comedy movie night - pick something light-hearted and hilarious, order delivery food, and focus on laughing together.`,
+            reasoning: `Comedy creates shared joy and inside jokes - perfect for rekindling playfulness`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
+
+        // Physical/silly activities
+        if (!isLongDistance) {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan a silly adventure - hide and go seek in a park, have a water balloon fight, try a new ice cream flavor crawl, or make funny TikToks together.`,
+            reasoning: `Physical playfulness creates memories and breaks routine - safe activities that spark joy`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        } else {
+          actions.push({
+            type: 'send_message',
+            description: `Send them funny content daily - memes, TikToks, or videos that match your shared humor. Make them laugh unexpectedly throughout the week.`,
+            reasoning: `Small daily doses of humor prevent relationships from feeling too serious`,
+            loveLanguageAlignment: 'words'
+          });
+        }
+
+        // Drinking games or social drinking if appropriate
+        if (energyLevel !== 'low_energy' && budgetComfort !== 'budget_friendly') {
+          actions.push({
+            type: 'schedule_date',
+            description: `Plan a fun drinking game night - cards against humanity, truth or dare with drinks, or a cocktail-making session. Keep it light and consensual.`,
+            reasoning: `Adult playfulness with drinks can create memorable, intimate moments - but only if it fits both your comfort levels`,
+            loveLanguageAlignment: 'quality_time'
+          });
+        }
+        break;
+    }
+
+    // Default fallback action if no specific category matched
+    if (actions.length === 0) {
+      actions.push({
+        type: 'send_message',
+        description: `Reach out to them today and ask: "I want to show up better for you. What would that look like?" Then listen carefully and act on what they share.`,
+        reasoning: `When unsure how to help, asking directly shows humility and genuine care`,
+        loveLanguageAlignment: loveLanguage
+      });
+    }
+
+    return actions.slice(0, 3);
+  }
+
+  /**
+   * Generate detailed receiver message
+   */
+  private generateDetailedReceiverMessage(need: RelationshipNeed, partnerProfile: any): string {
+    const { needCategory, context } = need;
+    const { communicationStyle } = partnerProfile;
+
+    if (context && context.trim().length > 0) {
+      // Include their specific context
+      const contextPreview = context.length > 50 ? context.substring(0, 50) + '...' : context;
+      return `They shared: "${contextPreview}" - They're looking for ${needCategory.replace('_', ' ')} right now.`;
+    }
+
+    // Use the existing receiver messages as fallback
+    return this.generateReceiverMessage(need, partnerProfile);
+  }
+
+  /**
+   * Generate detailed reasoning
+   */
+  private generateDetailedReasoning(
+    need: RelationshipNeed,
+    partnerProfile: any,
+    favoriteActivities: string[]
+  ): string {
+    const { loveLanguage } = partnerProfile;
+    const prefs = partnerProfile.customPreferences || {};
+
+    let reasoning = `Your partner values ${loveLanguage.replace('_', ' ')}. `;
+
+    if (favoriteActivities.length > 0) {
+      reasoning += `They especially enjoy ${favoriteActivities.slice(0, 2).join(' and ')}. `;
+    }
+
+    if (need.context && need.context.trim().length > 0) {
+      reasoning += `They specifically mentioned feeling this way, so acknowledging what they shared will mean a lot. `;
+    }
+
+    reasoning += `These suggestions are tailored to help you respond in a way that resonates with them.`;
+
+    return reasoning;
+  }
+
+  /**
+   * Generate detailed suggestions for capacity check-ins
+   */
+  async generateCapacityCheckInSuggestions(
+    mood: string,
+    needs: string[],
+    context: string | undefined,
+    partnerId: string,
+    isLongDistance: boolean
+  ): Promise<string[]> {
+    console.log('[aiSuggestionService] Generating capacity check-in suggestions', {
+      mood,
+      needs,
+      hasContext: !!context,
+      partnerId
+    });
+
+    // Fetch partner's profile for personalization
+    const { data: partnerProfile } = await api.supabase
+      .from('onboarding_responses')
+      .select('love_language_primary, communication_style, favorite_activities, budget_comfort, energy_level, name')
+      .eq('user_id', partnerId)
+      .maybeSingle();
+
+    const loveLanguage = partnerProfile?.love_language_primary || 'quality_time';
+    const favoriteActivities = partnerProfile?.favorite_activities || [];
+    const budgetComfort = partnerProfile?.budget_comfort || 'moderate';
+    const partnerName = partnerProfile?.name || 'your partner';
+
+    const suggestions: string[] = [];
+    const hasContext = context && context.trim().length > 0;
+
+    // Map mood to capacity level
+    const moodCapacity = {
+      energized: 95,
+      good: 80,
+      okay: 60,
+      stretched: 40,
+      low: 25,
+      overwhelmed: 15,
+      struggling: 10,
+      numb: 5
+    }[mood] || 50;
+
+    const isLowCapacity = moodCapacity < 40;
+    const isCritical = moodCapacity < 20;
+
+    // Generate suggestions based on needs
+    if (needs.includes('comfort')) {
+      if (loveLanguage === 'gifts' || loveLanguage === 'acts') {
+        if (budgetComfort === 'budget_friendly') {
+          suggestions.push(`Send them a heartfelt digital message or create something for them - a playlist of comforting songs, a photo collage of happy memories, or a handwritten letter (photo and text it). Personal > expensive.`);
+        } else {
+          suggestions.push(`Order delivery of their comfort meal from their favorite restaurant TODAY - don't ask, just surprise them. Include a note: "Thought you could use this right now."`);
+        }
+      } else if (loveLanguage === 'quality_time') {
+        suggestions.push(`Set up a video call tonight - pick the same movie or show, press play together, and just be there. Low pressure, high comfort. Even 30-60 minutes helps.`);
+      } else if (loveLanguage === 'words') {
+        suggestions.push(`Send them a voice message telling them specifically why they're going to get through this, referencing times they've been strong before. Make it personal, not generic.`);
+      } else if (loveLanguage === 'touch') {
+        suggestions.push(`Send them something physical that represents closeness - mail them something you've worn (like a hoodie that smells like you), or plan your next visit RIGHT NOW so you both have a hug to count down to.`);
+      }
+
+      // Add one optional in-person suggestion if applicable
+      if (!isLongDistance && suggestions.length < 4) {
+        suggestions.push(`If you can meet up soon, bring their favorite comfort item in person - but don't wait to reach out digitally first.`);
+      }
+    }
+
+    if (needs.includes('distraction')) {
+      // Prioritize immediate, non-proximity distractions
+      suggestions.push(`Send them something funny RIGHT NOW - memes, TikToks, or videos that match your shared humor. Laughter is instant relief.`);
+
+      if (favoriteActivities.length > 0) {
+        const activity = favoriteActivities[0];
+        suggestions.push(`Send them something related to ${activity.toLowerCase()} to give them something positive to focus on - an article, video, or "this made me think of you" message.`);
+      } else {
+        suggestions.push(`Play an online game together or start a funny show at the same time over video/FaceTime. Keep it light, give their brain a break.`);
+      }
+
+      // Optional in-person suggestion only if not long distance
+      if (!isLongDistance && suggestions.length < 4) {
+        suggestions.push(`When you both have time, do something engaging together in person - but start with virtual connection now.`);
+      }
+    }
+
+    if (needs.includes('encouragement')) {
+      if (loveLanguage === 'words') {
+        if (hasContext) {
+          const contextSnippet = context.substring(0, 40);
+          suggestions.push(`Address what they shared specifically: "${contextSnippet}..." - remind them of the last time they faced something hard and crushed it. Be specific, not generic.`);
+        } else {
+          suggestions.push(`Text them 3 specific things they're handling well right now, even if they can't see it. Point out their strengths with real examples from this week.`);
+        }
+      } else {
+        suggestions.push(`Remind them of their wins - "Remember when you [specific past accomplishment]? You've got that same strength now." Make it real, not motivational-poster vague.`);
+      }
+    }
+
+    if (needs.includes('space')) {
+      suggestions.push(`Give them breathing room, but send one simple text: "Take all the time you need. I'm here whenever you're ready - no pressure." Then actually give them space.`);
+      suggestions.push(`Don't force conversation, but do something thoughtful in the background - order them food for later, handle something on their to-do list quietly, show care through action not words.`);
+    }
+
+    if (needs.includes('no_talk')) {
+      suggestions.push(`Send a no-pressure care message: "No need to respond. Just want you to know I'm thinking of you and you don't have to be 'on' right now." Then don't expect a reply.`);
+      suggestions.push(`Offer to be on FaceTime/video together doing your own things if they want company - working, watching stuff, just existing in the same virtual space. No talking required.`);
+
+      // Optional in-person suggestion
+      if (!isLongDistance && suggestions.length < 4) {
+        suggestions.push(`If you get time together, you can offer to just be in the same space quietly - but respect if they need solo space too.`);
+      }
+    }
+
+    if (needs.includes('open_to_talk')) {
+      if (hasContext) {
+        suggestions.push(`Reference what they shared and go deeper: "You mentioned ${context.substring(0, 30)}... want to talk about that more? I'm listening, no judgment, no fixing."`);
+      } else {
+        suggestions.push(`Open the door gently: "I'm here if you want to talk about what's going on. And if you don't, that's okay too. What do you need from me right now?"`);
+      }
+      suggestions.push(`Ask them the right question: "How are you REALLY doing?" Then actually listen without trying to solve or minimize. Just hear them.`);
+    }
+
+    if (needs.includes('check_in')) {
+      if (isCritical) {
+        suggestions.push(`Check in RIGHT NOW - call them, don't text. At ${moodCapacity}% capacity, they need to hear your voice. Ask how they're holding up and actually stay on the line.`);
+      } else {
+        suggestions.push(`Check in daily with something simple: "How's your heart today?" or "What's your energy at right now?" Show consistent presence, not just one big check-in.`);
+      }
+      suggestions.push(`Don't just ask how they are - ask what would actually help: "What's one thing I could do today that would make this easier for you?" Then do it.`);
+    }
+
+    if (needs.includes('be_close') || needs.includes('be_present_virtual')) {
+      suggestions.push(`Set up a video call when you both have time - even 30 minutes of face-to-face connection helps. Or fall asleep on FaceTime together if your schedules allow.`);
+      suggestions.push(`Send them your presence throughout today - voice messages, photos of what you're doing, share little moments. Make them feel part of your day even when apart.`);
+
+      // Optional in-person suggestion
+      if (!isLongDistance && suggestions.length < 4) {
+        suggestions.push(`When you can meet up, prioritize quality time together - but start with digital closeness now rather than waiting.`);
+      }
+    }
+
+    // Add context-specific suggestion if they shared details
+    if (hasContext && suggestions.length < 3) {
+      suggestions.push(`Acknowledge what they're going through: "I hear that ${context.substring(0, 40).toLowerCase()}... I see you. How can I support you best right now?"`);
+    }
+
+    // Add low-capacity specific suggestions
+    if (isLowCapacity && !suggestions.some(s => s.includes('take care of'))) {
+      if (loveLanguage === 'acts') {
+        suggestions.push(`They're at ${moodCapacity}% capacity - take something off their plate. Offer to handle a specific task they're stressed about. "Let me take care of [specific thing]." Then do it.`);
+      }
+    }
+
+    // Critical mood - add urgent support
+    if (isCritical && !suggestions.some(s => s.includes('RIGHT NOW') || s.includes('TODAY'))) {
+      suggestions.push(`At ${moodCapacity}% capacity, this is serious. Don't wait - reach out TODAY with real support. Check if they need you to come over or just need to know someone's there.`);
+    }
+
+    // Ensure we have at least 3-4 suggestions
+    if (suggestions.length === 0) {
+      suggestions.push(`Ask them directly: "What would help most right now - company, distraction, space, or something else?" Then honor whatever they say.`);
+      suggestions.push(`Show up however they need - be flexible and responsive to what they're asking for, even if it's not what you'd want in their situation.`);
+      suggestions.push(`Stay consistent - check in tomorrow too. One gesture is nice, sustained support is what matters when capacity is low.`);
+    }
+
+    console.log('[aiSuggestionService] Generated capacity suggestions:', suggestions.length);
+    return suggestions.slice(0, 4);
+  }
+
   // ==================== PRIVATE HELPERS ====================
 
   private generateId(): string {
     return `sug_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  private getEmojiForType(type: SuggestionType): string {
+    const emojiMap: Record<SuggestionType, string> = {
+      affection: '💕',
+      appreciation: '🙏',
+      celebration: '🎉',
+      support: '🫂',
+      reassurance: '🤗',
+      quality_time: '⏰',
+      reconnection: '💞',
+      check_in: '💭',
+    };
+    return emojiMap[type] || '💌';
   }
 
   private generateReasoning(

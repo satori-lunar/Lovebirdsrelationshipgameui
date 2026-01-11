@@ -170,7 +170,6 @@ export interface FrequencyConfig {
   // Current settings
   dailyQuestionEnabled: boolean;
   weeklyReflectionEnabled: boolean;
-  nudgesPerWeek: number;
   suggestionsPerWeek: number;
 
   // Quiet mode

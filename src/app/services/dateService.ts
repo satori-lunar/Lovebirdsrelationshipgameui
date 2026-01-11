@@ -1,5 +1,6 @@
 import { api, handleSupabaseError } from './api';
 import type { Tables, Inserts } from './api';
+import { dateIdeas as staticDateIdeas } from '../data/dateIdeas';
 
 export type DateIdea = Tables<'date_ideas'>;
 export type DateMatch = Tables<'date_matches'>;
@@ -235,6 +236,50 @@ export const dateService = {
     );
 
     return matches || [];
+  },
+
+  async getOrCreateSwipeDateIdeas(relationshipId: string): Promise<any[]> {
+    // Check if date ideas already exist for this relationship
+    const existing = await handleSupabaseError(
+      api.supabase
+        .from('date_ideas')
+        .select('*')
+        .eq('relationship_id', relationshipId)
+        .order('created_at', { ascending: true })
+    );
+
+    // If we have enough ideas (at least as many as the static array), return them with image mapping
+    if (existing && existing.length >= staticDateIdeas.length) {
+      return existing.map(idea => ({
+        ...idea,
+        image: idea.image_emoji, // Map image_emoji to image for compatibility
+      }));
+    }
+
+    // Otherwise, create date ideas from the static array
+    const inserts: Inserts<'date_ideas'>[] = staticDateIdeas.map(idea => ({
+      relationship_id: relationshipId,
+      title: idea.title,
+      description: idea.description,
+      category: idea.category,
+      duration: idea.duration,
+      budget: idea.budget,
+      location: idea.location,
+      image_emoji: idea.image,
+    }));
+
+    const created = await handleSupabaseError(
+      api.supabase
+        .from('date_ideas')
+        .insert(inserts)
+        .select()
+    );
+
+    // Map image_emoji to image for compatibility with components
+    return (created || []).map(idea => ({
+      ...idea,
+      image: idea.image_emoji,
+    }));
   },
 
   async selectWinningDate(dateMatchId: string): Promise<DateMatch> {
