@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation, Edit } from 'lucide-react';
+import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation, Edit, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { useLocation } from '../hooks/useLocation';
@@ -277,10 +277,18 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
       {/* Status Bar */}
       <div className="bg-transparent h-[44px] px-6 flex items-center justify-between">
         <p className="text-[16px]">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
-        <div className="flex gap-1 items-center">
-          <div className="w-[18px] h-[10px]" />
-          <div className="w-[15px] h-[11px]" />
-          <div className="w-[27px] h-[13px]" />
+        <div className="flex gap-3 items-center">
+          <button
+            onClick={() => onNavigate('settings')}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors"
+          >
+            <Settings className="w-5 h-5 text-[#2c2c2c]" />
+          </button>
+          <div className="flex gap-1 items-center">
+            <div className="w-[18px] h-[10px]" />
+            <div className="w-[15px] h-[11px]" />
+            <div className="w-[27px] h-[13px]" />
+          </div>
         </div>
       </div>
 
