@@ -549,7 +549,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
             {/* Couples Challenges */}
             <button
-              onClick={() => onNavigate('weekly-suggestions')}
+              onClick={() => onNavigate('couples-challenges')}
               className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] flex items-center justify-center shadow-lg">
