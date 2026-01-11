@@ -72,6 +72,8 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [showDiscussionView, setShowDiscussionView] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -112,6 +114,13 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
     }
   }, [currentChallengeIndex, challenges]);
 
+  useEffect(() => {
+    // Check for category completion when challenges are loaded
+    if (challenges.length > 0) {
+      checkCategoryCompletion(challenges);
+    }
+  }, [challenges]);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -145,6 +154,38 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
     setMediaPreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const checkCategoryCompletion = (updatedChallenges: ChallengeWithResponse[]) => {
+    // Check if both partners have completed all challenges in this category
+    const allCompleted = updatedChallenges.every(
+      challenge => challenge.myResponse && challenge.partnerResponse
+    );
+
+    // Check if user has completed all but partner hasn't
+    const userCompletedAll = updatedChallenges.every(
+      challenge => challenge.myResponse
+    );
+    const partnerCompletedAll = updatedChallenges.every(
+      challenge => challenge.partnerResponse
+    );
+
+    if (allCompleted) {
+      setShowCompletionDialog(true);
+    } else if (userCompletedAll && !partnerCompletedAll) {
+      // User finished but partner hasn't - encourage them to notify partner
+      const partnerPending = updatedChallenges.filter(
+        challenge => !challenge.partnerResponse
+      ).length;
+
+      toast.success(
+        `You've completed all challenges! ${partnerName} has ${partnerPending} remaining.`,
+        {
+          description: "Let them know you're excited to discuss your answers together!",
+          duration: 6000,
+        }
+      );
     }
   };
 
@@ -189,6 +230,14 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
       toast.success('Response saved!');
       await loadChallenges();
       setSelectedFile(null);
+
+      // Check if category is completed after reloading challenges
+      // We need to wait for the challenges to be reloaded
+      setTimeout(() => {
+        if (challenges.length > 0) {
+          checkCategoryCompletion(challenges);
+        }
+      }, 500);
     } catch (error) {
       console.error('Error submitting response:', error);
       toast.error('Failed to save response');
@@ -300,6 +349,153 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
         >
           Back to Categories
         </button>
+      </div>
+    );
+  }
+
+  // Discussion View - Show all responses side by side
+  if (showDiscussionView) {
+    return (
+      <div className="bg-[#F5F0F6] flex flex-col h-screen w-full max-w-[430px] mx-auto">
+        {/* Header */}
+        <div className={`bg-gradient-to-r ${config.gradient} px-5 pt-12 pb-6`}>
+          <button
+            onClick={() => setShowDiscussionView(false)}
+            className="mb-4 p-2 rounded-full hover:bg-white/10 transition-colors inline-flex items-center"
+          >
+            <ArrowLeft className="w-6 h-6 text-white" />
+          </button>
+          <div className="flex items-center gap-3 mb-2">
+            <MessageCircle className="w-8 h-8 text-white" />
+            <h1 className="font-['Lora',serif] text-[24px] text-white">Discussion View</h1>
+          </div>
+          <p className="font-['Nunito_Sans',sans-serif] text-[15px] text-white/90" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+            Review and discuss your {config.name} responses together
+          </p>
+        </div>
+
+        {/* All Challenges with Responses */}
+        <div className="flex-1 overflow-y-auto px-5 py-6">
+          <div className="space-y-6">
+            {challenges.map((challenge, index) => (
+              <div key={challenge.id} className="bg-white/70 backdrop-blur-lg rounded-3xl p-6 shadow-md border border-white/60">
+                {/* Challenge Header */}
+                <div className="flex items-start gap-2 mb-4 pb-4 border-b border-gray-200">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] text-white text-xs font-bold flex-shrink-0">
+                    {index + 1}
+                  </span>
+                  <div className="flex-1">
+                    <h3 className="font-['Nunito_Sans',sans-serif] text-[17px] text-[#2c2c2c] font-semibold mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      {challenge.title}
+                    </h3>
+                    <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      {challenge.prompt}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Both Responses Side by Side */}
+                <div className="space-y-4">
+                  {/* Your Response */}
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                      <span className="font-['Nunito_Sans',sans-serif] text-[14px] font-semibold text-blue-900" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        Your Response
+                      </span>
+                    </div>
+                    {challenge.myResponse ? (
+                      <>
+                        {challenge.myResponse.media_url && (
+                          <div className="mb-3">
+                            {challenge.myResponse.media_type === 'video' ? (
+                              <video
+                                src={challenge.myResponse.media_url}
+                                controls
+                                className="w-full rounded-xl max-h-[200px] object-cover"
+                              />
+                            ) : (
+                              <img
+                                src={challenge.myResponse.media_url}
+                                alt="Your media"
+                                className="w-full rounded-xl max-h-[200px] object-cover"
+                              />
+                            )}
+                          </div>
+                        )}
+                        <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-gray-700 leading-relaxed" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          {challenge.myResponse.response}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-blue-400 italic" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        No response yet
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Partner's Response */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-2 h-2 rounded-full bg-purple-600"></div>
+                      <span className="font-['Nunito_Sans',sans-serif] text-[14px] font-semibold text-purple-900" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        {partnerName}'s Response
+                      </span>
+                    </div>
+                    {challenge.partnerResponse?.is_visible_to_partner ? (
+                      <>
+                        {challenge.partnerResponse.media_url && (
+                          <div className="mb-3">
+                            {challenge.partnerResponse.media_type === 'video' ? (
+                              <video
+                                src={challenge.partnerResponse.media_url}
+                                controls
+                                className="w-full rounded-xl max-h-[200px] object-cover"
+                              />
+                            ) : (
+                              <img
+                                src={challenge.partnerResponse.media_url}
+                                alt="Partner's media"
+                                className="w-full rounded-xl max-h-[200px] object-cover"
+                              />
+                            )}
+                          </div>
+                        )}
+                        <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-gray-700 leading-relaxed" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          {challenge.partnerResponse.response}
+                        </p>
+                      </>
+                    ) : challenge.partnerResponse ? (
+                      <div className="flex items-center gap-2">
+                        <Lock className="w-4 h-4 text-purple-400" />
+                        <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-purple-400 italic" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          Response is private
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-purple-400 italic" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        No response yet
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="bg-white/70 backdrop-blur-lg border-t border-white/60 px-5 py-4">
+          <Button
+            onClick={() => {
+              setShowDiscussionView(false);
+              setSelectedCategory(null);
+            }}
+            className="w-full bg-gradient-to-r from-[#FF2D55] to-[#FF6B9D] text-white py-6 text-[16px] font-semibold"
+          >
+            Choose Another Category
+          </Button>
+        </div>
       </div>
     );
   }
@@ -556,6 +752,70 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
           </button>
         </div>
       </div>
+
+      {/* Completion Celebration Dialog */}
+      {showCompletionDialog && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-5">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+            {/* Celebration Header */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] mb-4 animate-bounce">
+                <Sparkles className="w-10 h-10 text-white" fill="white" />
+              </div>
+              <h2 className="font-['Lora',serif] text-[28px] text-[#2c2c2c] mb-2">
+                Category Complete! 🎉
+              </h2>
+              <p className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                You and {partnerName} have completed all challenges in <span className="font-semibold">{config.name}</span>
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 mb-6">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Heart className="w-5 h-5 text-[#FF2D55]" fill="currentColor" />
+                <span className="font-['Nunito_Sans',sans-serif] text-[18px] font-semibold text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  {challenges.length} Challenges Completed
+                </span>
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-center text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                You've both shared your hearts and learned more about each other
+              </p>
+            </div>
+
+            {/* Call to Action */}
+            <div className="space-y-3">
+              <Button
+                onClick={() => {
+                  setShowCompletionDialog(false);
+                  setShowDiscussionView(true);
+                  setCurrentChallengeIndex(0);
+                }}
+                className="w-full bg-gradient-to-r from-[#FF2D55] to-[#FF6B9D] text-white py-6 text-[16px] font-semibold"
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                Review & Discuss Together
+              </Button>
+
+              <Button
+                onClick={() => {
+                  setShowCompletionDialog(false);
+                  setSelectedCategory(null);
+                }}
+                variant="outline"
+                className="w-full py-6 text-[16px] font-semibold border-2"
+              >
+                Try Another Category
+              </Button>
+            </div>
+
+            {/* Encouragement */}
+            <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-center text-[#6d6d6d] mt-4 italic" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Take time to talk about your answers and grow closer together
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
