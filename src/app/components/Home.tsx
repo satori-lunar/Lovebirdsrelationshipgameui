@@ -20,6 +20,7 @@ import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { useMoodUpdates } from '../hooks/useMoodUpdates';
 import { toast } from 'sonner';
 import { PhotoUpload } from './PhotoUpload';
+import { PartnerSuggestions } from './PartnerSuggestions';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
 interface HomeProps {
@@ -560,6 +561,21 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               </p>
             </button>
 
+            {/* Something Feels Missing */}
+            <button
+              onClick={() => onNavigate('something-feels-missing')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                </svg>
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Something<br/>Feels Missing?
+              </p>
+            </button>
+
             {/* Icebreakers */}
             <button
               onClick={() => onNavigate('icebreakers')}
@@ -723,6 +739,11 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               </svg>
             </div>
           </div>
+        </div>
+
+        {/* Partner Suggestions */}
+        <div className="px-5 mb-5">
+          <PartnerSuggestions />
         </div>
 
         {/* Insights & Notes */}
