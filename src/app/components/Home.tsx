@@ -102,9 +102,9 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
   // Calculate time together
   const getTimeTogether = () => {
-    if (!relationship?.anniversary_date) return 'Just Started';
+    if (!relationship?.relationship_start_date) return 'Just Started';
 
-    const anniversary = new Date(relationship.anniversary_date);
+    const anniversary = new Date(relationship.relationship_start_date);
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - anniversary.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
