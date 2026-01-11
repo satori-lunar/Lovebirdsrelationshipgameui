@@ -42,24 +42,20 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const {
     userLocation,
     partnerLocation,
-    isSharing,
+    shareWithApp,
+    shareWithPartner,
     isUpdating: isUpdatingLocation,
     requestPermission,
-    enableSharing,
-    disableSharing,
-    updateLocation,
+    updateSharingSettings,
     distanceToPartner,
   } = useLocation();
 
-  const [userLocationName, setUserLocationName] = useState<string>('');
-  const [partnerLocationName, setPartnerLocationName] = useState<string>('');
-
   // Start location tracking on mount
   useEffect(() => {
-    if (isSharing && user?.id) {
-      updateLocation();
+    if ((shareWithApp || shareWithPartner) && user?.id) {
+      // Location updates handled by useLocation hook
     }
-  }, [isSharing, user?.id]);
+  }, [shareWithApp, shareWithPartner, user?.id]);
 
   // Fetch user's onboarding data for profile photo
   const { data: onboardingData } = useQuery({
@@ -194,36 +190,50 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
     }
   };
 
-  const handleLocationToggle = async () => {
+  const handleLocationSharingChange = async (mode: 'off' | 'app' | 'partner') => {
     try {
-      if (!isSharing) {
-        // Request permission first
+      // Request permission if enabling any tracking
+      if (mode !== 'off') {
         const permitted = await requestPermission();
         if (!permitted) {
           toast.error('Location permission denied. Please enable it in your device settings.');
           return;
         }
+      }
 
-        // Enable sharing
-        const success = await enableSharing();
-        if (success) {
-          toast.success('Location sharing enabled');
-        } else {
-          toast.error('Failed to enable location sharing');
-        }
+      let success = false;
+      let message = '';
+
+      switch (mode) {
+        case 'off':
+          success = await updateSharingSettings(false, false);
+          message = 'Location sharing disabled';
+          break;
+        case 'app':
+          success = await updateSharingSettings(true, false);
+          message = 'Sharing with app only (for features)';
+          break;
+        case 'partner':
+          success = await updateSharingSettings(true, true);
+          message = 'Sharing with app and partner';
+          break;
+      }
+
+      if (success) {
+        toast.success(message);
       } else {
-        // Disable sharing
-        const success = await disableSharing();
-        if (success) {
-          toast.success('Location sharing disabled');
-        } else {
-          toast.error('Failed to disable location sharing');
-        }
+        toast.error('Failed to update location sharing');
       }
     } catch (error) {
       toast.error('Failed to update location sharing');
       console.error('Location sharing error:', error);
     }
+  };
+
+  const getLocationSharingMode = (): 'off' | 'app' | 'partner' => {
+    if (!shareWithApp && !shareWithPartner) return 'off';
+    if (shareWithApp && !shareWithPartner) return 'app';
+    return 'partner';
   };
 
   return (
@@ -303,36 +313,112 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         {/* Location Tracking */}
         <div className="px-5 mb-5">
           <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 shadow-md border border-white/60">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                    Location Sharing
-                  </h3>
-                  <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                    {isSharing ? 'Sharing with ' + partnerName : 'Not sharing'}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-white" />
               </div>
+              <div>
+                <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Location Sharing
+                </h3>
+                <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Choose how to share your location
+                </p>
+              </div>
+            </div>
+
+            {/* Location Sharing Options */}
+            <div className="space-y-3 mb-4">
+              {/* Off */}
               <button
-                onClick={handleLocationToggle}
+                onClick={() => handleLocationSharingChange('off')}
                 disabled={isUpdatingLocation}
-                className={`px-4 py-2 rounded-xl font-['Nunito_Sans',sans-serif] text-[14px] transition-all ${
-                  isSharing
-                    ? 'bg-[#FF2D55] text-white'
-                    : 'bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] text-white'
+                className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                  getLocationSharingMode() === 'off'
+                    ? 'border-[#06B6D4] bg-[#06B6D4]/10'
+                    : 'border-gray-200 bg-white'
                 } disabled:opacity-50`}
-                style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}
               >
-                {isUpdatingLocation ? '...' : isSharing ? 'Stop' : 'Share'}
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    getLocationSharingMode() === 'off' ? 'border-[#06B6D4]' : 'border-gray-300'
+                  }`}>
+                    {getLocationSharingMode() === 'off' && (
+                      <div className="w-3 h-3 rounded-full bg-[#06B6D4]" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      Off
+                    </p>
+                    <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      No location tracking
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* App Only */}
+              <button
+                onClick={() => handleLocationSharingChange('app')}
+                disabled={isUpdatingLocation}
+                className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                  getLocationSharingMode() === 'app'
+                    ? 'border-[#8B5CF6] bg-[#8B5CF6]/10'
+                    : 'border-gray-200 bg-white'
+                } disabled:opacity-50`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    getLocationSharingMode() === 'app' ? 'border-[#8B5CF6]' : 'border-gray-300'
+                  }`}>
+                    {getLocationSharingMode() === 'app' && (
+                      <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      App Only
+                    </p>
+                    <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      For date suggestions, not visible to {partnerName}
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Share with Partner */}
+              <button
+                onClick={() => handleLocationSharingChange('partner')}
+                disabled={isUpdatingLocation}
+                className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                  getLocationSharingMode() === 'partner'
+                    ? 'border-[#FF2D55] bg-[#FF2D55]/10'
+                    : 'border-gray-200 bg-white'
+                } disabled:opacity-50`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    getLocationSharingMode() === 'partner' ? 'border-[#FF2D55]' : 'border-gray-300'
+                  }`}>
+                    {getLocationSharingMode() === 'partner' && (
+                      <div className="w-3 h-3 rounded-full bg-[#FF2D55]" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      Share with {partnerName}
+                    </p>
+                    <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      {partnerName} can see your location in real-time
+                    </p>
+                  </div>
+                </div>
               </button>
             </div>
 
-            {/* Show distance if both are sharing */}
-            {isSharing && partnerLocation && distanceToPartner() && (
+            {/* Show distance if both are sharing with partner */}
+            {shareWithPartner && partnerLocation && distanceToPartner() && (
               <div className="mt-4 p-3 bg-gradient-to-br from-[#06B6D4]/10 to-[#3B82F6]/10 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
                   <Navigation className="w-4 h-4 text-[#06B6D4]" />
@@ -340,32 +426,8 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                     {distanceToPartner()!.formatted}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[12px]">
-                  <div>
-                    <p className="font-['Nunito_Sans',sans-serif] text-[#6d6d6d] mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                      You
-                    </p>
-                    <p className="font-['Nunito_Sans',sans-serif] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                      {userLocation ? '📍 Location shared' : 'No location'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-['Nunito_Sans',sans-serif] text-[#6d6d6d] mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                      {partnerName}
-                    </p>
-                    <p className="font-['Nunito_Sans',sans-serif] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                      {partnerLocation ? '📍 Location shared' : 'Not sharing'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Show info when not sharing */}
-            {!isSharing && (
-              <div className="mt-4 p-3 bg-[#F59E0B]/10 rounded-xl">
-                <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
-                  Share your location to see how close you are to {partnerName}
+                <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Distance to {partnerName}
                 </p>
               </div>
             )}

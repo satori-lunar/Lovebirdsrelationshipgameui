@@ -8,7 +8,8 @@ export function useLocation() {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const queryClient = useQueryClient();
-  const [isSharing, setIsSharing] = useState(false);
+  const [shareWithApp, setShareWithApp] = useState(false);
+  const [shareWithPartner, setShareWithPartner] = useState(false);
   const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [currentCoordinates, setCurrentCoordinates] = useState<LocationCoordinates | null>(null);
 
@@ -36,7 +37,8 @@ export function useLocation() {
   // Update sharing state when user location is loaded
   useEffect(() => {
     if (userLocation) {
-      setIsSharing(userLocation.is_sharing_enabled);
+      setShareWithApp(userLocation.share_with_app || false);
+      setShareWithPartner(userLocation.share_with_partner || false);
     }
   }, [userLocation]);
 
@@ -67,9 +69,9 @@ export function useLocation() {
 
   // Update location mutation
   const updateLocationMutation = useMutation({
-    mutationFn: async ({ coordinates, sharing }: { coordinates: LocationCoordinates; sharing: boolean }) => {
+    mutationFn: async ({ coordinates, app, partner }: { coordinates: LocationCoordinates; app: boolean; partner: boolean }) => {
       if (!user?.id) throw new Error('User not authenticated');
-      return locationService.updateUserLocation(user.id, coordinates, sharing);
+      return locationService.updateUserLocation(user.id, coordinates, app, partner);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-location'] });
@@ -78,49 +80,69 @@ export function useLocation() {
 
   // Update user's location in database
   const updateLocation = useCallback(
-    async (coordinates?: LocationCoordinates, sharing?: boolean) => {
+    async (coordinates?: LocationCoordinates) => {
       try {
         const coords = coordinates || currentCoordinates || await getCurrentLocation();
-        const sharingEnabled = sharing !== undefined ? sharing : isSharing;
 
-        await updateLocationMutation.mutateAsync({ coordinates: coords, sharing: sharingEnabled });
+        await updateLocationMutation.mutateAsync({
+          coordinates: coords,
+          app: shareWithApp,
+          partner: shareWithPartner,
+        });
         return true;
       } catch (error) {
         console.error('Error updating location:', error);
         return false;
       }
     },
-    [currentCoordinates, isSharing, getCurrentLocation, updateLocationMutation]
+    [currentCoordinates, shareWithApp, shareWithPartner, getCurrentLocation, updateLocationMutation]
   );
 
-  // Enable location sharing
-  const enableSharing = useCallback(async () => {
+  // Update location sharing settings
+  const updateSharingSettings = useCallback(async (app: boolean, partner: boolean) => {
     if (!user?.id) return false;
 
     try {
-      // Get current location first
-      const coords = await getCurrentLocation();
+      // Get current location if enabling any sharing
+      if (app || partner) {
+        const coords = await getCurrentLocation();
+        await updateLocationMutation.mutateAsync({
+          coordinates: coords,
+          app,
+          partner,
+        });
+      }
 
-      // Update location with sharing enabled
-      await updateLocation(coords, true);
-      await locationService.enableLocationSharing(user.id);
+      await locationService.updateLocationSharing(user.id, app, partner);
 
-      setIsSharing(true);
+      setShareWithApp(app);
+      setShareWithPartner(partner);
       queryClient.invalidateQueries({ queryKey: ['user-location'] });
       return true;
     } catch (error) {
-      console.error('Error enabling location sharing:', error);
+      console.error('Error updating location sharing:', error);
       return false;
     }
-  }, [user, getCurrentLocation, updateLocation, queryClient]);
+  }, [user, getCurrentLocation, updateLocationMutation, queryClient]);
 
-  // Disable location sharing
-  const disableSharing = useCallback(async () => {
+  // Enable sharing with app only
+  const enableAppSharing = useCallback(async () => {
+    return updateSharingSettings(true, shareWithPartner);
+  }, [updateSharingSettings, shareWithPartner]);
+
+  // Enable sharing with partner
+  const enablePartnerSharing = useCallback(async () => {
+    return updateSharingSettings(shareWithApp, true);
+  }, [updateSharingSettings, shareWithApp]);
+
+  // Disable all location sharing
+  const disableAllSharing = useCallback(async () => {
     if (!user?.id) return false;
 
     try {
-      await locationService.disableLocationSharing(user.id);
-      setIsSharing(false);
+      await locationService.disableAllSharing(user.id);
+      setShareWithApp(false);
+      setShareWithPartner(false);
       queryClient.invalidateQueries({ queryKey: ['user-location'] });
       return true;
     } catch (error) {
@@ -156,7 +178,7 @@ export function useLocation() {
     if (!user?.id) return null;
 
     const interval = setInterval(async () => {
-      if (isSharing) {
+      if (shareWithApp || shareWithPartner) {
         try {
           await getCurrentLocation();
           await updateLocation();
@@ -167,7 +189,7 @@ export function useLocation() {
     }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearInterval(interval);
-  }, [user, isSharing, getCurrentLocation, updateLocation]);
+  }, [user, shareWithApp, shareWithPartner, getCurrentLocation, updateLocation]);
 
   return {
     // Location data
@@ -176,7 +198,9 @@ export function useLocation() {
     currentCoordinates,
 
     // Sharing state
-    isSharing,
+    shareWithApp,
+    shareWithPartner,
+    isSharing: shareWithApp || shareWithPartner, // For backward compatibility
     locationPermission,
 
     // Loading states
@@ -188,8 +212,10 @@ export function useLocation() {
     requestPermission,
     getCurrentLocation,
     updateLocation,
-    enableSharing,
-    disableSharing,
+    updateSharingSettings,
+    enableAppSharing,
+    enablePartnerSharing,
+    disableAllSharing,
     distanceToPartner,
     getLocationName,
     startTracking,

@@ -72,7 +72,8 @@ export const locationService = {
   async updateUserLocation(
     userId: string,
     location: LocationCoordinates,
-    isSharingEnabled: boolean = false
+    shareWithApp: boolean = false,
+    shareWithPartner: boolean = false
   ): Promise<UserLocation> {
     const { data, error } = await api.supabase
       .from('user_locations')
@@ -82,7 +83,8 @@ export const locationService = {
           latitude: location.latitude,
           longitude: location.longitude,
           accuracy: location.accuracy || null,
-          is_sharing_enabled: isSharingEnabled,
+          share_with_app: shareWithApp,
+          share_with_partner: shareWithPartner,
           updated_at: new Date().toISOString(),
         },
         {
@@ -118,14 +120,14 @@ export const locationService = {
   },
 
   /**
-   * Get partner's location if they are sharing
+   * Get partner's location if they are sharing with partner
    */
   async getPartnerLocation(partnerId: string): Promise<UserLocation | null> {
     const { data, error } = await api.supabase
       .from('user_locations')
       .select('*')
       .eq('user_id', partnerId)
-      .eq('is_sharing_enabled', true)
+      .eq('share_with_partner', true)
       .maybeSingle();
 
     if (error) {
@@ -137,26 +139,64 @@ export const locationService = {
   },
 
   /**
-   * Enable location sharing
+   * Update location sharing settings
    */
-  async enableLocationSharing(userId: string): Promise<void> {
+  async updateLocationSharing(
+    userId: string,
+    shareWithApp: boolean,
+    shareWithPartner: boolean
+  ): Promise<void> {
     const { error } = await api.supabase
       .from('user_locations')
-      .update({ is_sharing_enabled: true })
+      .update({
+        share_with_app: shareWithApp,
+        share_with_partner: shareWithPartner,
+      })
       .eq('user_id', userId);
 
     if (error) {
-      throw new Error(error.message || 'Failed to enable location sharing');
+      throw new Error(error.message || 'Failed to update location sharing');
     }
   },
 
   /**
-   * Disable location sharing
+   * Enable sharing with app only (for features, not visible to partner)
    */
-  async disableLocationSharing(userId: string): Promise<void> {
+  async enableAppSharing(userId: string): Promise<void> {
     const { error } = await api.supabase
       .from('user_locations')
-      .update({ is_sharing_enabled: false })
+      .update({ share_with_app: true })
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new Error(error.message || 'Failed to enable app sharing');
+    }
+  },
+
+  /**
+   * Enable sharing with partner (visible to partner)
+   */
+  async enablePartnerSharing(userId: string): Promise<void> {
+    const { error } = await api.supabase
+      .from('user_locations')
+      .update({ share_with_partner: true })
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new Error(error.message || 'Failed to enable partner sharing');
+    }
+  },
+
+  /**
+   * Disable all location sharing
+   */
+  async disableAllSharing(userId: string): Promise<void> {
+    const { error } = await api.supabase
+      .from('user_locations')
+      .update({
+        share_with_app: false,
+        share_with_partner: false,
+      })
       .eq('user_id', userId);
 
     if (error) {
