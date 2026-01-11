@@ -126,10 +126,11 @@ export default function App() {
   // Compute partner name with fallback chain
   const partnerName = partnerOnboarding?.name || partnerNameFromUsers || 'Partner';
 
-  const userData = onboarding ? {
-    name: onboarding.name,
+  // Always compute userData, even if onboarding is null (use fallbacks)
+  const userData = {
+    name: onboarding?.name || 'there',
     partnerName: partnerName,
-  } : null;
+  };
 
   // Debug: Log final userData
   useEffect(() => {
