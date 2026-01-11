@@ -39,33 +39,33 @@ ALTER TABLE public.partner_suggestions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view their own needs" ON public.relationship_needs;
 CREATE POLICY "Users can view their own needs"
   ON public.relationship_needs FOR SELECT
-  USING (auth.uid() = relationship_needs.user_id);
+  USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can insert their own needs" ON public.relationship_needs;
 CREATE POLICY "Users can insert their own needs"
   ON public.relationship_needs FOR INSERT
-  WITH CHECK (auth.uid() = relationship_needs.user_id);
+  WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update their own needs" ON public.relationship_needs;
 CREATE POLICY "Users can update their own needs"
   ON public.relationship_needs FOR UPDATE
-  USING (auth.uid() = relationship_needs.user_id);
+  USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can delete their own needs" ON public.relationship_needs;
 CREATE POLICY "Users can delete their own needs"
   ON public.relationship_needs FOR DELETE
-  USING (auth.uid() = relationship_needs.user_id);
+  USING (auth.uid() = user_id);
 
 -- RLS Policies for partner_suggestions (users can only see suggestions meant for them)
 DROP POLICY IF EXISTS "Users can view their own suggestions" ON public.partner_suggestions;
 CREATE POLICY "Users can view their own suggestions"
   ON public.partner_suggestions FOR SELECT
-  USING (auth.uid() = partner_suggestions.user_id);
+  USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update their own suggestions" ON public.partner_suggestions;
 CREATE POLICY "Users can update their own suggestions"
   ON public.partner_suggestions FOR UPDATE
-  USING (auth.uid() = partner_suggestions.user_id);
+  USING (auth.uid() = user_id);
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_relationship_needs_user ON public.relationship_needs(user_id);
