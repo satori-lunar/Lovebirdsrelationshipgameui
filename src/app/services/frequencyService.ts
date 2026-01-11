@@ -38,7 +38,7 @@ class FrequencyService {
   /**
    * Main decision point: Should we send a check-in/prompt right now?
    */
-  async shouldSendCheckin(userId: string, promptType: 'daily_question' | 'nudge' | 'suggestion'): Promise<FrequencyDecision> {
+  async shouldSendCheckin(userId: string, promptType: 'daily_question' | 'suggestion'): Promise<FrequencyDecision> {
     const profile = await partnerProfileService.getProfile(userId);
     if (!profile) {
       return {
@@ -345,9 +345,6 @@ class FrequencyService {
     if (promptType === 'daily_question') {
       return config.dailyQuestionEnabled ? 7 : 0;
     }
-    if (promptType === 'nudge') {
-      return config.nudgesPerWeek;
-    }
     if (promptType === 'suggestion') {
       return config.suggestionsPerWeek;
     }
@@ -385,8 +382,8 @@ class FrequencyService {
       return nextPreferred;
     }
 
-    // Nudges/suggestions: spread throughout week
-    const daysUntilNext = Math.ceil(7 / config.nudgesPerWeek);
+    // Suggestions: spread throughout week
+    const daysUntilNext = Math.ceil(7 / config.suggestionsPerWeek);
     next.setDate(next.getDate() + daysUntilNext);
 
     return next;

@@ -35,6 +35,7 @@ export interface Database {
           invite_code_expires_at: string;
           created_at: string;
           connected_at: string | null;
+          relationship_start_date: string | null;
         };
         Insert: {
           id?: string;
@@ -44,6 +45,7 @@ export interface Database {
           invite_code_expires_at: string;
           created_at?: string;
           connected_at?: string | null;
+          relationship_start_date?: string | null;
         };
         Update: {
           id?: string;
@@ -52,6 +54,7 @@ export interface Database {
           invite_code?: string;
           invite_code_expires_at?: string;
           connected_at?: string | null;
+          relationship_start_date?: string | null;
         };
       };
       onboarding_responses: {
@@ -75,6 +78,11 @@ export interface Database {
           is_private: boolean;
           created_at: string;
           updated_at: string;
+          user_photo_url: string | null;
+          partner_photo_url: string | null;
+          relationship_status: string | null;
+          date_frequency: string | null;
+          want_more_dates: boolean | null;
         };
         Insert: {
           id?: string;
@@ -96,6 +104,11 @@ export interface Database {
           is_private?: boolean;
           created_at?: string;
           updated_at?: string;
+          user_photo_url?: string | null;
+          partner_photo_url?: string | null;
+          relationship_status?: string | null;
+          date_frequency?: string | null;
+          want_more_dates?: boolean | null;
         };
         Update: {
           id?: string;
@@ -116,6 +129,11 @@ export interface Database {
           relationship_goals?: string | null;
           is_private?: boolean;
           updated_at?: string;
+          user_photo_url?: string | null;
+          partner_photo_url?: string | null;
+          relationship_status?: string | null;
+          date_frequency?: string | null;
+          want_more_dates?: boolean | null;
         };
       };
       daily_questions: {

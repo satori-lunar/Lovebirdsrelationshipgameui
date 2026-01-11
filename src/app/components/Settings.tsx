@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Bell, Users, Link2, Copy, Check, Mail, MessageSquare, LogOut, Trash2, AlertTriangle, Smartphone, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Bell, Users, Link2, Copy, Check, Mail, MessageSquare, LogOut, Trash2, AlertTriangle, Smartphone, ChevronRight, Edit3 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Switch } from './ui/switch';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { authService } from '../services/authService';
+import { onboardingService } from '../services/onboardingService';
 import { toast } from 'sonner';
 import { PartnerConnection } from './PartnerConnection';
 
@@ -16,9 +17,10 @@ interface SettingsProps {
   onBack: () => void;
   partnerName: string;
   onNavigate?: (page: string) => void;
+  onPartnerNameUpdate?: () => void;
 }
 
-export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
+export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate }: SettingsProps) {
   const { user, signOut } = useAuth();
   const { relationship } = useRelationship();
 
@@ -33,6 +35,9 @@ export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [showPartnerNameDialog, setShowPartnerNameDialog] = useState(false);
+  const [editingPartnerName, setEditingPartnerName] = useState(partnerName);
+  const [isUpdatingPartnerName, setIsUpdatingPartnerName] = useState(false);
 
   const toggleNotification = (key: keyof typeof notificationSettings) => {
     setNotificationSettings(prev => ({
@@ -80,6 +85,33 @@ export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
     }
   };
 
+  const handleUpdatePartnerName = async () => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    if (!editingPartnerName.trim()) {
+      toast.error('Partner name cannot be empty');
+      return;
+    }
+
+    setIsUpdatingPartnerName(true);
+    try {
+      await onboardingService.updateOnboarding(user.id, {
+        partnerName: editingPartnerName.trim(),
+      });
+      toast.success('Partner name updated successfully');
+      setShowPartnerNameDialog(false);
+      onPartnerNameUpdate?.();
+    } catch (error) {
+      console.error('Update partner name error:', error);
+      toast.error('Failed to update partner name');
+    } finally {
+      setIsUpdatingPartnerName(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50 pb-8">
       {/* Header */}
@@ -111,6 +143,27 @@ export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
           </div>
 
           <PartnerConnection partnerName={partnerName} variant="settings" />
+
+          {/* Partner Name Edit */}
+          <div className="border-t pt-4">
+            <Button
+              onClick={() => {
+                setEditingPartnerName(partnerName);
+                setShowPartnerNameDialog(true);
+              }}
+              variant="outline"
+              className="w-full flex items-center justify-between h-12"
+            >
+              <span className="flex items-center gap-2">
+                <Edit3 className="w-4 h-4" />
+                Edit Partner Name
+              </span>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <p className="text-xs text-gray-600 mt-2">
+              Current: {partnerName}
+            </p>
+          </div>
         </Card>
 
         {/* Notification Settings */}
@@ -298,6 +351,47 @@ export function Settings({ onBack, partnerName, onNavigate }: SettingsProps) {
               className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
             >
               Log Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Partner Name Dialog */}
+      <Dialog open={showPartnerNameDialog} onOpenChange={setShowPartnerNameDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Partner Name</DialogTitle>
+            <DialogDescription>
+              Update your partner's name as it appears throughout the app.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="partnerName">Partner's Name</Label>
+              <Input
+                id="partnerName"
+                value={editingPartnerName}
+                onChange={(e) => setEditingPartnerName(e.target.value)}
+                placeholder="Enter partner's name"
+                className="h-12"
+                disabled={isUpdatingPartnerName}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowPartnerNameDialog(false)}
+              disabled={isUpdatingPartnerName}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdatePartnerName}
+              disabled={isUpdatingPartnerName || !editingPartnerName.trim()}
+              className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+            >
+              {isUpdatingPartnerName ? 'Updating...' : 'Update Name'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -20,7 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_onboarding_preferences ON public.onboarding_respo
 
 -- Add comment to document the new structure
 COMMENT ON COLUMN public.onboarding_responses.wants_needs IS 'JSON object containing: gestures (array), surprise_frequency (string), date_style (string), gift_types (array), planning_style (string), avoid (string), notes (string)';
-COMMENT ON COLUMN public.onboarding_responses.preferences IS 'JSON object containing: date_types (array), gift_budget (string), nudge_frequency (string)';
+COMMENT ON COLUMN public.onboarding_responses.preferences IS 'JSON object containing: date_types (array), gift_budget (string)';
 COMMENT ON COLUMN public.onboarding_responses.consent IS 'JSON object containing: share_with_partner (boolean), email_opt_in (boolean)';
 
 -- Allow daily_questions to be global (not tied to specific relationships)

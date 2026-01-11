@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Heart, Lightbulb, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { api } from '../services/api';
+import { aiSuggestionService } from '../services/aiSuggestionService';
 
 const moods = {
   energized: {
@@ -80,42 +81,34 @@ const getSuggestions = (mood: string, needs: string[], isLongDistance: boolean) 
   const suggestions: string[] = [];
 
   if (needs.includes('comfort')) {
-    if (isLongDistance) {
-      suggestions.push('Send a care package or order comfort food delivery');
-      suggestions.push('Watch the same movie together on video call');
-    } else {
-      suggestions.push('Bring their favorite comfort food');
-      suggestions.push('Movie night in bed with snacks');
+    suggestions.push('Order delivery of their comfort food TODAY with a sweet note');
+    suggestions.push('Watch the same movie together on video call - press play at the same time');
+    if (!isLongDistance) {
+      suggestions.push('When you can meet up, bring their favorite comfort item in person');
     }
   }
 
   if (needs.includes('distraction')) {
-    if (isLongDistance) {
-      suggestions.push('Play an online game together');
-      suggestions.push('Send funny memes or videos');
-    } else {
-      suggestions.push('Suggest a fun activity or outing');
-      suggestions.push('Watch a comedy together');
+    suggestions.push('Send them funny content RIGHT NOW - memes, videos, TikToks');
+    suggestions.push('Play an online game together or watch a comedy at the same time');
+    if (!isLongDistance) {
+      suggestions.push('Suggest a quick fun outing when you both have time');
     }
   }
 
   if (needs.includes('no_talk')) {
-    if (isLongDistance) {
-      suggestions.push('Send a care text: "No need to reply, just thinking of you"');
-      suggestions.push('Be on FaceTime together doing your own things');
-    } else {
-      suggestions.push('Sit together quietly - no pressure to talk');
-      suggestions.push('Gentle physical affection without asking questions');
+    suggestions.push('Send a care text: "No need to reply, just thinking of you"');
+    suggestions.push('Offer to be on FaceTime doing your own things - no talking required');
+    if (!isLongDistance) {
+      suggestions.push('When together, offer to just sit quietly in the same space');
     }
   }
 
   if (needs.includes('be_close') || needs.includes('be_present_virtual')) {
-    if (isLongDistance) {
-      suggestions.push('Set up a long FaceTime/video call - just being there');
-      suggestions.push('Send a voice note instead of text');
-    } else {
-      suggestions.push('Offer a hug or physical closeness');
-      suggestions.push('Do an activity side-by-side quietly');
+    suggestions.push('Set up a video call - even 30 minutes of face time helps');
+    suggestions.push('Send voice notes and photos throughout the day to stay connected');
+    if (!isLongDistance) {
+      suggestions.push('Plan to meet up soon for quality time together');
     }
   }
 
@@ -141,6 +134,7 @@ const getSuggestions = (mood: string, needs: string[], isLongDistance: boolean) 
 interface PartnerCapacityViewProps {
   checkin: {
     id: string;
+    user_id: string;
     mood: string;
     needs: string[];
     context?: string;
@@ -156,8 +150,41 @@ export default function PartnerCapacityView({
   partnerName,
   isLongDistance = false
 }: PartnerCapacityViewProps) {
+  // Don't render anything if no checkin data
+  if (!checkin) {
+    return null;
+  }
+
   const mood = moods[checkin.mood as keyof typeof moods];
-  const suggestions = getSuggestions(checkin.mood, checkin.needs, isLongDistance);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
+
+  // Fetch AI-generated suggestions
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        setIsLoadingSuggestions(true);
+        const suggestions = await aiSuggestionService.generateCapacityCheckInSuggestions(
+          checkin.mood,
+          checkin.needs,
+          checkin.context,
+          checkin.user_id,
+          isLongDistance
+        );
+        setAiSuggestions(suggestions);
+      } catch (error) {
+        console.error('Error fetching capacity suggestions:', error);
+        // Fallback to hardcoded suggestions
+        setAiSuggestions(getSuggestions(checkin.mood, checkin.needs, isLongDistance));
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, [checkin.id, checkin.mood, checkin.needs, checkin.context, checkin.user_id, isLongDistance]);
+
+  const suggestions = aiSuggestions.length > 0 ? aiSuggestions : getSuggestions(checkin.mood, checkin.needs, isLongDistance);
 
   useEffect(() => {
     // Mark as viewed when component mounts
@@ -251,14 +278,21 @@ export default function PartnerCapacityView({
           </div>
 
           <div className="space-y-3">
-            {suggestions.map((suggestion, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Heart className="w-4 h-4 text-white" fill="white" />
-                </div>
-                <p className="text-gray-700">{suggestion}</p>
+            {isLoadingSuggestions ? (
+              <div className="flex items-center gap-3 text-gray-500">
+                <div className="w-6 h-6 rounded-full bg-purple-200 animate-pulse flex-shrink-0"></div>
+                <p className="italic">Generating personalized suggestions...</p>
               </div>
-            ))}
+            ) : (
+              suggestions.map((suggestion, index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Heart className="w-4 h-4 text-white" fill="white" />
+                  </div>
+                  <p className="text-gray-700">{suggestion}</p>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="mt-6 p-4 bg-amber-50 rounded-xl border border-amber-200">

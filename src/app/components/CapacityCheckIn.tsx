@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Heart, Send, Check } from 'lucide-react';
+import { Heart, Send, Check, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
+import { NEED_CATEGORIES, NeedCategory, Urgency } from '../types/needs';
+import { needsService } from '../services/needsService';
 
 const moods = [
   {
@@ -107,17 +109,8 @@ const moods = [
   },
 ];
 
-const needs = [
-  { id: 'comfort', label: 'I want comfort' },
-  { id: 'distraction', label: 'I want distraction' },
-  { id: 'encouragement', label: 'I want encouragement' },
-  { id: 'space', label: 'I want space' },
-  { id: 'no_talk', label: "I don't want to talk about it" },
-  { id: 'open_to_talk', label: "I'm open to talking" },
-  { id: 'check_in', label: 'Just check in on me' },
-  { id: 'be_close', label: 'Be physically close' },
-  { id: 'be_present_virtual', label: 'Be present virtually' },
-];
+// Using detailed need categories from the "What Feels Missing?" system
+const needs = NEED_CATEGORIES.filter(c => c.category !== 'other'); // Exclude 'other' for now
 
 interface CapacityCheckInProps {
   onComplete?: () => void;
@@ -127,9 +120,14 @@ interface CapacityCheckInProps {
 export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
-  const [step, setStep] = useState<'mood' | 'needs' | 'context'>('mood');
+  const [step, setStep] = useState<'mood' | 'duration' | 'causes' | 'activities' | 'boundaries' | 'needs' | 'urgency' | 'context'>('mood');
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
-  const [selectedNeeds, setSelectedNeeds] = useState<string[]>([]);
+  const [duration, setDuration] = useState<string>('');
+  const [causes, setCauses] = useState<string[]>([]);
+  const [activities, setActivities] = useState<string>('');
+  const [boundaries, setBoundaries] = useState<string>('');
+  const [selectedNeeds, setSelectedNeeds] = useState<NeedCategory[]>([]);
+  const [urgency, setUrgency] = useState<Urgency>('would_help');
   const [context, setContext] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -153,11 +151,11 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     };
   }, []);
 
-  const toggleNeed = (needId: string) => {
+  const toggleNeed = (needCategory: NeedCategory) => {
     setSelectedNeeds(prev =>
-      prev.includes(needId)
-        ? prev.filter(id => id !== needId)
-        : [...prev, needId]
+      prev.includes(needCategory)
+        ? prev.filter(id => id !== needCategory)
+        : [...prev, needCategory]
     );
   };
 
@@ -166,18 +164,36 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
     setSubmitting(true);
     try {
+      // Save capacity check-in
       const { error } = await api.supabase
         .from('capacity_checkins')
         .insert({
           user_id: user.id,
           couple_id: relationship.id,
           mood: selectedMood,
+          duration: duration || null,
+          causes: causes.length > 0 ? causes : null,
+          activities: activities.trim() || null,
+          boundaries: boundaries.trim() || null,
           needs: selectedNeeds,
           context: context.trim() || null,
           created_at: new Date().toISOString()
         });
 
       if (error) throw error;
+
+      // If needs were selected, also submit them through the needs service
+      if (selectedNeeds.length > 0) {
+        for (const needCategory of selectedNeeds) {
+          await needsService.submitNeed({
+            coupleId: relationship.id,
+            requesterId: user.id,
+            needCategory,
+            context: context.trim() || undefined,
+            urgency
+          });
+        }
+      }
 
       setSubmitted(true);
       if (onComplete) {
@@ -191,35 +207,10 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     }
   };
 
-  // Submit directly for high-capacity moods (>80%) without asking for needs/context
-  const handleSubmitDirectly = async (moodId: string) => {
-    if (!user?.id || !relationship?.id) return;
-
-    setSubmitting(true);
-    try {
-      const { error } = await api.supabase
-        .from('capacity_checkins')
-        .insert({
-          user_id: user.id,
-          couple_id: relationship.id,
-          mood: moodId,
-          needs: [], // Empty - feeling good, no needs
-          context: null, // No context needed
-          created_at: new Date().toISOString()
-        });
-
-      if (error) throw error;
-
-      setSubmitted(true);
-      if (onComplete) {
-        setTimeout(() => onComplete(), 1500);
-      }
-    } catch (error) {
-      console.error('Error saving capacity check-in:', error);
-      alert(`Error saving check-in: ${error.message}`);
-    } finally {
-      setSubmitting(false);
-    }
+  // Set capacity and move to duration step - capacity details will be saved when user completes
+  const handleCapacitySelected = (moodId: string) => {
+    setSelectedMood(moodId);
+    setStep('duration');
   };
 
   if (submitted) {
@@ -236,10 +227,10 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
                 <Check className="w-10 h-10 text-white" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                Shared ✨
+                Capacity Shared ✨
               </h2>
               <p className="text-gray-600 leading-relaxed">
-                Your partner will be notified about how you're feeling today.
+                Your partner knows how you're feeling. Now let's see if there's anything you need...
               </p>
             </CardContent>
           </Card>
@@ -273,18 +264,11 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
       holdTimerRef.current = window.setTimeout(() => {
         setHoldProgress(100);
-        setSelectedMood(currentMood.id);
         setIsHolding(false);
-        // Only show needs/context questions for moods below 80%
-        // For 80% and higher capacity, submit directly - they're fine!
-        if (currentMood.capacity < 80) {
-          setTimeout(() => setStep('needs'), 300);
-        } else {
-          // High capacity mood (80%+) - submit directly without needs/context
-          setTimeout(() => {
-            handleSubmitDirectly(currentMood.id);
-          }, 300);
-        }
+        // Capacity selected - move to needs step
+        setTimeout(() => {
+          handleCapacitySelected(currentMood.id);
+        }, 300);
       }, holdDuration);
     };
 
@@ -301,10 +285,11 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
     // Convert Tailwind gradient to CSS gradient
     const getGradientStyle = (colorClass: string) => {
-      const colors = colorClass.match(/([\w-]+)-(\d+)/g) || [];
-      if (colors.length >= 2) {
-        const fromColor = colors[0];
-        const toColor = colors[1];
+      const matches = colorClass.match(/from-([\w-]+)-(\d+)/);
+      const matches2 = colorClass.match(/to-([\w-]+)-(\d+)/);
+      if (matches && matches2) {
+        const fromColor = `${matches[1]}-${matches[2]}`;
+        const toColor = `${matches2[1]}-${matches2[2]}`;
         const colorMap: Record<string, string> = {
           'emerald-400': '#34d399',
           'green-500': '#22c55e',
@@ -609,43 +594,44 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
     );
   };
 
-  const renderNeedsStep = () => (
+  const renderDurationStep = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
         <div className="text-5xl mb-3">
           {moods.find(m => m.id === selectedMood)?.icon}
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          What do you need right now?
+          How long have you felt this way?
         </h2>
         <p className="text-gray-600 text-sm">
-          Select all that apply
+          Help your partner understand the timeline
         </p>
       </div>
 
       <div className="space-y-3">
-        {needs.map((need) => (
+        {[
+          { value: 'just_today', label: 'Just today', desc: 'This is new today' },
+          { value: 'few_days', label: 'A few days', desc: '2-3 days now' },
+          { value: 'this_week', label: 'This week', desc: 'Most of this week' },
+          { value: 'few_weeks', label: 'A few weeks', desc: '2-3 weeks or more' },
+          { value: 'ongoing', label: 'Ongoing', desc: 'This has been going on for a while' }
+        ].map((option) => (
           <motion.button
-            key={need.id}
-            onClick={() => toggleNeed(need.id)}
+            key={option.value}
+            onClick={() => {
+              setDuration(option.value);
+              setStep('causes');
+            }}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
-            className="w-full"
+            className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+              duration === option.value
+                ? 'border-purple-500 bg-purple-50'
+                : 'border-gray-200 hover:border-purple-300'
+            }`}
           >
-            <Card className={`cursor-pointer transition-all ${
-              selectedNeeds.includes(need.id)
-                ? 'ring-2 ring-purple-400 bg-purple-50'
-                : 'hover:shadow-md'
-            }`}>
-              <CardContent className="p-4 flex items-center justify-between">
-                <span className="text-gray-900 font-medium">{need.label}</span>
-                {selectedNeeds.includes(need.id) && (
-                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
-                    <Check className="w-4 h-4 text-white" />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="font-semibold text-gray-900">{option.label}</div>
+            <div className="text-sm text-gray-500">{option.desc}</div>
           </motion.button>
         ))}
       </div>
@@ -659,11 +645,293 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
           Back
         </Button>
         <Button
-          onClick={() => setStep('context')}
-          disabled={selectedNeeds.length === 0}
+          onClick={() => setStep('causes')}
+          disabled={!duration}
           className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
         >
           Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderCausesStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          What's contributing to this?
+        </h2>
+        <p className="text-gray-600 text-sm">
+          Select all that apply • Optional
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {[
+          'Work stress',
+          'Health issues',
+          'Family responsibilities',
+          'Relationship challenges',
+          'Financial concerns',
+          'Sleep issues',
+          'Social obligations',
+          'Weather/seasonal changes',
+          'Personal goals',
+          'Other'
+        ].map((cause) => (
+          <motion.button
+            key={cause}
+            onClick={() => {
+              setCauses(prev =>
+                prev.includes(cause)
+                  ? prev.filter(c => c !== cause)
+                  : [...prev, cause]
+              );
+            }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className="w-full"
+          >
+            <Card className={`cursor-pointer transition-all ${
+              causes.includes(cause)
+                ? 'ring-2 ring-purple-400 bg-purple-50'
+                : 'hover:shadow-md'
+            }`}>
+              <CardContent className="p-4 flex items-center justify-between">
+                <span className="text-gray-900 font-medium">{cause}</span>
+                {causes.includes(cause) && (
+                  <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.button>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('duration')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => setStep('activities')}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderActivitiesStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Activities & Energy
+        </h2>
+        <p className="text-gray-600 text-sm">
+          Any specific activities you're looking forward to or avoiding?
+        </p>
+      </div>
+
+      <Textarea
+        value={activities}
+        onChange={(e) => setActivities(e.target.value)}
+        placeholder="E.g., 'Looking forward to our date night' or 'Need to skip social plans this weekend'"
+        rows={3}
+        className="resize-none"
+      />
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('causes')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => setStep('boundaries')}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderBoundariesStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Any boundaries or specific needs?
+        </h2>
+        <p className="text-gray-600 text-sm">
+          How can your partner best support you right now?
+        </p>
+      </div>
+
+      <Textarea
+        value={boundaries}
+        onChange={(e) => setBoundaries(e.target.value)}
+        placeholder="E.g., 'Please check in before making plans' or 'I need quiet time after work'"
+        rows={3}
+        className="resize-none"
+      />
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('activities')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => setStep('needs')}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderNeedsStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          What feels missing right now?
+        </h2>
+        <p className="text-gray-600 text-sm">
+          Optional • Select all that apply
+        </p>
+      </div>
+
+      <div className="space-y-3 max-h-96 overflow-y-auto">
+        {needs.map((need) => (
+          <motion.button
+            key={need.category}
+            onClick={() => toggleNeed(need.category)}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className="w-full"
+          >
+            <Card className={`cursor-pointer transition-all ${
+              selectedNeeds.includes(need.category)
+                ? 'ring-2 ring-purple-400 bg-purple-50'
+                : 'hover:shadow-md'
+            }`}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">{need.icon}</span>
+                  <div className="flex-1 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-900 font-medium">{need.label}</span>
+                      {selectedNeeds.includes(need.category) && (
+                        <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{need.description}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.button>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <Button
+          onClick={handleSubmit}
+          variant="outline"
+          className="flex-1"
+        >
+          Skip & Finish
+        </Button>
+        <Button
+          onClick={() => setStep('urgency')}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Continue
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderUrgencyStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <div className="text-5xl mb-3">
+          {moods.find(m => m.id === selectedMood)?.icon}
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          How urgent is this?
+        </h2>
+        <p className="text-gray-600 text-sm">
+          Help your partner understand the priority
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {[
+          { value: 'not_urgent', label: 'Not Urgent', desc: 'Can wait, no rush', color: 'blue' },
+          { value: 'would_help', label: 'Would Help', desc: 'Would improve things', color: 'yellow' },
+          { value: 'important', label: 'Important', desc: 'Needs attention soon', color: 'red' }
+        ].map((option) => (
+          <motion.button
+            key={option.value}
+            onClick={() => setUrgency(option.value as Urgency)}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+              urgency === option.value
+                ? option.color === 'blue'
+                  ? 'border-blue-500 bg-blue-50'
+                  : option.color === 'yellow'
+                  ? 'border-yellow-500 bg-yellow-50'
+                  : 'border-red-500 bg-red-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-semibold text-gray-900">{option.label}</div>
+            <div className="text-sm text-gray-500">{option.desc}</div>
+          </motion.button>
+        ))}
+      </div>
+
+      <div className="flex gap-3">
+        <Button
+          onClick={() => setStep('boundaries')}
+          variant="outline"
+          className="flex-1"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={() => setStep('context')}
+          className="flex-1 bg-gradient-to-r from-purple-500 to-violet-500"
+        >
+          Add Context
         </Button>
       </div>
     </div>
@@ -696,7 +964,7 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
 
       <div className="flex gap-3">
         <Button
-          onClick={() => setStep('needs')}
+          onClick={() => setStep('urgency')}
           variant="outline"
           className="flex-1"
         >
@@ -724,15 +992,26 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 px-6 py-12">
       <div className="max-w-2xl mx-auto">
+        {/* Back Button */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="font-medium">Back</span>
+          </button>
+        )}
+
         {/* Progress */}
         <div className="flex items-center justify-center gap-2 mb-8">
-          {['mood', 'needs', 'context'].map((s, i) => (
+          {['mood', 'duration', 'causes', 'activities', 'boundaries', 'needs', 'urgency', 'context'].map((s, i) => (
             <div
               key={s}
               className={`h-2 rounded-full transition-all ${
                 s === step
                   ? 'w-12 bg-gradient-to-r from-purple-500 to-violet-500'
-                  : ['mood', 'needs'].indexOf(s) < ['mood', 'needs', 'context'].indexOf(step)
+                  : ['mood', 'duration', 'causes', 'activities', 'boundaries', 'needs', 'urgency'].indexOf(s) < ['mood', 'duration', 'causes', 'activities', 'boundaries', 'needs', 'urgency', 'context'].indexOf(step)
                   ? 'w-8 bg-purple-300'
                   : 'w-8 bg-gray-200'
               }`}
@@ -743,18 +1022,14 @@ export default function CapacityCheckIn({ onComplete, onBack }: CapacityCheckInP
         {/* Content */}
         <div className="bg-white rounded-3xl shadow-xl p-8">
           {step === 'mood' && renderMoodStep()}
+          {step === 'duration' && renderDurationStep()}
+          {step === 'causes' && renderCausesStep()}
+          {step === 'activities' && renderActivitiesStep()}
+          {step === 'boundaries' && renderBoundariesStep()}
           {step === 'needs' && renderNeedsStep()}
+          {step === 'urgency' && renderUrgencyStep()}
           {step === 'context' && renderContextStep()}
         </div>
-
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="mt-6 w-full text-center text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-        )}
       </div>
     </div>
   );

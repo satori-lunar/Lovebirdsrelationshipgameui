@@ -40,16 +40,38 @@ class NeedsService {
 
     console.log('👥 Receiver ID:', receiverId);
 
-    // Try to get partner's onboarding data for personalization (optional)
+    // Check if there's already a pending need from this requester to this receiver
+    const { data: existingNeed, error: checkError } = await api.supabase
+      .from('relationship_needs')
+      .select('id, status, created_at')
+      .eq('couple_id', request.coupleId)
+      .eq('requester_id', request.requesterId)
+      .eq('receiver_id', receiverId)
+      .in('status', ['pending', 'acknowledged'])
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('❌ Failed to check existing needs:', checkError);
+      // Continue with creating new need instead of throwing error
+    }
+
+    console.log('🔍 Existing need check:', {
+      coupleId: request.coupleId,
+      requesterId: request.requesterId,
+      receiverId,
+      existingNeed: existingNeed ? { id: existingNeed.id, status: existingNeed.status, createdAt: existingNeed.created_at } : null
+    });
+
+    // Try to get partner's onboarding data for personalization
     const { data: partnerOnboarding } = await api.supabase
       .from('onboarding_responses')
-      .select('love_language_primary, communication_style')
+      .select('love_language_primary, communication_style, favorite_activities, budget_comfort, energy_level, name, wish_happened')
       .eq('user_id', receiverId)
       .maybeSingle();
 
     console.log('💑 Partner onboarding data:', partnerOnboarding);
 
-    // Generate AI suggestion with partner's preferences if available
+    // Generate AI suggestion with partner's full profile
     const aiSuggestion = await aiSuggestionService.generateNeedResponse(
       {
         id: '',
@@ -67,35 +89,74 @@ class NeedsService {
       {
         loveLanguage: partnerOnboarding?.love_language_primary || 'quality_time',
         communicationStyle: partnerOnboarding?.communication_style || 'gentle',
-        customPreferences: {}
+        customPreferences: {
+          favoriteActivities: partnerOnboarding?.favorite_activities || [],
+          budgetComfort: partnerOnboarding?.budget_comfort,
+          energyLevel: partnerOnboarding?.energy_level,
+          partnerName: partnerOnboarding?.name,
+          wishesPartnerWould: partnerOnboarding?.wish_happened
+        }
       }
     );
 
-    // Insert need with AI suggestion
-    const { data, error } = await api.supabase
-      .from('relationship_needs')
-      .insert({
-        couple_id: request.coupleId,
-        requester_id: request.requesterId,
-        receiver_id: receiverId,
-        need_category: request.needCategory,
-        custom_category: request.customCategory,
-        context: request.context,
-        urgency: request.urgency,
-        show_raw_need_to_partner: request.showRawNeedToPartner || false,
-        ai_suggestion: aiSuggestion,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    let data;
 
-    if (error) {
-      console.error('❌ Failed to insert need:', error);
-      throw error;
+    if (existingNeed) {
+      // Update existing pending need instead of creating a new one
+      console.log('🔄 Updating existing pending need:', existingNeed.id);
+
+      const { data: updated, error: updateError } = await api.supabase
+        .from('relationship_needs')
+        .update({
+          need_category: request.needCategory,
+          custom_category: request.customCategory,
+          context: request.context,
+          urgency: request.urgency,
+          show_raw_need_to_partner: request.showRawNeedToPartner || false,
+          ai_suggestion: aiSuggestion,
+          status: 'pending', // Reset to pending for new submission
+          acknowledged_at: null, // Clear acknowledgment since it's a new need
+          created_at: new Date().toISOString() // Update timestamp to show it was recently updated
+        })
+        .eq('id', existingNeed.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('❌ Failed to update existing need:', updateError);
+        throw updateError;
+      }
+
+      data = updated;
+      console.log('✅ Existing need updated successfully:', data.id);
+    } else {
+      // Insert new need
+      const { data: inserted, error: insertError } = await api.supabase
+        .from('relationship_needs')
+        .insert({
+          couple_id: request.coupleId,
+          requester_id: request.requesterId,
+          receiver_id: receiverId,
+          need_category: request.needCategory,
+          custom_category: request.customCategory,
+          context: request.context,
+          urgency: request.urgency,
+          show_raw_need_to_partner: request.showRawNeedToPartner || false,
+          ai_suggestion: aiSuggestion,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('❌ Failed to insert need:', insertError);
+        throw insertError;
+      }
+
+      data = inserted;
+      console.log('✅ Need submitted successfully:', data.id);
     }
-
-    console.log('✅ Need submitted successfully:', data.id);
 
     // TODO: Record engagement event (optional analytics)
     // await partnerProfileService.recordEngagementEvent(...)
@@ -104,19 +165,56 @@ class NeedsService {
   }
 
   /**
-   * Get pending needs for a user (where they are the receiver)
+   * Get unresolved needs for a user (where they are the receiver)
+   * Returns only the most recent unresolved need per requester to avoid crowding the UI
+   * Includes pending, acknowledged, and in_progress needs (anything not resolved)
    */
   async getPendingNeeds(userId: string): Promise<RelationshipNeed[]> {
-    const { data, error } = await api.supabase
-      .from('relationship_needs')
-      .select('*')
-      .eq('receiver_id', userId)
-      .in('status', ['pending', 'acknowledged'])
-      .order('created_at', { ascending: false });
+    // First, get all relationships this user is part of
+    const { data: relationships, error: relError } = await api.supabase
+      .from('relationships')
+      .select('id, partner_a_id, partner_b_id')
+      .or(`partner_a_id.eq.${userId},partner_b_id.eq.${userId}`);
 
-    if (error) throw error;
+    if (relError) throw relError;
 
-    return (data || []).map(this.mapFromDatabase);
+    if (!relationships || relationships.length === 0) {
+      return [];
+    }
+
+    // For each relationship, get the most recent unresolved need from the other partner
+    const pendingNeeds: any[] = [];
+
+    for (const relationship of relationships) {
+      const partnerId = relationship.partner_a_id === userId
+        ? relationship.partner_b_id
+        : relationship.partner_a_id;
+
+      if (!partnerId) continue; // Partner not connected yet
+
+      // Get the most recent need from this partner that hasn't been resolved yet
+      const { data: recentNeed, error: needError } = await api.supabase
+        .from('relationship_needs')
+        .select('*')
+        .eq('couple_id', relationship.id)
+        .eq('requester_id', partnerId)
+        .eq('receiver_id', userId)
+        .neq('status', 'resolved') // Show all needs except resolved ones
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (needError) {
+        console.error('Error fetching recent need:', needError);
+        continue;
+      }
+
+      if (recentNeed) {
+        pendingNeeds.push(recentNeed);
+      }
+    }
+
+    return pendingNeeds.map(this.mapFromDatabase);
   }
 
   /**
@@ -180,6 +278,71 @@ class NeedsService {
 
     // TODO: Record engagement event (optional analytics)
     // await partnerProfileService.recordEngagementEvent(...)
+  }
+
+  /**
+   * Save support plan progress for a need
+   */
+  async saveSupportPlanProgress(needId: string, progress: import('../types/needs').SupportPlanProgress): Promise<void> {
+    console.log('💾 Saving support plan progress:', { needId, progress });
+
+    const { error } = await api.supabase
+      .from('relationship_needs')
+      .update({
+        support_plan_progress: progress,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', needId);
+
+    if (error) {
+      console.error('❌ Failed to save support plan progress:', error);
+      throw new Error(`Failed to save progress: ${error.message}`);
+    }
+
+    console.log('✅ Support plan progress saved');
+  }
+
+  /**
+   * Load support plan progress for a need
+   */
+  async getSupportPlanProgress(needId: string): Promise<import('../types/needs').SupportPlanProgress | null> {
+    console.log('📖 Loading support plan progress for need:', needId);
+
+    const { data, error } = await api.supabase
+      .from('relationship_needs')
+      .select('support_plan_progress')
+      .eq('id', needId)
+      .single();
+
+    if (error) {
+      console.error('❌ Failed to load support plan progress:', error);
+      return null;
+    }
+
+    console.log('✅ Support plan progress loaded:', data?.support_plan_progress);
+    return data?.support_plan_progress || null;
+  }
+
+  /**
+   * Get all needs for a couple (for planning overview)
+   */
+  async getNeedsForCouple(coupleId: string): Promise<RelationshipNeed[]> {
+    console.log('📋 Getting needs for couple:', coupleId);
+
+    const { data, error } = await api.supabase
+      .from('relationship_needs')
+      .select('*')
+      .eq('couple_id', coupleId)
+      .neq('status', 'expired')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Failed to get needs for couple:', error);
+      throw new Error(`Failed to get needs: ${error.message}`);
+    }
+
+    console.log('✅ Got needs for couple:', data?.length || 0);
+    return data || [];
   }
 
   /**

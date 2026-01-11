@@ -1,798 +1,777 @@
 /**
- * Home Screen Component
+ * Home Screen Component - New Figma Design
  *
- * Main dashboard for the Lovebirds app featuring partner status,
- * daily questions, weekly suggestions, and quick navigation.
- * Styled with rose/pink gradients matching the Amora design system.
+ * A redesigned home screen with modern UI elements including:
+ * - Couple photo with anniversary tracker
+ * - Partner's capacity display
+ * - Quick action buttons for engagement
+ * - Upcoming dates and streaks
  */
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import {
-  Heart,
-  Sparkles,
-  Calendar,
-  MessageCircleHeart,
-  Gift,
-  BookHeart,
-  ChevronRight,
-  ChevronDown,
-  Flame,
-  TrendingUp,
-  Target,
-  Settings,
-  Lock,
-  Bell
-} from 'lucide-react';
-import { Card, CardContent } from './ui/card';
-import { Progress } from './ui/progress';
-import { useDailyQuestion } from '../hooks/useDailyQuestion';
+import React, { useState, useEffect } from 'react';
+import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
-import { useQuestionStats } from '../hooks/useQuestionStats';
-import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
+import { useLocation } from '../hooks/useLocation';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
-import { useUnreadMessages } from '../hooks/useUnreadMessages';
-import { useUnreadRequests } from '../hooks/useUnreadRequests';
 import { api } from '../services/api';
-import PartnerFormInvite from './PartnerFormInvite';
-import WeeklyRhythm from './WeeklyRhythm';
-import AsyncDateIdeas from './AsyncDateIdeas';
-import LocationDateSuggestions from './LocationDateSuggestions';
-import PartnerCapacityView from './PartnerCapacityView';
-import { SubmitNeedModal } from './SubmitNeedModal';
-import { useAllSuggestions } from '../hooks/useSuggestions';
+import { useSharedCalendar } from '../hooks/useSharedCalendar';
+import { useMoodUpdates } from '../hooks/useMoodUpdates';
+import { toast } from 'sonner';
 
 interface HomeProps {
   userName: string;
   partnerName: string;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, data?: any) => void;
+  showWelcomeFlow?: boolean;
 }
 
-export function Home({ userName, partnerName: partnerNameProp, onNavigate }: HomeProps) {
+export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
-  const { hasAnswered, hasGuessed, canSeeFeedback } = useDailyQuestion();
-  const { totalCompleted, currentStreak } = useQuestionStats();
-  const { partnerName: partnerNameFromOnboarding } = usePartnerOnboarding();
-  const { unreadCount } = useUnreadMessages();
-  const { pendingCount } = useUnreadRequests();
-  const { dateSuggestions } = useAllSuggestions();
-  const hasCompletedDailyQuestion = hasAnswered && hasGuessed;
+  const [currentTab, setCurrentTab] = useState('home');
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [capacityLevel, setCapacityLevel] = useState<number>(50);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const partnerName = partnerNameFromOnboarding || partnerNameProp;
+  // Use mood updates hook for partner's capacity
+  const { partnerMood } = useMoodUpdates();
 
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [showNeedModal, setShowNeedModal] = useState(false);
+  // Location tracking
+  const {
+    userLocation,
+    partnerLocation,
+    shareWithApp,
+    shareWithPartner,
+    isUpdating: isUpdatingLocation,
+    requestPermission,
+    updateSharingSettings,
+    distanceToPartner,
+  } = useLocation();
 
-  const { data: onboarding } = useQuery({
+  // Start location tracking on mount
+  useEffect(() => {
+    if ((shareWithApp || shareWithPartner) && user?.id) {
+      // Location updates handled by useLocation hook
+    }
+  }, [shareWithApp, shareWithPartner, user?.id]);
+
+  // Fetch user's onboarding data for profile photo
+  const { data: onboardingData } = useQuery({
     queryKey: ['onboarding', user?.id],
     queryFn: () => onboardingService.getOnboarding(user!.id),
-    enabled: !!user,
+    enabled: !!user?.id,
   });
 
-  // Query couple data (relationship contains couple data)
-  const couple = relationship;
+  // Calculate time together
+  const getTimeTogether = () => {
+    if (!relationship?.anniversary_date) return 'Just Started';
 
-  // Query partner profile data
-  const { data: partnerProfile } = useQuery({
-    queryKey: ['partnerProfile', relationship?.id, user?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
-      try {
-        // Determine partner's user_id from relationship
-        const partnerId = relationship.partner_a_id === user.id
-          ? relationship.partner_b_id
-          : relationship.partner_a_id;
-
-        if (!partnerId) {
-          console.log('No partner connected yet');
-          return null;
-        }
-
-        // Fetch partner's onboarding data directly
-        const partnerData = await onboardingService.getOnboarding(partnerId);
-        console.log('✅ Partner profile data:', partnerData);
-        return partnerData;
-      } catch (error) {
-        console.error('Failed to fetch partner profile:', error);
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
-  });
-
-  // Query partner's latest capacity check-in
-  const { data: partnerCapacity } = useQuery({
-    queryKey: ['partnerCapacity', relationship?.id, user?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id) return null;
-      try {
-        // Determine partner's user_id from relationship
-        const partnerId = relationship.partner_a_id === user.id
-          ? relationship.partner_b_id
-          : relationship.partner_a_id;
-
-        if (!partnerId) {
-          console.log('No partner connected yet');
-          return null;
-        }
-
-        // Get partner's latest capacity check-in from today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const { data, error } = await api.supabase
-          .from('capacity_checkins')
-          .select('*')
-          .eq('couple_id', relationship.id)
-          .eq('user_id', partnerId) // Filter by partner's user_id
-          .gte('created_at', today.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(); // Use maybeSingle to handle no results gracefully
-
-        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-          console.error('Failed to fetch partner capacity:', error);
-          return null;
-        }
-
-        console.log('✅ Partner capacity check-in:', data);
-        return data;
-      } catch (error) {
-        console.error('Failed to fetch partner capacity:', error);
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
-    refetchInterval: 30000, // Refresh every 30 seconds to catch new check-ins quickly
-  });
-
-  // Calculate days together (mock - would come from relationship data)
-  const getDaysTogether = () => {
-    if (!relationship?.created_at) return null;
-    const start = new Date(relationship.created_at);
+    const anniversary = new Date(relationship.anniversary_date);
     const now = new Date();
-    return Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const diffTime = Math.abs(now.getTime() - anniversary.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const years = Math.floor(diffDays / 365);
+    const months = Math.floor((diffDays % 365) / 30);
+
+    if (years > 0) {
+      return `${years} Year${years > 1 ? 's' : ''}, ${months} Month${months !== 1 ? 's' : ''}`;
+    } else if (months > 0) {
+      return `${months} Month${months !== 1 ? 's' : ''}`;
+    } else {
+      return `${diffDays} Day${diffDays !== 1 ? 's' : ''}`;
+    }
   };
 
-  const daysTogether = getDaysTogether();
+  // Convert capacity percentage to energy level description
+  const getEnergyLevel = (percentage: number): string => {
+    if (percentage >= 80) return 'High Energy';
+    if (percentage >= 60) return 'Good Energy';
+    if (percentage >= 40) return 'Moderate Energy';
+    if (percentage >= 20) return 'Low Energy';
+    return 'Numb and Disconnected';
+  };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+  // Get color for capacity level
+  const getCapacityColor = (percentage: number): string => {
+    if (percentage >= 80) return '#10B981'; // green
+    if (percentage >= 60) return '#3B82F6'; // blue
+    if (percentage >= 40) return '#F59E0B'; // orange
+    if (percentage >= 20) return '#EF4444'; // red
+    return '#6B7280'; // gray
+  };
+
+  // Get partner's mood display
+  const getPartnerMood = () => {
+    if (!partnerMood) return 'Not Updated';
+
+    // Map mood string to display text
+    const moodMap: Record<string, string> = {
+      'great': 'Feeling Great',
+      'good': 'Feeling Good',
+      'okay': 'Feeling Okay',
+      'low': 'Feeling Low',
+      'struggling': 'Struggling',
+      'numb': 'Disconnected'
+    };
+
+    return moodMap[partnerMood.mood] || 'Unknown';
+  };
+
+  // Get partner's capacity percentage from mood string
+  const getPartnerCapacityLevel = () => {
+    if (!partnerMood || !partnerMood.mood) return null;
+
+    // Convert mood string to percentage for display
+    const moodToPercentage: Record<string, number> = {
+      'great': 90,
+      'good': 70,
+      'okay': 50,
+      'low': 30,
+      'struggling': 15,
+      'numb': 5
+    };
+
+    return moodToPercentage[partnerMood.mood] || 50;
+  };
+
+  const handleTabNavigation = (tab: string) => {
+    setCurrentTab(tab);
+
+    // Map tabs to existing navigation routes
+    const tabRouteMap: Record<string, string> = {
+      'calendar': 'tracker',
+      'messages': 'messages',
+      'dates': 'dates',
+      'memories': 'memories',
+    };
+
+    if (tab !== 'home' && tabRouteMap[tab]) {
+      onNavigate(tabRouteMap[tab]);
+    }
+  };
+
+  const handleUpdateCapacity = async () => {
+    if (!user?.id || !relationship?.id) {
+      toast.error('Please sign in to update your capacity');
+      return;
+    }
+
+    // Convert percentage to mood string that matches database schema
+    let moodString: string;
+    if (capacityLevel >= 80) moodString = 'great';
+    else if (capacityLevel >= 60) moodString = 'good';
+    else if (capacityLevel >= 40) moodString = 'okay';
+    else if (capacityLevel >= 20) moodString = 'low';
+    else if (capacityLevel >= 10) moodString = 'struggling';
+    else moodString = 'numb';
+
+    setIsUpdating(true);
+
+    try {
+      const { error } = await api.supabase
+        .from('capacity_checkins')
+        .insert({
+          user_id: user.id,
+          couple_id: relationship.id,
+          mood: moodString,
+        });
+
+      if (error) throw error;
+
+      toast.success(`Capacity updated: ${getEnergyLevel(capacityLevel)}`);
+    } catch (error) {
+      toast.error('Failed to update capacity. Please try again.');
+      console.error('Capacity update error:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleLocationSharingChange = async (mode: 'off' | 'app' | 'partner') => {
+    try {
+      // Request permission if enabling any tracking
+      if (mode !== 'off') {
+        const permitted = await requestPermission();
+        if (!permitted) {
+          toast.error('Location permission denied. Please enable it in your device settings.');
+          return;
+        }
+      }
+
+      let success = false;
+      let message = '';
+
+      switch (mode) {
+        case 'off':
+          success = await updateSharingSettings(false, false);
+          message = 'Location sharing disabled';
+          break;
+        case 'app':
+          success = await updateSharingSettings(true, false);
+          message = 'Sharing with app only (for features)';
+          break;
+        case 'partner':
+          success = await updateSharingSettings(true, true);
+          message = 'Sharing with app and partner';
+          break;
+      }
+
+      if (success) {
+        toast.success(message);
+      } else {
+        toast.error('Failed to update location sharing');
+      }
+    } catch (error) {
+      toast.error('Failed to update location sharing');
+      console.error('Location sharing error:', error);
+    }
+  };
+
+  const getLocationSharingMode = (): 'off' | 'app' | 'partner' => {
+    if (!shareWithApp && !shareWithPartner) return 'off';
+    if (shareWithApp && !shareWithPartner) return 'app';
+    return 'partner';
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
-      {/* Custom Styles */}
-      <style>{`
-        @keyframes heartbeat {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-        }
-
-        .heartbeat {
-          animation: heartbeat 1.5s ease-in-out infinite;
-        }
-
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-
-        .float {
-          animation: float 3s ease-in-out infinite;
-        }
-      `}</style>
-
-      {/* Animated background hearts */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute"
-            initial={{ opacity: 0.1, scale: 0.5 }}
-            animate={{
-              y: [-20, 20, -20],
-              rotate: [0, 10, -10, 0],
-            }}
-            transition={{
-              duration: 4 + i,
-              repeat: Infinity,
-              delay: i * 0.5
-            }}
-            style={{
-              left: `${10 + i * 15}%`,
-              top: `${20 + (i % 3) * 20}%`,
-            }}
-          >
-            <Heart className="w-8 h-8 text-rose-200" fill="currentColor" />
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Header */}
-      <div className="relative z-10 px-6 pt-6 pb-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', duration: 0.8 }}
-              className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200"
-            >
-              <Heart className="w-7 h-7 text-white heartbeat" fill="white" />
-            </motion.div>
-            <div>
-              <span className="font-semibold text-xl bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
-                Lovebirds
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate('settings')}
-            className="w-10 h-10 rounded-xl bg-white/80 backdrop-blur-sm border border-rose-100 flex items-center justify-center hover:bg-rose-50 transition-colors shadow-sm"
-          >
-            <Settings className="w-5 h-5 text-gray-600" />
-          </button>
+    <div className="bg-[#F5F0F6] flex flex-col h-screen w-full max-w-[430px] mx-auto">
+      {/* Status Bar */}
+      <div className="bg-transparent h-[44px] px-6 flex items-center justify-between">
+        <p className="text-[16px]">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+        <div className="flex gap-1 items-center">
+          <div className="w-[18px] h-[10px]" />
+          <div className="w-[15px] h-[11px]" />
+          <div className="w-[27px] h-[13px]" />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="relative z-10 px-6 pb-24">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Greeting */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-4"
-          >
-            <h1 className="text-2xl font-bold text-gray-900">
-              {getGreeting()}, {userName} 💕
-            </h1>
-            {daysTogether && (
-              <p className="text-gray-600 mt-1 flex items-center justify-center gap-2">
-                <Flame className="w-4 h-4 text-orange-500" />
-                {daysTogether} days together
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Couple Photo with Anniversary Tracker */}
+        <div className="relative w-full h-[200px] mb-6 px-5">
+          <div className="relative w-full h-full rounded-3xl overflow-hidden">
+            <img
+              src="https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80"
+              alt="Couple"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
+
+            {/* Anniversary Tracker Overlay */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 min-w-[240px] text-center shadow-lg border border-white/60">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Heart className="w-4 h-4 text-[#FF2D55]" fill="#FF2D55" />
+                <p className="font-['Lora',serif] text-[16px] text-[#2c2c2c]">Together for</p>
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[20px] text-[#FF2D55]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                {getTimeTogether()}
               </p>
-            )}
-          </motion.div>
+            </div>
+          </div>
+        </div>
 
-          {/* Partner Status Card */}
-          {relationship?.partner_b_id ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="bg-gradient-to-br from-rose-500 to-pink-500 text-white overflow-hidden border-0 shadow-xl shadow-rose-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-rose-100 text-sm">Your Partner</p>
-                      <h2 className="text-2xl font-bold mt-1">{partnerName}</h2>
-                      <p className="text-rose-100 mt-2 text-sm">
-                        Streak: <span className="text-white font-medium">{currentStreak} days</span>
+        {/* Partner's Capacity */}
+        <div className="px-5 mb-5">
+          <div className="bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] rounded-3xl p-5 shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center border-2 border-white">
+                    <span className="text-2xl">{partnerName.charAt(0).toUpperCase()}</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="font-['Nunito_Sans',sans-serif] text-[18px] text-white" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    {partnerName}
+                  </p>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    {getPartnerMood()}
+                  </p>
+                  {getPartnerCapacityLevel() !== null && (
+                    <div className="mt-2">
+                      <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-white/90 mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        {getEnergyLevel(getPartnerCapacityLevel()!)} • {getPartnerCapacityLevel()}%
                       </p>
-                    </div>
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
-                    >
-                      <Heart className="w-8 h-8 text-white" fill="white" />
-                    </motion.div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 shadow-lg">
-                <CardContent className="p-6 text-center">
-                  <Gift className="w-12 h-12 mx-auto text-amber-500 mb-3" />
-                  <h3 className="font-semibold text-gray-900">Waiting for your partner</h3>
-                  <p className="text-gray-600 text-sm mt-1">Share your invite code to connect</p>
-                  <button
-                    onClick={() => onNavigate('settings')}
-                    className="mt-4 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium shadow-lg shadow-amber-200 hover:shadow-xl transition-all"
-                  >
-                    Share Invite
-                  </button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Daily Question Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-          > (fix: resolve homepage dates display and date tab functionality)
-            <button
-              onClick={() => onNavigate('daily-question')}
-              className="w-full text-left"
-              disabled={!relationship}
-            >
-              <Card className="hover:shadow-xl transition-all cursor-pointer group overflow-hidden border-0 shadow-lg">
-                <CardContent className="p-0">
-                  <div className="bg-gradient-to-r from-purple-500 to-violet-500 p-4 text-white">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                          <Sparkles className="w-5 h-5" />
-                        </div>
-                        <span className="font-semibold text-lg">Daily Question</span>
+                      <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white transition-all duration-300"
+                          style={{ width: `${getPartnerCapacityLevel()}%` }}
+                        />
                       </div>
-                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </div>
-                  </div>
-                  <div className="p-4 bg-white">
-                    {canSeeFeedback ? (
-                      <>
-                        <p className="text-gray-800 font-medium">Results are ready! 🎉</p>
-                        <p className="text-sm text-gray-500 mt-1">See how well you know each other</p>
-                      </>
-                    ) : hasCompletedDailyQuestion ? (
-                      <>
-                        <p className="text-gray-800 font-medium">Waiting for {partnerName}...</p>
-                        <p className="text-sm text-gray-500 mt-1">We'll notify you when they respond</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-gray-800 font-medium">New question available!</p>
-                        <p className="text-sm text-gray-500 mt-1">Answer and guess each other's responses</p>
-                      </>
+                  )}
+                </div>
+              </div>
+              <Heart className="w-8 h-8 text-white flex-shrink-0" fill="white" />
+            </div>
+          </div>
+        </div>
+
+        {/* Location Tracking */}
+        <div className="px-5 mb-5">
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 shadow-md border border-white/60">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Location Sharing
+                </h3>
+                <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Choose how to share your location
+                </p>
+              </div>
+            </div>
+
+            {/* Location Sharing Options */}
+            <div className="space-y-3 mb-4">
+              {/* Off */}
+              <button
+                onClick={() => handleLocationSharingChange('off')}
+                disabled={isUpdatingLocation}
+                className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                  getLocationSharingMode() === 'off'
+                    ? 'border-[#06B6D4] bg-[#06B6D4]/10'
+                    : 'border-gray-200 bg-white'
+                } disabled:opacity-50`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    getLocationSharingMode() === 'off' ? 'border-[#06B6D4]' : 'border-gray-300'
+                  }`}>
+                    {getLocationSharingMode() === 'off' && (
+                      <div className="w-3 h-3 rounded-full bg-[#06B6D4]" />
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </button>
-          </motion.div>
-
-          {/* Partner Capacity Check-In */}
-          {partnerCapacity && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.17 }}
-            >
-              <PartnerCapacityView
-                checkin={partnerCapacity}
-                partnerName={partnerName}
-                isLongDistance={couple?.is_long_distance || false}
-              />
-            </motion.div>
-          )}
-
-          {/* My Capacity Today Prompt */}
-          {relationship?.partner_b_id && !partnerCapacity && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.23 }}
-            >
-              <button
-                onClick={() => onNavigate('capacity-checkin')}
-                className="w-full text-left"
-              >
-                <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all">
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-4">
-                      <motion.div
-                        animate={{ y: [-2, 2, -2] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-purple-200"
-                      >
-                        <Heart className="w-6 h-6 text-white" fill="white" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <p className="text-xs text-purple-600 font-semibold uppercase tracking-wide">My Capacity Today</p>
-                        <h3 className="font-semibold text-gray-900 mt-1">Share how you're feeling</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          Let {partnerName} know your mood and what you need - it helps them show up better for you
-                        </p>
-                        <div className="mt-3">
-                          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-sm font-medium rounded-xl shadow-md">
-                            <span>Share Your Capacity</span>
-                            <ChevronRight className="w-4 h-4" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  <div className="flex-1">
+                    <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      Off
+                    </p>
+                    <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      No location tracking
+                    </p>
+                  </div>
+                </div>
               </button>
-            </motion.div>
-          )}
 
-          {/* What Feels Missing? */}
-          {relationship?.partner_b_id && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.26 }}
-            >
+              {/* App Only */}
               <button
-                onClick={() => setShowNeedModal(true)}
-                className="w-full text-left"
+                onClick={() => handleLocationSharingChange('app')}
+                disabled={isUpdatingLocation}
+                className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                  getLocationSharingMode() === 'app'
+                    ? 'border-[#8B5CF6] bg-[#8B5CF6]/10'
+                    : 'border-gray-200 bg-white'
+                } disabled:opacity-50`}
               >
-                <Card className="border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg hover:shadow-xl transition-all">
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-4">
-                      <motion.div
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-200"
-                      >
-                        <Heart className="w-6 h-6 text-white" fill="white" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <p className="text-xs text-amber-600 font-semibold uppercase tracking-wide">What Feels Missing?</p>
-                        <h3 className="font-semibold text-gray-900 mt-1">Tell us what you need</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          We'll help {partnerName} know how to support you in a way that feels right to them
-                        </p>
-                        <div className="mt-3">
-                          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-medium rounded-xl shadow-md">
-                            <span>Share What's Missing</span>
-                            <ChevronRight className="w-4 h-4" />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    getLocationSharingMode() === 'app' ? 'border-[#8B5CF6]' : 'border-gray-300'
+                  }`}>
+                    {getLocationSharingMode() === 'app' && (
+                      <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      App Only
+                    </p>
+                    <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      For date suggestions, not visible to {partnerName}
+                    </p>
+                  </div>
+                </div>
               </button>
-            </motion.div>
-          )}
 
-          {/* Solo Mode - Partner Form Invite */}
-          {couple?.relationship_mode === 'solo' && !couple?.partner_form_completed && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <PartnerFormInvite couple={couple} />
-            </motion.div>
-          )}
-
-          {/* Long Distance Features */}
-          {couple?.is_long_distance && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <WeeklyRhythm couple={couple} user={user} />
-            </motion.div>
-          )}
-
-          {/* Async Date Ideas - Always Show */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-          >
-            <AsyncDateIdeas />
-          </motion.div>
-
-          {/* Location-Based Date Suggestions - Show even without partner */}
-          {relationship && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <LocationDateSuggestions
-                couple={relationship}
-                partnerProfile={partnerProfile}
-              />
-            </motion.div>
-          )}
-
-          {/* Quick Actions Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 }}
-            >
+              {/* Share with Partner */}
               <button
-                onClick={() => onNavigate('messages')}
-                className="w-full"
+                onClick={() => handleLocationSharingChange('partner')}
+                disabled={isUpdatingLocation}
+                className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                  getLocationSharingMode() === 'partner'
+                    ? 'border-[#FF2D55] bg-[#FF2D55]/10'
+                    : 'border-gray-200 bg-white'
+                } disabled:opacity-50`}
               >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="relative">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                        <MessageCircleHeart className="w-7 h-7 text-blue-500" />
-                      </div>
-                      {unreadCount > 0 && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                          {unreadCount}
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Messages</h3>
-                    <p className="text-xs text-gray-500 mt-1">Send love notes</p>
-                  </CardContent>
-                </Card>
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    getLocationSharingMode() === 'partner' ? 'border-[#FF2D55]' : 'border-gray-300'
+                  }`}>
+                    {getLocationSharingMode() === 'partner' && (
+                      <div className="w-3 h-3 rounded-full bg-[#FF2D55]" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      Share with {partnerName}
+                    </p>
+                    <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      {partnerName} can see your location in real-time
+                    </p>
+                  </div>
+                </div>
               </button>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 }}
-            >
-              <button
-                onClick={() => onNavigate('dates')}
-                className="w-full"
-              >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-rose-100 to-pink-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Calendar className="w-7 h-7 text-rose-500" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Plan a Date</h3>
-                    <p className="text-xs text-gray-500 mt-1">Curated experiences</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <button
-                onClick={() => onNavigate('memories')}
-                className="w-full"
-              >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <BookHeart className="w-7 h-7 text-amber-500" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Memories</h3>
-                    <p className="text-xs text-gray-500 mt-1">Your love story</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <button
-                onClick={() => onNavigate('weekly-suggestions')}
-                className="w-full"
-              >
-                <Card className="h-full hover:shadow-xl transition-all cursor-pointer group border-0 shadow-lg">
-                  <CardContent className="p-5 flex flex-col items-center text-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-pink-100 to-rose-100 rounded-2xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Sparkles className="w-7 h-7 text-pink-500" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900">Weekly</h3>
-                    <p className="text-xs text-gray-500 mt-1">AI suggestions</p>
-                  </CardContent>
-                </Card>
-              </button>
-            </motion.div>
+            {/* Show distance if both are sharing with partner */}
+            {shareWithPartner && partnerLocation && distanceToPartner() && (
+              <div className="mt-4 p-3 bg-gradient-to-br from-[#06B6D4]/10 to-[#3B82F6]/10 rounded-xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Navigation className="w-4 h-4 text-[#06B6D4]" />
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    {distanceToPartner()!.formatted}
+                  </p>
+                </div>
+                <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Distance to {partnerName}
+                </p>
+              </div>
+            )}
           </div>
+        </div>
 
-          {/* More Options - Collapsible */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-          >
+        {/* Three Column Grid */}
+        <div className="px-5 mb-5">
+          <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c] mb-4 px-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+            Connect & Grow
+          </h3>
+          <div className="grid grid-cols-3 gap-4">
+            {/* Daily Questions */}
             <button
-              onClick={() => setShowMoreOptions(!showMoreOptions)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm rounded-2xl shadow-md border border-gray-100 hover:bg-white transition-colors"
+              onClick={() => onNavigate('daily-question')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
-              <span className="font-medium text-gray-700">More Options</span>
-              <motion.div
-                animate={{ rotate: showMoreOptions ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-              </motion.div>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center shadow-lg">
+                <MessageCircle className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Daily<br/>Questions
+              </p>
             </button>
 
-            <AnimatePresence>
-              {showMoreOptions && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="overflow-hidden"
-                >
-                  <div className="grid grid-cols-3 gap-3 pt-4">
-                    <button
-                      onClick={() => onNavigate('vault')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform shadow-md">
-                        <Lock className="w-5 h-5 text-white" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Vault</h3>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigate('insights')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <TrendingUp className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Insights</h3>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigate('nudges')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-rose-100 to-pink-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <Bell className="w-5 h-5 text-rose-500" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Nudges</h3>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigate('gifts')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <Gift className="w-5 h-5 text-purple-500" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Gifts</h3>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigate('tracker')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <Target className="w-5 h-5 text-indigo-500" />
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Goals</h3>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigate('dragon')}
-                      className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition-all text-center group border border-gray-100"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
-                        <span className="text-xl">🐉</span>
-                      </div>
-                      <h3 className="font-medium text-gray-900 text-xs">Dragon</h3>
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-
-          {/* Stats Row */}
-          {relationship && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
+            {/* Couples Challenges */}
+            <button
+              onClick={() => onNavigate('weekly-suggestions')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
-              <Card className="border-0 shadow-lg">
-                <CardContent className="p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4">Your Journey</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent">
-                        {currentStreak}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Day Streak</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-violet-500 bg-clip-text text-transparent">
-                        {totalCompleted}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Questions</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-                        {daysTogether || '—'}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Days</p>
-                    </div>
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] flex items-center justify-center shadow-lg">
+                <Heart className="w-8 h-8 text-white" strokeWidth={2.5} fill="white" />
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Couples<br/>Challenges
+              </p>
+            </button>
+
+            {/* Icebreakers */}
+            <button
+              onClick={() => onNavigate('icebreakers')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Ice-<br/>breakers
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* Set Your Capacity */}
+        <div className="px-5 mb-5">
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 shadow-md border border-white/60">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center text-white font-bold text-xl">
+                    {userName.charAt(0).toUpperCase()}
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+                </div>
+                <div>
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Set Your Capacity
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    {userName}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Capacity Slider */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Energy Level
+                </p>
+                <p
+                  className="font-['Nunito_Sans',sans-serif] text-[16px] font-bold"
+                  style={{
+                    fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                    color: getCapacityColor(capacityLevel)
+                  }}
+                >
+                  {capacityLevel}%
+                </p>
+              </div>
+
+              {/* Slider */}
+              <div className="relative mb-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={capacityLevel}
+                  onChange={(e) => setCapacityLevel(Number(e.target.value))}
+                  className="w-full h-3 rounded-full appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, ${getCapacityColor(capacityLevel)} 0%, ${getCapacityColor(capacityLevel)} ${capacityLevel}%, #E5E7EB ${capacityLevel}%, #E5E7EB 100%)`
+                  }}
+                />
+              </div>
+
+              {/* Energy Level Description */}
+              <div className="text-center py-3 px-4 rounded-xl" style={{ backgroundColor: `${getCapacityColor(capacityLevel)}15` }}>
+                <p
+                  className="font-['Nunito_Sans',sans-serif] text-[15px] font-semibold"
+                  style={{
+                    fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                    color: getCapacityColor(capacityLevel)
+                  }}
+                >
+                  {getEnergyLevel(capacityLevel)}
+                </p>
+              </div>
+
+              {/* Energy Level Labels */}
+              <div className="flex justify-between mt-3 text-[11px] text-[#9CA3AF] px-1">
+                <span>Numb</span>
+                <span>Low</span>
+                <span>Moderate</span>
+                <span>Good</span>
+                <span>High</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleUpdateCapacity}
+              disabled={isUpdating}
+              className="w-full text-white rounded-2xl py-3 font-['Nunito_Sans',sans-serif] text-[16px] hover:opacity-90 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                backgroundColor: getCapacityColor(capacityLevel)
+              }}
+            >
+              {isUpdating ? 'Updating...' : 'Update Capacity'}
+            </button>
+          </div>
+        </div>
+
+        {/* Helping Hand */}
+        <div className="px-5 mb-5">
+          <div
+            onClick={() => onNavigate('helping-hand')}
+            className="bg-gradient-to-br from-[#8B5CF6] to-[#A78BFA] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Helping Hand
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Get suggestions to support {partnerName}
+                  </p>
+                </div>
+              </div>
+              <svg className="w-6 h-6 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Anniversary Tracker */}
+        <div className="px-5 mb-5">
+          <div
+            onClick={() => onNavigate('anniversary-tracker')}
+            className="bg-gradient-to-br from-[#EC4899] to-[#F472B6] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Anniversary Tracker
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Track milestones & special dates
+                  </p>
+                </div>
+              </div>
+              <svg className="w-6 h-6 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Insights & Notes */}
+        <div className="px-5 mb-5">
+          <div
+            onClick={() => onNavigate('insights-notes')}
+            className="bg-gradient-to-br from-[#F59E0B] to-[#FBBF24] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Insights & Notes
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Relationship insights & reminders
+                  </p>
+                </div>
+              </div>
+              <svg className="w-6 h-6 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Upcoming Date */}
+        <div className="px-5 mb-5">
+          <div className="bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all" onClick={() => onNavigate('dates')}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <p className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-2" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Plan Your Next Date
+                </p>
+                <div className="flex items-center gap-2 text-white/90">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Find perfect date ideas
+                  </p>
+                </div>
+              </div>
+              <div className="text-3xl">💝</div>
+            </div>
+            <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Tap to explore date ideas
+            </p>
+          </div>
+        </div>
+
+        {/* Streaks */}
+        <div className="px-5 mb-6">
+          <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c] mb-3 px-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+            Your Journey
+          </h3>
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 text-center shadow-md border border-white/60">
+            <div className="text-3xl mb-2">🔥</div>
+            <p className="font-['Nunito_Sans',sans-serif] text-[28px] text-[#FF2D55] mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              {relationship?.streak || 0}
+            </p>
+            <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Daily streak
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-rose-100 z-50 shadow-lg">
-        <div className="max-w-2xl mx-auto flex justify-around items-center h-16 px-4">
-          <button className="flex flex-col items-center gap-1 py-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
-              <Heart className="w-5 h-5 text-white" fill="white" />
-            </div>
-            <span className="text-[10px] font-semibold text-rose-500">Home</span>
+      {/* Bottom Navigation Tabs */}
+      <div className="bg-white/80 backdrop-blur-xl border-t border-white/40 pb-6 pt-2 px-4 shadow-lg">
+        <div className="flex justify-around items-center max-w-[430px] mx-auto">
+          <button
+            onClick={() => handleTabNavigation('calendar')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              currentTab === 'calendar' ? 'text-[#d9a0b8]' : 'text-[#6d6d6d]'
+            }`}
+          >
+            <Calendar className="w-6 h-6" />
+            <p className="font-['Nunito_Sans',sans-serif] text-[11px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Calendar
+            </p>
           </button>
 
           <button
-            onClick={() => onNavigate('daily-question')}
-            className="flex flex-col items-center gap-1 py-2"
+            onClick={() => handleTabNavigation('messages')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              currentTab === 'messages' ? 'text-[#d9a0b8]' : 'text-[#6d6d6d]'
+            }`}
           >
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <Sparkles className="w-5 h-5 text-gray-500" />
-            </div>
-            <span className="text-[10px] font-medium text-gray-400">Daily Q</span>
+            <MessageCircle className="w-6 h-6" />
+            <p className="font-['Nunito_Sans',sans-serif] text-[11px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Messages
+            </p>
           </button>
 
           <button
-            onClick={() => onNavigate('dates')}
-            className="flex flex-col items-center gap-1 py-2"
+            onClick={() => handleTabNavigation('home')}
+            className="flex flex-col items-center gap-1 px-4 py-2 -mt-8"
           >
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <Calendar className="w-5 h-5 text-gray-500" />
+            <div className="bg-[#d9a0b8] rounded-full p-4 shadow-lg">
+              <Heart className="w-7 h-7 text-white" fill="white" />
             </div>
-            <span className="text-[10px] font-medium text-gray-400">Dates</span>
           </button>
 
           <button
-            onClick={() => onNavigate('messages')}
-            className="flex flex-col items-center gap-1 py-2 relative"
+            onClick={() => handleTabNavigation('dates')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              currentTab === 'dates' ? 'text-[#d9a0b8]' : 'text-[#6d6d6d]'
+            }`}
           >
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <MessageCircleHeart className="w-5 h-5 text-gray-500" />
-            </div>
-            {unreadCount > 0 && (
-              <div className="absolute top-1 right-1 w-4 h-4 bg-rose-500 rounded-full flex items-center justify-center text-white text-[8px] font-bold">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </div>
-            )}
-            <span className="text-[10px] font-medium text-gray-400">Messages</span>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <p className="font-['Nunito_Sans',sans-serif] text-[11px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Date Ideas
+            </p>
           </button>
 
           <button
-            onClick={() => onNavigate('memories')}
-            className="flex flex-col items-center gap-1 py-2"
+            onClick={() => handleTabNavigation('memories')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              currentTab === 'memories' ? 'text-[#d9a0b8]' : 'text-[#6d6d6d]'
+            }`}
           >
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <BookHeart className="w-5 h-5 text-gray-500" />
-            </div>
-            <span className="text-[10px] font-medium text-gray-400">Memories</span>
+            <Camera className="w-6 h-6" />
+            <p className="font-['Nunito_Sans',sans-serif] text-[11px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Memories
+            </p>
           </button>
         </div>
-      </nav>
 
-      {/* Submit Need Modal */}
-      {user && relationship && (
-        <SubmitNeedModal
-          isOpen={showNeedModal}
-          onClose={() => setShowNeedModal(false)}
-          userId={user.id}
-          coupleId={relationship.id}
-          partnerName={partnerName}
-        />
-      )}
+        {/* Home Indicator */}
+        <div className="flex justify-center mt-4">
+          <div className="bg-black h-[5px] w-[98px] rounded-full" />
+        </div>
+      </div>
     </div>
   );
 }

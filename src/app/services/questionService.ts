@@ -37,6 +37,18 @@ export const questionService = {
       return existing;
     }
 
+    // Get recently used questions for this relationship (last 14 days) to avoid repeats
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    const fourteenDaysAgoStr = fourteenDaysAgo.toISOString().split('T')[0];
+
+    const { data: recentQuestions } = await api.supabase
+      .from('daily_questions')
+      .select('question_text')
+      .eq('relationship_id', relationshipId)
+      .gte('question_date', fourteenDaysAgoStr);
+
+    const recentlyUsedTexts = recentQuestions?.map(q => q.question_text) || [];
 
     // Get a random question from the global question bank
     let questions: any[] | null = null;
@@ -69,28 +81,55 @@ export const questionService = {
         "What's a small gesture that means a lot to you?",
         "What's your favorite thing about your partner?",
         "What's something you'd love to do together this month?",
+        "What's your go-to comfort food?",
+        "What's a book that changed your perspective?",
+        "What's your favorite way to exercise or stay active?",
+        "What's a skill you'd love to learn?",
+        "What's your favorite season and why?",
+        "What's a tradition you cherish?",
+        "What's something that always makes you laugh?",
+        "What's your favorite way to spend time alone?",
+        "What's a place you've always wanted to visit?",
+        "What's your favorite type of music and why?",
       ];
 
+      // Filter out recently used questions
+      const availableFallbacks = fallbackQuestions.filter(q => !recentlyUsedTexts.includes(q));
 
-      // Create a mock question object
+      // Create a mock question object from available questions
+      const selectedQuestion = availableFallbacks.length > 0
+        ? availableFallbacks[Math.floor(Math.random() * availableFallbacks.length)]
+        : fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)]; // Fallback to any if all used
+
       questions = [{
         id: 'fallback-' + Date.now(),
-        question_text: fallbackQuestions[Math.floor(Math.random() * fallbackQuestions.length)],
+        question_text: selectedQuestion,
         question_date: today,
         relationship_id: null,
         created_at: new Date().toISOString()
       }];
+    } else {
+      // Filter out recently used questions from database questions
+      const availableQuestions = questions.filter(q => !recentlyUsedTexts.includes(q.question_text));
+
+      // If we have available questions that haven't been used recently, use those
+      // Otherwise, fall back to all questions (to prevent getting stuck)
+      const questionsToChooseFrom = availableQuestions.length > 0 ? availableQuestions : questions;
+
+      // Create a mock question object from available questions
+      const randomQuestion = questionsToChooseFrom[Math.floor(Math.random() * questionsToChooseFrom.length)];
+      questions = [randomQuestion];
     }
 
-    // Select a random question
-    const randomQuestion = questions[Math.floor(Math.random() * questions.length)];
+    // Select the question (now filtered)
+    const selectedQuestion = questions[0];
 
     // Create a new daily question for this relationship
     try {
       const { data: question, error } = await api.supabase
         .from('daily_questions')
         .insert({
-          question_text: randomQuestion.question_text,
+          question_text: selectedQuestion.question_text,
           question_date: today,
           relationship_id: relationshipId,
         })
@@ -101,7 +140,7 @@ export const questionService = {
         // If insert fails, return a mock question object
         return {
           id: 'mock-' + Date.now(),
-          question_text: randomQuestion.question_text,
+          question_text: selectedQuestion.question_text,
           question_date: today,
           relationship_id: relationshipId,
           created_at: new Date().toISOString()
@@ -113,12 +152,29 @@ export const questionService = {
       // Return mock question if database operations fail
       return {
         id: 'mock-' + Date.now(),
-        question_text: randomQuestion.question_text,
+        question_text: selectedQuestion.question_text,
         question_date: today,
         relationship_id: relationshipId,
         created_at: new Date().toISOString()
       };
     }
+  },
+
+  /**
+   * Get question usage analytics to help prevent repeats
+   */
+  async getQuestionUsageStats(relationshipId: string): Promise<{ question_text: string; last_used: string }[]> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data } = await api.supabase
+      .from('daily_questions')
+      .select('question_text, question_date')
+      .eq('relationship_id', relationshipId)
+      .gte('question_date', thirtyDaysAgo.toISOString().split('T')[0])
+      .order('question_date', { ascending: false });
+
+    return data || [];
   },
 
   async saveAnswer(questionId: string, userId: string, answerText: string): Promise<QuestionAnswer> {
