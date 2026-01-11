@@ -1,11 +1,14 @@
 -- Fix Storage RLS policies for photo uploads
 -- This allows authenticated users to upload and access their photos
 
--- Enable RLS on storage.objects if not already enabled
--- Note: This might already be enabled, but we'll ensure it
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can upload their own photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own photos" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can view photos" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own photos" ON storage.objects;
 
 -- Policy 1: Allow authenticated users to upload their own photos
-CREATE POLICY IF NOT EXISTS "Users can upload their own photos"
+CREATE POLICY "Users can upload their own photos"
 ON storage.objects
 FOR INSERT
 TO authenticated
@@ -15,7 +18,7 @@ WITH CHECK (
 );
 
 -- Policy 2: Allow authenticated users to update their own photos
-CREATE POLICY IF NOT EXISTS "Users can update their own photos"
+CREATE POLICY "Users can update their own photos"
 ON storage.objects
 FOR UPDATE
 TO authenticated
@@ -30,14 +33,14 @@ WITH CHECK (
 
 -- Policy 3: Allow authenticated users to read all photos in the photos bucket
 -- This allows partners to see each other's photos
-CREATE POLICY IF NOT EXISTS "Authenticated users can view photos"
+CREATE POLICY "Authenticated users can view photos"
 ON storage.objects
 FOR SELECT
 TO authenticated
 USING (bucket_id = 'photos');
 
 -- Policy 4: Allow users to delete their own photos
-CREATE POLICY IF NOT EXISTS "Users can delete their own photos"
+CREATE POLICY "Users can delete their own photos"
 ON storage.objects
 FOR DELETE
 TO authenticated
