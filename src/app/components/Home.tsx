@@ -40,7 +40,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
   // Debug: Log props received by Home component
   useEffect(() => {
-    console.log('🏠 Home component received props:', { userName, partnerName });
+    console.log('🏠 Home component received props:', {
+      userName,
+      partnerName,
+      partnerNameLength: partnerName?.length,
+      partnerNameType: typeof partnerName
+    });
+    console.log('🏠 partnerName exact value:', JSON.stringify(partnerName));
   }, [userName, partnerName]);
 
   // Handle couple photo upload
