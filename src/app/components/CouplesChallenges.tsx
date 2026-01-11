@@ -452,7 +452,19 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
               </h4>
             </div>
 
-            {currentChallenge.partnerResponse?.is_visible_to_partner ? (
+            {!currentChallenge.myResponse ? (
+              // User hasn't completed the challenge yet - show locked state
+              <div className="text-center py-4">
+                <Lock className="w-8 h-8 text-purple-300 mx-auto mb-2" />
+                <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-purple-700 mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Complete this challenge to see {partnerName}'s response
+                </p>
+                <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-purple-500" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Submit your answer first to unlock their response
+                </p>
+              </div>
+            ) : currentChallenge.partnerResponse?.is_visible_to_partner ? (
+              // User has completed & partner's response is visible
               <>
                 {/* Partner's Media */}
                 {currentChallenge.partnerResponse.media_url && (
@@ -478,6 +490,7 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
                 </p>
               </>
             ) : currentChallenge.partnerResponse && !currentChallenge.partnerResponse.is_visible_to_partner ? (
+              // User has completed but partner set response to private
               <div className="text-center py-4">
                 <Lock className="w-8 h-8 text-purple-300 mx-auto mb-2" />
                 <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-purple-700" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
@@ -485,6 +498,7 @@ export function CouplesChallenges({ onBack }: CouplesChallengesProps) {
                 </p>
               </div>
             ) : (
+              // User has completed but partner hasn't responded yet
               <div className="text-center py-4">
                 <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-2">
                   <MessageCircle className="w-6 h-6 text-purple-400" />
