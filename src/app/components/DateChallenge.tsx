@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Zap, Check, X, RefreshCw, Calendar, DollarSign, Clock, MapPin, Navigation, Users2, MapPinned, Home, Palmtree } from 'lucide-react';
+import { ChevronLeft, Zap, Check, X, RefreshCw, Calendar, DollarSign, Clock, MapPin, Navigation, Users2, MapPinned, Home, Palmtree, Heart } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
@@ -27,6 +27,7 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   const [nearbyPlaces, setNearbyPlaces] = useState<Place[]>([]);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [venueFetchError, setVenueFetchError] = useState(false);
+  const [selectedVenue, setSelectedVenue] = useState<Place | null>(null);
 
   const { userLocation, partnerLocation, getCurrentLocation, shareWithApp } = useLocation();
 
@@ -397,6 +398,108 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
     return uniqueCategories;
   };
 
+  const generateItemizedPlan = (venue: Place, dateIdea: typeof dateSuggestionTemplates[0]): string[] => {
+    const plan: string[] = [];
+    const category = venue.category;
+    const isRestaurant = category === 'restaurant' || category === 'cafe';
+    const isPark = category === 'park';
+    const isMuseum = category === 'museum';
+    const isActivity = category === 'activity' || category === 'entertainment';
+    const isBar = category === 'bar';
+    const isTheater = category === 'theater' || category === 'cinema';
+
+    // Start with arrival
+    plan.push(`Arrive at ${venue.name} (${placesService.formatDistance(venue.distance)} away)`);
+
+    // Add venue-specific activities based on category and date type
+    if (isRestaurant) {
+      if (dateIdea.title.toLowerCase().includes('breakfast') || dateIdea.title.toLowerCase().includes('brunch')) {
+        plan.push('Order your favorite breakfast items or try something new');
+        plan.push('Enjoy a leisurely meal together while chatting about your plans for the day');
+        plan.push('Share a dessert or specialty coffee');
+      } else if (dateIdea.title.toLowerCase().includes('dinner')) {
+        plan.push('Browse the menu together and share what sounds good');
+        plan.push('Order appetizers to share (great for trying new things!)');
+        plan.push('Enjoy your main courses and talk about your week');
+        plan.push('Share a dessert if you\'re still hungry');
+      } else {
+        plan.push('Browse the menu and pick something you\'ll both enjoy');
+        plan.push('Order and find a cozy spot to sit');
+        plan.push('Enjoy your food while having great conversation');
+      }
+      plan.push('Take a photo together before you leave');
+    } else if (isPark) {
+      plan.push('Take a leisurely walk through the park together');
+      if (dateIdea.title.toLowerCase().includes('picnic')) {
+        plan.push('Find a perfect spot to lay out your picnic blanket');
+        plan.push('Enjoy the food you brought while taking in the scenery');
+        plan.push('Play a simple game or just relax and talk');
+      } else {
+        plan.push('Explore different paths and areas you haven\'t seen before');
+        plan.push('Take photos of beautiful spots or fun moments');
+        plan.push('Find a bench or nice area to sit and just enjoy each other\'s company');
+      }
+      plan.push('Take a selfie to remember the moment');
+    } else if (isMuseum) {
+      plan.push('Get tickets and grab a map of the exhibits');
+      plan.push('Explore the galleries together, discussing your favorite pieces');
+      plan.push('Take turns picking which exhibits to visit next');
+      plan.push('Share what you each found most interesting or surprising');
+      plan.push('Visit the gift shop and find a small memento');
+      plan.push('Take a photo in front of your favorite exhibit');
+    } else if (isActivity) {
+      plan.push('Get oriented and understand how everything works');
+      plan.push('Jump into the fun together!');
+      plan.push('Challenge each other or work together depending on the activity');
+      plan.push('Take breaks to laugh about funny moments');
+      plan.push('Grab refreshments if available');
+      plan.push('Take photos or videos to capture the memories');
+    } else if (isBar) {
+      plan.push('Browse the drink menu together');
+      plan.push('Order your first round and find a comfortable spot');
+      plan.push('Try each other\'s drinks if you\'re feeling adventurous');
+      plan.push('Enjoy deep conversation or play bar games if available');
+      plan.push('Order appetizers to share if you\'re hungry');
+    } else if (isTheater) {
+      plan.push('Arrive early to get tickets and snacks');
+      plan.push('Pick your favorite movie snacks together');
+      plan.push('Find your seats and get comfortable');
+      plan.push('Enjoy the movie!');
+      plan.push('Discuss your favorite parts afterward');
+    } else {
+      // Generic plan for other venues
+      plan.push('Explore and experience what this place has to offer');
+      plan.push('Take your time and enjoy being together');
+      plan.push('Share what you\'re both thinking and feeling');
+      plan.push('Make the most of this time together');
+    }
+
+    // Add closing
+    if (!plan.some(item => item.includes('photo') || item.includes('selfie'))) {
+      plan.push('Take a photo together to remember the date');
+    }
+    plan.push(`Head home or continue the date at another location nearby`);
+
+    return plan;
+  };
+
+  const getVenueSummary = (venue: Place): string => {
+    const summaries: Record<string, string> = {
+      restaurant: 'A great spot for dining together with delicious food and good atmosphere.',
+      cafe: 'Perfect for coffee, conversation, and a relaxed vibe.',
+      bar: 'Enjoy drinks, good music, and quality time in a social setting.',
+      park: 'Beautiful outdoor space perfect for walking, picnics, and enjoying nature together.',
+      museum: 'Explore art, culture, and history while spending quality time together.',
+      theater: 'Entertainment and shared experiences watching shows or movies.',
+      cinema: 'Watch the latest movies together in a comfortable theater setting.',
+      activity: 'Fun and engaging activities perfect for creating memorable moments together.',
+      entertainment: 'Exciting entertainment options for a fun date experience.',
+      shopping: 'Browse shops together and enjoy a day of retail therapy.',
+    };
+
+    return summaries[venue.category] || 'A great location for your date!';
+  };
+
   const acceptChallenge = () => {
     setHasAccepted(true);
   };
@@ -755,7 +858,11 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                               }[place.category] || '📍';
 
                               return (
-                                <div key={place.id} className="bg-white rounded-lg p-4 text-left shadow-sm hover:shadow-md transition-shadow">
+                                <div
+                                  key={place.id}
+                                  onClick={() => setSelectedVenue(place)}
+                                  className="bg-white rounded-lg p-4 text-left shadow-sm hover:shadow-lg transition-all cursor-pointer border-2 border-transparent hover:border-purple-300"
+                                >
                                   <div className="flex items-start gap-3">
                                     <div className="text-2xl">{categoryEmoji}</div>
                                     <div className="flex-1 min-w-0">
@@ -773,7 +880,7 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                                         <p className="text-xs text-gray-400 mb-2 italic">Address details not available</p>
                                       )}
 
-                                      <div className="flex items-center gap-3 flex-wrap">
+                                      <div className="flex items-center gap-3 flex-wrap mb-2">
                                         <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full capitalize">
                                           {place.category}
                                         </span>
@@ -787,6 +894,11 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                                           <span className="text-xs text-gray-500">{place.description}</span>
                                         )}
                                       </div>
+
+                                      <button className="text-xs text-purple-600 font-medium hover:text-purple-700 flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" />
+                                        View Date Plan →
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -895,6 +1007,182 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                   )}
                 </div>
               </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Venue Detail Modal */}
+        <AnimatePresence>
+          {selectedVenue && selectedDate && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              onClick={() => setSelectedVenue(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              >
+                {/* Header */}
+                <div className="sticky top-0 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-t-2xl">
+                  <button
+                    onClick={() => setSelectedVenue(null)}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <div className="flex items-start gap-4">
+                    <div className="text-4xl">
+                      {{
+                        restaurant: '🍽️',
+                        cafe: '☕',
+                        bar: '🍺',
+                        park: '🌳',
+                        museum: '🎨',
+                        theater: '🎭',
+                        cinema: '🎬',
+                        activity: '🎯',
+                        entertainment: '🎪',
+                      }[selectedVenue.category] || '📍'}
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-bold mb-1">{selectedVenue.name}</h2>
+                      <div className="flex items-center gap-3 flex-wrap text-sm">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          {placesService.formatDistance(selectedVenue.distance)}
+                        </span>
+                        {selectedVenue.rating && (
+                          <span>⭐ {selectedVenue.rating.toFixed(1)}</span>
+                        )}
+                        {selectedVenue.priceLevel && (
+                          <span>{selectedVenue.priceLevel}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 space-y-6">
+                  {/* Venue Info */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-purple-600" />
+                      Venue Information
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Address</p>
+                        <p className="text-sm text-gray-900">{selectedVenue.address}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Category</p>
+                        <p className="text-sm text-gray-900 capitalize">{selectedVenue.category}</p>
+                      </div>
+                      {selectedVenue.description && (
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Details</p>
+                          <p className="text-sm text-gray-900">{selectedVenue.description}</p>
+                        </div>
+                      )}
+                      {selectedVenue.isOpen !== undefined && (
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Status</p>
+                          <p className={`text-sm font-medium ${selectedVenue.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                            {selectedVenue.isOpen ? '✓ Currently Open' : '✗ Currently Closed'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Summary */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-purple-600" />
+                      Why This Place is Perfect
+                    </h3>
+                    <p className="text-sm text-gray-700 bg-purple-50 rounded-lg p-4">
+                      {getVenueSummary(selectedVenue)}
+                    </p>
+                  </div>
+
+                  {/* Itemized Date Plan */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-purple-600" />
+                      Your Date Plan
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Here's a step-by-step plan for your <strong>{selectedDate.title}</strong> at {selectedVenue.name}:
+                    </p>
+                    <div className="space-y-2">
+                      {generateItemizedPlan(selectedVenue, selectedDate).map((step, index) => (
+                        <div key={index} className="flex items-start gap-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-3">
+                          <div className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                            {index + 1}
+                          </div>
+                          <p className="text-sm text-gray-800 flex-1">{step}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Cost Estimate */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-purple-600" />
+                      Estimated Cost
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-sm text-gray-700">
+                        Based on this venue's price level ({selectedVenue.priceLevel || 'Varies'}) and your date
+                        budget ({getBudgetSymbol(selectedDate.budget)}), expect to spend approximately:
+                      </p>
+                      <p className="text-2xl font-bold text-purple-600 mt-2">
+                        {selectedVenue.priceLevel === 'Free' ? 'Free!' :
+                         selectedVenue.priceLevel === '$' ? '$10-30' :
+                         selectedVenue.priceLevel === '$$' ? '$30-75' :
+                         selectedVenue.priceLevel === '$$$' ? '$75-150' :
+                         selectedVenue.priceLevel === '$$$$' ? '$150+' :
+                         getBudgetSymbol(selectedDate.budget) === '$' ? '$20 or less' :
+                         getBudgetSymbol(selectedDate.budget) === '$$' ? '$20-75' :
+                         '$75+'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2">
+                        *Actual cost may vary based on your choices and local pricing
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      onClick={() => setSelectedVenue(null)}
+                      variant="outline"
+                      className="flex-1 h-12"
+                    >
+                      Close
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setSelectedVenue(null);
+                        acceptChallenge();
+                      }}
+                      className="flex-1 h-12 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Plan This Date!
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
