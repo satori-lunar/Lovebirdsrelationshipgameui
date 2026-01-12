@@ -161,13 +161,19 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
       const availableCategories = new Set(uniquePlaces.map(place => place.category));
 
       // Step 4: Filter dates to those that match available venues
+      // IMPORTANT: Only match dates if their PRIMARY venue type is available
       const goingOutDates = dateSuggestionTemplates.filter(
         date => date.environment === 'outdoor' || date.environment === 'both'
       );
 
       const matchingDates = goingOutDates.filter(date => {
+        const primaryVenue = getPrimaryVenueCategory(date);
+        // Date must have its primary venue available
+        if (primaryVenue && availableCategories.has(primaryVenue)) {
+          return true;
+        }
+        // If no clear primary venue identified, check if any categories match
         const dateCategories = getDateCategories(date);
-        // Date matches if at least one of its categories is available
         return dateCategories.some(cat => availableCategories.has(cat));
       });
 
@@ -177,9 +183,16 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
 
       // Step 6: Filter venues to those relevant for the selected date
       const dateCategories = getDateCategories(selectedDateIdea);
-      const relevantPlaces = uniquePlaces.filter(place =>
-        dateCategories.includes(place.category as PlaceCategory)
-      ).slice(0, 5);
+      const primaryVenue = getPrimaryVenueCategory(selectedDateIdea);
+
+      // Prioritize primary venue, then add supporting venues
+      const relevantPlaces = uniquePlaces.filter(place => {
+        const cat = place.category as PlaceCategory;
+        // Always include primary venue
+        if (primaryVenue && cat === primaryVenue) return true;
+        // Include other matching categories
+        return dateCategories.includes(cat);
+      }).slice(0, 5);
 
       // Set the results
       setSelectedDate(selectedDateIdea);
@@ -206,6 +219,71 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
     setNearbyPlaces([]);
     setDateEnvironment(null);
     setLocationPreference(null);
+  };
+
+  const getPrimaryVenueCategory = (dateIdea: typeof dateSuggestionTemplates[0]): PlaceCategory | null => {
+    // Identify the PRIMARY venue need for a date (not secondary/optional venues)
+    const title = dateIdea.title?.toLowerCase() || '';
+    const desc = dateIdea.description?.toLowerCase() || '';
+    const dateType = dateIdea.dateType?.toLowerCase() || '';
+
+    // Check title and description for PRIMARY venue indicators
+    // Beach/outdoor/nature activities
+    if (title.includes('beach') || title.includes('sunset stroll') || title.includes('nature') ||
+        title.includes('hike') || title.includes('hiking') || title.includes('trail') ||
+        title.includes('picnic') || title.includes('park walk') ||
+        desc.includes('beach') || desc.includes('shore') || desc.includes('hiking') ||
+        desc.includes('trail') || desc.includes('nature') || desc.includes('picnic')) {
+      return 'park';
+    }
+
+    // Restaurant/dining dates
+    if (title.includes('dinner') || title.includes('restaurant') || title.includes('brunch') ||
+        title.includes('lunch') || title.includes('dine') || title.includes('meal') ||
+        desc.includes('restaurant') || (desc.includes('dinner') && !desc.includes('cook at home'))) {
+      return 'restaurant';
+    }
+
+    // Museum/cultural dates
+    if (title.includes('museum') || title.includes('gallery') || title.includes('exhibit') ||
+        title.includes('art show') || desc.includes('museum') || desc.includes('gallery') ||
+        desc.includes('exhibit')) {
+      return 'museum';
+    }
+
+    // Theater/cinema dates
+    if (title.includes('movie') || title.includes('cinema') || title.includes('theater') ||
+        title.includes('show') || title.includes('concert') ||
+        desc.includes('movie theater') || desc.includes('cinema') || desc.includes('live show')) {
+      return 'theater';
+    }
+
+    // Bar/drinks dates
+    if (title.includes('bar') || title.includes('pub') || title.includes('drinks') ||
+        title.includes('cocktail') || desc.includes('bar') || desc.includes('pub')) {
+      return 'bar';
+    }
+
+    // Activity/entertainment dates
+    if (title.includes('bowling') || title.includes('arcade') || title.includes('mini golf') ||
+        title.includes('escape room') || desc.includes('bowling') || desc.includes('arcade')) {
+      return 'activity';
+    }
+
+    // Coffee/cafe dates
+    if (title.includes('coffee') || title.includes('cafe') || title.includes('coffee shop') ||
+        (desc.includes('coffee') && desc.includes('shop'))) {
+      return 'cafe';
+    }
+
+    // Check date type as fallback
+    if (dateType === 'picnic' || dateType === 'hiking') return 'park';
+    if (dateType === 'dinner') return 'restaurant';
+    if (dateType === 'museum') return 'museum';
+    if (dateType === 'movie_concert') return 'theater';
+
+    // No clear primary venue identified
+    return null;
   };
 
   const getDateCategories = (dateIdea: typeof dateSuggestionTemplates[0]): PlaceCategory[] => {
