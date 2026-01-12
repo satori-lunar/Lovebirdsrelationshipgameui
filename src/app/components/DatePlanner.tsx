@@ -154,6 +154,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
         // Filter by duration
         if (selectedDuration) {
+          if (!date.timeRequired) return false; // Skip dates without duration info
           const timeReq = date.timeRequired.toLowerCase();
           if (selectedDuration === 'quick') {
             // 1-3 hours: matches "1-2 hours", "2-3 hours"
