@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star } from 'lucide-react';
+import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star, Clock, Layers } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
@@ -17,7 +17,9 @@ interface DatePlannerProps {
 
 type LocationPreference = 'user' | 'partner' | 'middle' | null;
 type BudgetLevel = '$' | '$$' | '$$$';
-type Step = 'budget' | 'location' | 'loading' | 'results';
+type DurationPreference = 'quick' | 'half-day' | 'full-day';
+type VenuePreference = 'single' | 'multiple' | null;
+type Step = 'budget' | 'duration' | 'venues' | 'location' | 'loading' | 'results';
 
 export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
   const { user } = useAuth();
@@ -26,6 +28,8 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
   const [step, setStep] = useState<Step>('budget');
   const [selectedBudget, setSelectedBudget] = useState<BudgetLevel | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<DurationPreference | null>(null);
+  const [venuePreference, setVenuePreference] = useState<VenuePreference>(null);
   const [locationPreference, setLocationPreference] = useState<LocationPreference>(null);
   const [dateOptions, setDateOptions] = useState<Array<{
     date: typeof dateSuggestionTemplates[0];
@@ -46,8 +50,29 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
     { value: '$$$' as BudgetLevel, label: 'Special Occasion', desc: '$75+', icon: Star }
   ];
 
+  const durationOptions = [
+    { value: 'quick' as DurationPreference, label: 'Quick Date', desc: '1-3 hours', icon: Clock },
+    { value: 'half-day' as DurationPreference, label: 'Half Day', desc: '3-5 hours', icon: Clock },
+    { value: 'full-day' as DurationPreference, label: 'Full Day', desc: '5+ hours', icon: Star }
+  ];
+
+  const venueOptions = [
+    { value: 'single' as VenuePreference, label: 'Single Venue', desc: 'Stay at one place', icon: MapPin },
+    { value: 'multiple' as VenuePreference, label: 'Multiple Venues', desc: 'Visit 2-3 different spots', icon: Layers }
+  ];
+
   const handleBudgetSelect = (budget: BudgetLevel) => {
     setSelectedBudget(budget);
+    setStep('duration');
+  };
+
+  const handleDurationSelect = (duration: DurationPreference) => {
+    setSelectedDuration(duration);
+    setStep('venues');
+  };
+
+  const handleVenuePreferenceSelect = (preference: VenuePreference) => {
+    setVenuePreference(preference);
     setStep('location');
   };
 
@@ -120,12 +145,41 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       console.log(`📍 Total unique venues found: ${uniquePlaces.length}`);
 
-      // Step 3: Filter dates based on budget and love language
+      // Step 3: Filter dates based on budget, duration, and love language
       const filteredDates = dateSuggestionTemplates.filter(date => {
         // Filter by budget
         if (selectedBudget === '$' && date.budget !== '$') return false;
         if (selectedBudget === '$$' && (date.budget === '$$$')) return false;
         // $$$ shows all budgets
+
+        // Filter by duration
+        if (selectedDuration) {
+          const timeReq = date.timeRequired.toLowerCase();
+          if (selectedDuration === 'quick') {
+            // 1-3 hours: matches "1-2 hours", "2-3 hours"
+            if (!timeReq.includes('1-2') && !timeReq.includes('2-3')) return false;
+          } else if (selectedDuration === 'half-day') {
+            // 3-5 hours: matches "2-4 hours", "3-4 hours", "3-5 hours"
+            if (!timeReq.includes('2-4') && !timeReq.includes('3-4') && !timeReq.includes('3-5')) return false;
+          } else if (selectedDuration === 'full-day') {
+            // 5+ hours: matches "4-6 hours", "6-8 hours", etc.
+            if (!timeReq.includes('4-6') && !timeReq.includes('6-8') && !timeReq.includes('5-')) return false;
+          }
+        }
+
+        // Filter by venue preference
+        if (venuePreference) {
+          const dateCategories = getDateCategories(date);
+          const uniqueCategories = new Set(dateCategories);
+
+          if (venuePreference === 'single') {
+            // Single venue: prefer dates with 1-2 venue types
+            if (uniqueCategories.size > 2) return false;
+          } else if (venuePreference === 'multiple') {
+            // Multiple venues: prefer dates with 2+ venue types
+            if (uniqueCategories.size < 2) return false;
+          }
+        }
 
         // Filter by love language if available
         if (userLoveLanguage && date.loveLanguage && date.loveLanguage.length > 0) {
@@ -454,29 +508,108 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
+            <Card className="p-8 border-0 shadow-2xl bg-white overflow-hidden relative">
+              {/* Decorative background elements */}
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-pink-100 to-purple-100 rounded-full opacity-30 -mr-20 -mt-20" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-purple-100 to-pink-100 rounded-full opacity-30 -ml-16 -mb-16" />
+
+              <div className="text-center mb-8 relative">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", duration: 0.8 }}
+                  className="w-24 h-24 bg-gradient-to-br from-pink-400 via-pink-500 to-purple-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl"
+                >
+                  <DollarSign className="w-12 h-12 text-white" />
+                </motion.div>
+                <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                  What's your budget?
+                </h2>
+                <p className="text-gray-600 text-base">
+                  Choose a range that feels comfortable for you
+                </p>
+              </div>
+
+              <div className="space-y-4 relative">
+                {budgetOptions.map((option, index) => {
+                  const Icon = option.icon;
+                  const colors = [
+                    { bg: 'from-green-400 to-emerald-500', hover: 'hover:from-green-500 hover:to-emerald-600', text: 'text-green-700', badge: 'bg-green-100' },
+                    { bg: 'from-blue-400 to-indigo-500', hover: 'hover:from-blue-500 hover:to-indigo-600', text: 'text-blue-700', badge: 'bg-blue-100' },
+                    { bg: 'from-purple-400 to-pink-500', hover: 'hover:from-purple-500 hover:to-pink-600', text: 'text-purple-700', badge: 'bg-purple-100' }
+                  ];
+                  const color = colors[index];
+
+                  return (
+                    <motion.div
+                      key={option.value}
+                      initial={{ x: -50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ scale: 1.03, x: 5 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Card
+                        onClick={() => handleBudgetSelect(option.value)}
+                        className="p-6 border-2 border-transparent hover:border-white cursor-pointer transition-all shadow-lg hover:shadow-2xl bg-gradient-to-r overflow-hidden relative group"
+                        style={{
+                          background: `linear-gradient(135deg, ${color.bg.includes('green') ? '#34D399' : color.bg.includes('blue') ? '#60A5FA' : '#A78BFA'} 0%, ${color.bg.includes('green') ? '#10B981' : color.bg.includes('blue') ? '#3B82F6' : '#EC4899'} 100%)`
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-all" />
+                        <div className="relative flex items-center gap-4">
+                          <div className="w-16 h-16 bg-white/90 backdrop-blur rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <Icon className="w-8 h-8 text-gray-800" />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <h3 className="font-bold text-xl mb-1 text-white">{option.label}</h3>
+                            <p className="text-sm text-white/90 font-medium">
+                              {option.desc}
+                            </p>
+                          </div>
+                          <div className="text-white/80 group-hover:text-white transition-colors">
+                            <span className="text-2xl">→</span>
+                          </div>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Duration Selection */}
+        {step === 'duration' && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             <Card className="p-8 border-0 shadow-xl">
               <div className="text-center mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-pink-400 to-purple-400 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <DollarSign className="w-10 h-10 text-white" />
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Clock className="w-10 h-10 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold mb-3">What's your budget?</h2>
+                <h2 className="text-2xl font-bold mb-3">How long do you have?</h2>
                 <p className="text-gray-600">
-                  We'll find dates that fit your comfort zone
+                  We'll suggest dates that fit your timeframe
                 </p>
               </div>
 
               <div className="space-y-3">
-                {budgetOptions.map((option) => {
+                {durationOptions.map((option) => {
                   const Icon = option.icon;
                   return (
                     <Card
                       key={option.value}
-                      onClick={() => handleBudgetSelect(option.value)}
-                      className="p-5 border-2 border-gray-200 hover:border-pink-400 hover:bg-pink-50 cursor-pointer transition-all group"
+                      onClick={() => handleDurationSelect(option.value)}
+                      className="p-5 border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 cursor-pointer transition-all group"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-pink-100 to-pink-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Icon className="w-7 h-7 text-pink-600" />
+                        <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Icon className="w-7 h-7 text-purple-600" />
                         </div>
                         <div className="flex-1 text-left">
                           <h3 className="font-semibold text-lg mb-1">{option.label}</h3>
@@ -489,6 +622,68 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                   );
                 })}
               </div>
+
+              <Button
+                onClick={() => setStep('budget')}
+                variant="outline"
+                className="w-full mt-6"
+              >
+                Back to Budget
+              </Button>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Venue Preference Selection */}
+        {step === 'venues' && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-8 border-0 shadow-xl">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Layers className="w-10 h-10 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold mb-3">Single or multiple venues?</h2>
+                <p className="text-gray-600">
+                  Stay at one spot or visit multiple places?
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {venueOptions.map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <Card
+                      key={option.value}
+                      onClick={() => handleVenuePreferenceSelect(option.value)}
+                      className="p-5 border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Icon className="w-7 h-7 text-blue-600" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <h3 className="font-semibold text-lg mb-1">{option.label}</h3>
+                          <p className="text-sm text-gray-600">
+                            {option.desc}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <Button
+                onClick={() => setStep('duration')}
+                variant="outline"
+                className="w-full mt-6"
+              >
+                Back to Duration
+              </Button>
             </Card>
           </motion.div>
         )}
@@ -565,11 +760,11 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               </div>
 
               <Button
-                onClick={() => setStep('budget')}
+                onClick={() => setStep('venues')}
                 variant="outline"
                 className="w-full mt-6"
               >
-                Back to Budget
+                Back to Venue Selection
               </Button>
             </Card>
           </motion.div>
@@ -602,13 +797,21 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="space-y-4"
+            className="space-y-5"
           >
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-2">Your Personalized Dates</h2>
-              <p className="text-sm text-gray-600">
-                {userLoveLanguage && `Based on your ${userLoveLanguage} love language. `}
-                Click any date to see the full plan!
+            <div className="text-center mb-8">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", duration: 0.5 }}
+                className="w-16 h-16 bg-gradient-to-br from-pink-400 via-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg"
+              >
+                <Sparkles className="w-8 h-8 text-white" />
+              </motion.div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Your Perfect Dates</h2>
+              <p className="text-sm text-gray-600 max-w-md mx-auto">
+                {userLoveLanguage && `✨ Curated for your ${userLoveLanguage} love language. `}
+                Tap any date to explore the full experience!
               </p>
             </div>
 
@@ -616,116 +819,215 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               const primaryVenue = option.venues[0];
               if (!primaryVenue) return null;
 
+              const categoryColors = {
+                restaurant: 'from-orange-400 to-red-400',
+                cafe: 'from-amber-400 to-orange-400',
+                bar: 'from-purple-400 to-pink-400',
+                park: 'from-green-400 to-emerald-400',
+                museum: 'from-blue-400 to-indigo-400',
+                theater: 'from-pink-400 to-rose-400',
+                cinema: 'from-indigo-400 to-purple-400',
+                activity: 'from-cyan-400 to-blue-400',
+                entertainment: 'from-fuchsia-400 to-pink-400',
+              };
+
+              const gradient = categoryColors[primaryVenue.category as keyof typeof categoryColors] || 'from-pink-400 to-purple-400';
+
               return (
                 <motion.div
                   key={option.date.id}
-                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  initial={{ scale: 0.9, opacity: 0, y: 30 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{
+                    delay: index * 0.15,
+                    type: "spring",
+                    stiffness: 200,
+                    damping: 20
+                  }}
+                  whileHover={{ scale: 1.02, y: -5 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   <Card
                     onClick={() => setSelectedOption({ date: option.date, venue: primaryVenue })}
-                    className="p-6 border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer border-2 border-transparent hover:border-pink-300"
+                    className="overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all cursor-pointer bg-white"
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="text-3xl">
-                        {{
-                          restaurant: '🍽️',
-                          cafe: '☕',
-                          bar: '🍺',
-                          park: '🌳',
-                          museum: '🎨',
-                          theater: '🎭',
-                          cinema: '🎬',
-                          activity: '🎯',
-                          entertainment: '🎪',
-                        }[primaryVenue.category] || '📍'}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          {option.date.title}
-                        </h3>
-                        <p className="text-sm text-gray-700 mb-3">
-                          {option.date.description.replace(/\{partner_name\}/g, partnerName).substring(0, 120)}...
-                        </p>
+                    {/* Header with gradient */}
+                    <div className={`bg-gradient-to-br ${gradient} p-6 relative overflow-hidden`}>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
+                      <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12" />
 
-                        <div className="flex items-center gap-2 flex-wrap mb-3">
-                          <span className="text-xs px-2 py-1 bg-pink-100 text-pink-700 rounded-full">
-                            {getBudgetSymbol(option.date.budget)}
-                          </span>
-                          <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
-                            {option.date.timeRequired}
-                          </span>
-                          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full capitalize">
-                            {option.date.environment}
-                          </span>
-                        </div>
-
-                        <div className="border-t pt-3">
-                          <p className="text-xs font-semibold text-gray-700 mb-2">
-                            📍 Primary Venue
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{primaryVenue.name}</p>
-                              <p className="text-xs text-gray-600">{placesService.formatDistance(primaryVenue.distance)} away</p>
-                            </div>
-                            {primaryVenue.rating && (
-                              <span className="text-sm">⭐ {primaryVenue.rating.toFixed(1)}</span>
-                            )}
+                      <div className="relative flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-14 h-14 bg-white/90 backdrop-blur rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                            {{
+                              restaurant: '🍽️',
+                              cafe: '☕',
+                              bar: '🍺',
+                              park: '🌳',
+                              museum: '🎨',
+                              theater: '🎭',
+                              cinema: '🎬',
+                              activity: '🎯',
+                              entertainment: '🎪',
+                            }[primaryVenue.category] || '📍'}
                           </div>
-                          {option.venues.length > 1 && (
-                            <p className="text-xs text-gray-500 mt-2">
-                              +{option.venues.length - 1} more nearby option{option.venues.length - 1 > 1 ? 's' : ''}
-                            </p>
-                          )}
+                          <div className="text-white">
+                            <p className="text-xs font-medium opacity-90 mb-1">Date #{index + 1}</p>
+                            <h3 className="text-xl font-bold leading-tight">
+                              {option.date.title}
+                            </h3>
+                          </div>
                         </div>
-
-                        <button className="text-sm text-pink-600 font-medium hover:text-pink-700 flex items-center gap-1 mt-3">
-                          <Calendar className="w-4 h-4" />
-                          View Full Date Plan →
-                        </button>
+                        {primaryVenue.rating && (
+                          <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-lg">
+                            <span className="text-sm font-bold">⭐ {primaryVenue.rating.toFixed(1)}</span>
+                          </div>
+                        )}
                       </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-5">
+                      <p className="text-sm text-gray-700 mb-4 leading-relaxed">
+                        {option.date.description.replace(/\{partner_name\}/g, partnerName).substring(0, 110)}...
+                      </p>
+
+                      {/* Tags */}
+                      <div className="flex items-center gap-2 flex-wrap mb-4">
+                        <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-pink-100 to-pink-50 text-pink-700 rounded-full font-medium border border-pink-200">
+                          {getBudgetSymbol(option.date.budget)}
+                        </span>
+                        <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-purple-100 to-purple-50 text-purple-700 rounded-full font-medium border border-purple-200">
+                          ⏱️ {option.date.timeRequired}
+                        </span>
+                        <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-blue-100 to-blue-50 text-blue-700 rounded-full font-medium border border-blue-200 capitalize">
+                          {option.date.environment}
+                        </span>
+                      </div>
+
+                      {/* Venue Info */}
+                      <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-100 rounded-xl p-4 mb-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <MapPin className="w-4 h-4 text-pink-500" />
+                          <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+                            Starting Point
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{primaryVenue.name}</p>
+                            <p className="text-xs text-gray-600 mt-0.5">
+                              📍 {placesService.formatDistance(primaryVenue.distance)} away
+                            </p>
+                          </div>
+                        </div>
+                        {option.venues.length > 1 && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <p className="text-xs text-gray-600">
+                              <span className="font-semibold text-purple-600">
+                                +{option.venues.length - 1} more venue{option.venues.length - 1 > 1 ? 's' : ''}
+                              </span> included in this date
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action Button */}
+                      <button className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg">
+                        <Calendar className="w-4 h-4" />
+                        View Complete Date Plan
+                        <span className="text-lg">→</span>
+                      </button>
                     </div>
                   </Card>
                 </motion.div>
               );
             })}
 
-            <Button
-              onClick={() => {
-                setStep('budget');
-                setSelectedBudget(null);
-                setLocationPreference(null);
-                setDateOptions([]);
-              }}
-              variant="outline"
-              className="w-full mt-6"
-            >
-              Start Over
-            </Button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={() => {
+                  setStep('budget');
+                  setSelectedBudget(null);
+                  setSelectedDuration(null);
+                  setVenuePreference(null);
+                  setLocationPreference(null);
+                  setDateOptions([]);
+                }}
+                variant="outline"
+                className="w-full mt-6 py-6 text-base font-semibold border-2 border-gray-300 hover:border-pink-400 hover:bg-pink-50 transition-all shadow-md hover:shadow-lg"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  Start Over
+                </span>
+              </Button>
+            </motion.div>
           </motion.div>
         )}
 
         {/* No Results */}
         {step === 'results' && dateOptions.length === 0 && (
-          <Card className="p-8 text-center border-0 shadow-xl">
-            <div className="text-6xl mb-4">😔</div>
-            <h2 className="text-xl font-bold mb-2">No Dates Found</h2>
-            <p className="text-gray-600 mb-6">
-              We couldn't find any venues nearby that match your preferences. Try adjusting your budget or location.
-            </p>
-            <Button
-              onClick={() => {
-                setStep('budget');
-                setSelectedBudget(null);
-                setLocationPreference(null);
-              }}
-              className="bg-gradient-to-r from-pink-500 to-purple-500"
-            >
-              Try Again
-            </Button>
-          </Card>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+          >
+            <Card className="p-10 text-center border-0 shadow-2xl bg-gradient-to-br from-white to-purple-50 relative overflow-hidden">
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-200 rounded-full opacity-20 -mr-16 -mt-16" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-200 rounded-full opacity-20 -ml-12 -mb-12" />
+
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", delay: 0.2 }}
+                className="text-7xl mb-6"
+              >
+                🔍
+              </motion.div>
+              <h2 className="text-2xl font-bold mb-3 text-gray-900">Let's Try Something Different</h2>
+              <p className="text-gray-600 mb-8 max-w-sm mx-auto leading-relaxed">
+                We couldn't find dates matching all your preferences right now. Try adjusting your criteria for better results!
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 mb-6 max-w-sm mx-auto">
+                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Try</p>
+                  <p className="text-sm font-semibold text-pink-600">Different Budget</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Try</p>
+                  <p className="text-sm font-semibold text-purple-600">Different Duration</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Try</p>
+                  <p className="text-sm font-semibold text-blue-600">Different Location</p>
+                </div>
+                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1">Try</p>
+                  <p className="text-sm font-semibold text-indigo-600">More Venues</p>
+                </div>
+              </div>
+
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  onClick={() => {
+                    setStep('budget');
+                    setSelectedBudget(null);
+                    setSelectedDuration(null);
+                    setVenuePreference(null);
+                    setLocationPreference(null);
+                  }}
+                  className="bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 hover:from-pink-600 hover:via-purple-600 hover:to-pink-600 text-white font-bold py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    Start Fresh
+                  </span>
+                </Button>
+              </motion.div>
+            </Card>
+          </motion.div>
         )}
       </div>
 
