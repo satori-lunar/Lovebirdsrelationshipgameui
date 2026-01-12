@@ -28,17 +28,24 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [venueFetchError, setVenueFetchError] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<Place | null>(null);
+  const [goingOutRetryCount, setGoingOutRetryCount] = useState(0);
 
   const { userLocation, partnerLocation, getCurrentLocation, shareWithApp } = useLocation();
+
+  const MAX_GOING_OUT_RETRIES = 2;
 
   const handleChallengeStart = () => {
     // Show environment selection first
     setShowEnvironmentSelect(true);
+    // Reset retry count when starting fresh
+    setGoingOutRetryCount(0);
   };
 
   const handleEnvironmentSelect = (environment: DateEnvironment) => {
     setDateEnvironment(environment);
     setShowEnvironmentSelect(false);
+    // Reset retry count when selecting environment
+    setGoingOutRetryCount(0);
 
     if (environment === 'at_home') {
       // Skip location selection and go straight to spinning
@@ -236,13 +243,26 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   };
 
   const spinForDate = () => {
-    // Reset and start over
-    setShowEnvironmentSelect(true);
-    setHasAccepted(false);
-    setNearbyPlaces([]);
-    setDateEnvironment(null);
-    setLocationPreference(null);
-    setVenueFetchError(false);
+    // For at-home dates: unlimited retries, just re-spin
+    if (dateEnvironment === 'at_home') {
+      spinForDateWithEnvironment('at_home', null);
+      return;
+    }
+
+    // For going-out dates: check retry limit
+    if (dateEnvironment === 'going_out' && goingOutRetryCount >= MAX_GOING_OUT_RETRIES) {
+      // Already at limit, don't allow more retries
+      return;
+    }
+
+    // Increment retry count for going-out dates
+    if (dateEnvironment === 'going_out') {
+      setGoingOutRetryCount(prev => prev + 1);
+      // Re-spin with same location preference
+      if (locationPreference) {
+        spinForDateWithEnvironment('going_out', locationPreference);
+      }
+    }
   };
 
   const getPrimaryVenueCategory = (dateIdea: typeof dateSuggestionTemplates[0]): PlaceCategory | null => {
@@ -920,22 +940,48 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <Button
-                          onClick={spinForDate}
-                          variant="outline"
-                          className="flex-1 h-12"
-                        >
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          Try Again
-                        </Button>
-                        <Button
-                          onClick={acceptChallenge}
-                          className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white"
-                        >
-                          <Check className="w-4 h-4 mr-2" />
-                          Accept Challenge!
-                        </Button>
+                      <div className="space-y-3">
+                        {/* Show retry info for going-out dates */}
+                        {dateEnvironment === 'going_out' && goingOutRetryCount > 0 && (
+                          <div className="bg-blue-50 border-l-4 border-blue-400 p-3">
+                            <p className="text-xs text-blue-900">
+                              {goingOutRetryCount >= MAX_GOING_OUT_RETRIES ? (
+                                <>
+                                  <strong>⚠️ No more retries left.</strong> Time to commit to a date! You can accept this one or start over by going back.
+                                </>
+                              ) : (
+                                <>
+                                  <strong>Retries used:</strong> {goingOutRetryCount}/{MAX_GOING_OUT_RETRIES}
+                                  {' '}• {MAX_GOING_OUT_RETRIES - goingOutRetryCount} {MAX_GOING_OUT_RETRIES - goingOutRetryCount === 1 ? 'retry' : 'retries'} remaining
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-3">
+                          <Button
+                            onClick={spinForDate}
+                            variant="outline"
+                            className="flex-1 h-12"
+                            disabled={dateEnvironment === 'going_out' && goingOutRetryCount >= MAX_GOING_OUT_RETRIES}
+                          >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            {dateEnvironment === 'at_home'
+                              ? 'Try Again'
+                              : goingOutRetryCount >= MAX_GOING_OUT_RETRIES
+                                ? 'No More Retries'
+                                : `Try Again (${MAX_GOING_OUT_RETRIES - goingOutRetryCount} left)`
+                            }
+                          </Button>
+                          <Button
+                            onClick={acceptChallenge}
+                            className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white"
+                          >
+                            <Check className="w-4 h-4 mr-2" />
+                            Accept Challenge!
+                          </Button>
+                        </div>
                       </div>
                     </>
                   ) : (
