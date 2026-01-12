@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, Zap, Check, X, RefreshCw, Calendar, DollarSign, Clock, MapPin, Navigation, Users2, MapPinned } from 'lucide-react';
+import { ChevronLeft, Zap, Check, X, RefreshCw, Calendar, DollarSign, Clock, MapPin, Navigation, Users2, MapPinned, Home, Palmtree } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,12 +13,15 @@ interface DateChallengeProps {
 }
 
 type LocationPreference = 'user' | 'partner' | 'middle' | null;
+type DateEnvironment = 'at_home' | 'going_out' | null;
 
 export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedDate, setSelectedDate] = useState<typeof dateSuggestionTemplates[0] | null>(null);
   const [hasAccepted, setHasAccepted] = useState(false);
+  const [showEnvironmentSelect, setShowEnvironmentSelect] = useState(false);
   const [showLocationSelect, setShowLocationSelect] = useState(false);
+  const [dateEnvironment, setDateEnvironment] = useState<DateEnvironment>(null);
   const [locationPreference, setLocationPreference] = useState<LocationPreference>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<Place[]>([]);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
@@ -26,40 +29,72 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   const { userLocation, partnerLocation, getCurrentLocation, shareWithApp } = useLocation();
 
   const handleChallengeStart = () => {
-    // Show location preference selection
-    setShowLocationSelect(true);
+    // Show environment selection first
+    setShowEnvironmentSelect(true);
+  };
+
+  const handleEnvironmentSelect = (environment: DateEnvironment) => {
+    setDateEnvironment(environment);
+    setShowEnvironmentSelect(false);
+
+    if (environment === 'at_home') {
+      // Skip location selection and go straight to spinning
+      spinForDateWithEnvironment(environment, null);
+    } else {
+      // Show location preference for going out
+      setShowLocationSelect(true);
+    }
   };
 
   const handleLocationSelect = async (preference: LocationPreference) => {
     setLocationPreference(preference);
     setShowLocationSelect(false);
+    spinForDateWithEnvironment('going_out', preference);
+  };
+
+  const spinForDateWithEnvironment = async (environment: DateEnvironment, preference: LocationPreference) => {
     setIsSpinning(true);
     setHasAccepted(false);
 
     // Animate for 2 seconds then show result
     setTimeout(async () => {
-      // Filter to outdoor/both dates since we're looking for venue-based dates
-      const goingOutDates = dateSuggestionTemplates.filter(
-        date => date.environment === 'outdoor' || date.environment === 'both'
-      );
+      let datePool;
 
-      // If no outdoor dates found (shouldn't happen), fall back to all dates
-      const datePool = goingOutDates.length > 0 ? goingOutDates : dateSuggestionTemplates;
+      if (environment === 'at_home') {
+        // Filter to indoor dates only
+        datePool = dateSuggestionTemplates.filter(
+          date => date.environment === 'indoor'
+        );
+      } else {
+        // Filter to outdoor/both dates for going out
+        datePool = dateSuggestionTemplates.filter(
+          date => date.environment === 'outdoor' || date.environment === 'both'
+        );
+      }
+
+      // If no dates found (shouldn't happen), fall back to all dates
+      if (datePool.length === 0) {
+        datePool = dateSuggestionTemplates;
+      }
+
       const randomDate = datePool[Math.floor(Math.random() * datePool.length)];
-
       setSelectedDate(randomDate);
       setIsSpinning(false);
 
-      // Fetch nearby places based on location preference
-      await fetchNearbyPlaces(preference, randomDate);
+      // Fetch nearby places only for going out dates
+      if (environment === 'going_out' && preference) {
+        await fetchNearbyPlaces(preference, randomDate);
+      }
     }, 2000);
   };
 
   const spinForDate = () => {
     // Reset and start over
-    setShowLocationSelect(true);
+    setShowEnvironmentSelect(true);
     setHasAccepted(false);
     setNearbyPlaces([]);
+    setDateEnvironment(null);
+    setLocationPreference(null);
   };
 
   const fetchNearbyPlaces = async (preference: LocationPreference, dateIdea: typeof dateSuggestionTemplates[0]) => {
@@ -258,7 +293,7 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
       </div>
 
       <div className="max-w-md mx-auto px-6 -mt-6">
-        {!selectedDate && !isSpinning && !showLocationSelect && (
+        {!selectedDate && !isSpinning && !showEnvironmentSelect && !showLocationSelect && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -294,6 +329,70 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
               >
                 <Zap className="w-5 h-5 mr-2" />
                 Challenge Us!
+              </Button>
+            </Card>
+          </motion.div>
+        )}
+
+        {showEnvironmentSelect && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-8 border-0 shadow-xl">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Zap className="w-10 h-10 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold mb-3">What kind of date?</h2>
+                <p className="text-gray-600">
+                  Choose between staying cozy at home or going out
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Card
+                  onClick={() => handleEnvironmentSelect('at_home')}
+                  className="p-5 border-2 border-gray-200 hover:border-orange-400 hover:bg-orange-50 cursor-pointer transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-rose-100 to-rose-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Home className="w-7 h-7 text-rose-600" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h3 className="font-semibold text-lg mb-1">At Home</h3>
+                      <p className="text-sm text-gray-600">
+                        Cozy indoor dates like cooking, games, movie nights
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card
+                  onClick={() => handleEnvironmentSelect('going_out')}
+                  className="p-5 border-2 border-gray-200 hover:border-orange-400 hover:bg-orange-50 cursor-pointer transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Palmtree className="w-7 h-7 text-blue-600" />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h3 className="font-semibold text-lg mb-1">Going Out</h3>
+                      <p className="text-sm text-gray-600">
+                        Explore restaurants, parks, museums, and more
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              <Button
+                onClick={() => setShowEnvironmentSelect(false)}
+                variant="outline"
+                className="w-full mt-6"
+              >
+                Cancel
               </Button>
             </Card>
           </motion.div>
