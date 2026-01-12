@@ -55,66 +55,50 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   const spinForDateWithEnvironment = async (environment: DateEnvironment, preference: LocationPreference) => {
     setIsSpinning(true);
     setHasAccepted(false);
+    setLoadingPlaces(true);
 
     // Animate for 2 seconds then show result
     setTimeout(async () => {
-      let datePool;
-
       if (environment === 'at_home') {
         // Filter to indoor dates only
-        datePool = dateSuggestionTemplates.filter(
+        const datePool = dateSuggestionTemplates.filter(
           date => date.environment === 'indoor'
         );
+        const randomDate = datePool.length > 0
+          ? datePool[Math.floor(Math.random() * datePool.length)]
+          : dateSuggestionTemplates[Math.floor(Math.random() * dateSuggestionTemplates.length)];
+
+        setSelectedDate(randomDate);
+        setIsSpinning(false);
+        setLoadingPlaces(false);
       } else {
-        // Filter to outdoor/both dates for going out
-        datePool = dateSuggestionTemplates.filter(
-          date => date.environment === 'outdoor' || date.environment === 'both'
-        );
-      }
+        // For going out: FIRST fetch venues, THEN pick date based on what's available
+        if (preference) {
+          await fetchVenuesFirstThenPickDate(preference);
+        } else {
+          // Fallback if no preference somehow
+          const datePool = dateSuggestionTemplates.filter(
+            date => date.environment === 'outdoor' || date.environment === 'both'
+          );
+          const randomDate = datePool.length > 0
+            ? datePool[Math.floor(Math.random() * datePool.length)]
+            : dateSuggestionTemplates[Math.floor(Math.random() * dateSuggestionTemplates.length)];
 
-      // If no dates found (shouldn't happen), fall back to all dates
-      if (datePool.length === 0) {
-        datePool = dateSuggestionTemplates;
-      }
-
-      const randomDate = datePool[Math.floor(Math.random() * datePool.length)];
-      setSelectedDate(randomDate);
-      setIsSpinning(false);
-
-      // Fetch nearby places only for going out dates
-      if (environment === 'going_out' && preference) {
-        await fetchNearbyPlaces(preference, randomDate);
+          setSelectedDate(randomDate);
+          setIsSpinning(false);
+          setLoadingPlaces(false);
+        }
       }
     }, 2000);
   };
 
-  const spinForDate = () => {
-    // Reset and start over
-    setShowEnvironmentSelect(true);
-    setHasAccepted(false);
-    setNearbyPlaces([]);
-    setDateEnvironment(null);
-    setLocationPreference(null);
-  };
-
-  const fetchNearbyPlaces = async (preference: LocationPreference, dateIdea: typeof dateSuggestionTemplates[0]) => {
-    if (!preference) return;
-
-    // Skip venue search for purely indoor/at-home dates
-    if (dateIdea.environment === 'indoor') {
-      setLoadingPlaces(false);
-      return;
-    }
-
-    setLoadingPlaces(true);
-
+  const fetchVenuesFirstThenPickDate = async (preference: LocationPreference) => {
     try {
+      // Step 1: Get target location
       let targetLocation;
 
-      // Determine which location to use
       if (preference === 'user') {
         if (!shareWithApp) {
-          // Need to get current location
           const coords = await getCurrentLocation();
           targetLocation = coords;
         } else if (userLocation) {
@@ -131,14 +115,12 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
           };
         }
       } else if (preference === 'middle') {
-        // Calculate midpoint
         if (userLocation && partnerLocation) {
           targetLocation = nearbyPlacesService.findMidpoint(
             { latitude: Number(userLocation.latitude), longitude: Number(userLocation.longitude) },
             { latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }
           );
         } else if (!shareWithApp) {
-          // Get user's current location and partner's location
           const coords = await getCurrentLocation();
           if (partnerLocation) {
             targetLocation = nearbyPlacesService.findMidpoint(
@@ -151,32 +133,79 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
 
       if (!targetLocation) {
         console.error('Could not determine target location');
+        // Fallback to random outdoor date without venues
+        const datePool = dateSuggestionTemplates.filter(
+          date => date.environment === 'outdoor' || date.environment === 'both'
+        );
+        const randomDate = datePool[Math.floor(Math.random() * datePool.length)];
+        setSelectedDate(randomDate);
+        setIsSpinning(false);
         setLoadingPlaces(false);
         return;
       }
 
-      // Determine appropriate place categories based on date type
-      const categories = getDateCategories(dateIdea);
-
-      // Fetch places for each category
+      // Step 2: Fetch a diverse mix of nearby venues
+      const allCategories: PlaceCategory[] = ['restaurant', 'cafe', 'bar', 'park', 'museum', 'theater', 'activity'];
       const allPlaces: Place[] = [];
-      const placesPerCategory = Math.ceil(5 / categories.length); // Distribute evenly
 
-      for (const category of categories) {
-        const places = await nearbyPlacesService.findNearbyPlaces(targetLocation, 15, category, placesPerCategory);
+      for (const category of allCategories) {
+        const places = await nearbyPlacesService.findNearbyPlaces(targetLocation, 15, category, 3);
         allPlaces.push(...places);
       }
 
-      // Remove duplicates, sort by distance, and limit to 5 places
+      // Remove duplicates and sort by distance
       const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values())
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 5);
-      setNearbyPlaces(uniquePlaces);
+        .sort((a, b) => a.distance - b.distance);
+
+      // Step 3: Analyze what venue types are available
+      const availableCategories = new Set(uniquePlaces.map(place => place.category));
+
+      // Step 4: Filter dates to those that match available venues
+      const goingOutDates = dateSuggestionTemplates.filter(
+        date => date.environment === 'outdoor' || date.environment === 'both'
+      );
+
+      const matchingDates = goingOutDates.filter(date => {
+        const dateCategories = getDateCategories(date);
+        // Date matches if at least one of its categories is available
+        return dateCategories.some(cat => availableCategories.has(cat));
+      });
+
+      // Step 5: Pick a random date from matches
+      const datePool = matchingDates.length > 0 ? matchingDates : goingOutDates;
+      const selectedDateIdea = datePool[Math.floor(Math.random() * datePool.length)];
+
+      // Step 6: Filter venues to those relevant for the selected date
+      const dateCategories = getDateCategories(selectedDateIdea);
+      const relevantPlaces = uniquePlaces.filter(place =>
+        dateCategories.includes(place.category as PlaceCategory)
+      ).slice(0, 5);
+
+      // Set the results
+      setSelectedDate(selectedDateIdea);
+      setNearbyPlaces(relevantPlaces);
+      setIsSpinning(false);
+      setLoadingPlaces(false);
     } catch (error) {
-      console.error('Error fetching nearby places:', error);
-    } finally {
+      console.error('Error in fetchVenuesFirstThenPickDate:', error);
+      // Fallback to random outdoor date
+      const datePool = dateSuggestionTemplates.filter(
+        date => date.environment === 'outdoor' || date.environment === 'both'
+      );
+      const randomDate = datePool[Math.floor(Math.random() * datePool.length)];
+      setSelectedDate(randomDate);
+      setIsSpinning(false);
       setLoadingPlaces(false);
     }
+  };
+
+  const spinForDate = () => {
+    // Reset and start over
+    setShowEnvironmentSelect(true);
+    setHasAccepted(false);
+    setNearbyPlaces([]);
+    setDateEnvironment(null);
+    setLocationPreference(null);
   };
 
   const getDateCategories = (dateIdea: typeof dateSuggestionTemplates[0]): PlaceCategory[] => {
