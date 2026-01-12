@@ -25,6 +25,7 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   const [locationPreference, setLocationPreference] = useState<LocationPreference>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<Place[]>([]);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [venueFetchError, setVenueFetchError] = useState(false);
 
   const { userLocation, partnerLocation, getCurrentLocation, shareWithApp } = useLocation();
 
@@ -145,6 +146,7 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
       }
 
       // Step 2: Fetch a diverse mix of nearby venues
+      console.log('🔍 Starting venue search for location:', targetLocation);
       const allCategories: PlaceCategory[] = ['restaurant', 'cafe', 'bar', 'park', 'museum', 'theater', 'activity'];
       const allPlaces: Place[] = [];
 
@@ -156,6 +158,25 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
       // Remove duplicates and sort by distance
       const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values())
         .sort((a, b) => a.distance - b.distance);
+
+      console.log(`📍 Total unique venues found: ${uniquePlaces.length}`);
+
+      // If no venues found at all, set error state
+      if (uniquePlaces.length === 0) {
+        console.warn('⚠️ No venues found - API may be down or location has no venues');
+        setVenueFetchError(true);
+        // Still show a date, just without venues
+        const datePool = dateSuggestionTemplates.filter(
+          date => date.environment === 'outdoor' || date.environment === 'both'
+        );
+        const randomDate = datePool[Math.floor(Math.random() * datePool.length)];
+        setSelectedDate(randomDate);
+        setIsSpinning(false);
+        setLoadingPlaces(false);
+        return;
+      }
+
+      setVenueFetchError(false);
 
       // Step 3: Analyze what venue types are available
       const availableCategories = new Set(uniquePlaces.map(place => place.category));
@@ -219,6 +240,7 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
     setNearbyPlaces([]);
     setDateEnvironment(null);
     setLocationPreference(null);
+    setVenueFetchError(false);
   };
 
   const getPrimaryVenueCategory = (dateIdea: typeof dateSuggestionTemplates[0]): PlaceCategory | null => {
@@ -699,7 +721,18 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                         </div>
                       )}
 
-                      {nearbyPlaces.length > 0 && (
+                      {venueFetchError && !loadingPlaces && nearbyPlaces.length === 0 && (
+                        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+                          <p className="text-sm text-amber-900 font-semibold mb-2">
+                            ⚠️ Unable to load nearby venues
+                          </p>
+                          <p className="text-xs text-amber-800">
+                            The venue search service is temporarily unavailable. You can still do this date - just search online for places in your area!
+                          </p>
+                        </div>
+                      )}
+
+                      {nearbyPlaces.length > 0 && !loadingPlaces && (
                         <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-4 mb-6">
                           <div className="flex items-center gap-2 mb-3">
                             <MapPin className="w-5 h-5 text-purple-600" />
