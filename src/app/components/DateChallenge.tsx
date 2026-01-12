@@ -5,7 +5,8 @@ import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
 import { dateSuggestionTemplates } from '../data/dateSuggestionTemplates';
 import { useLocation } from '../hooks/useLocation';
-import { nearbyPlacesService, type Place, type PlaceCategory } from '../services/nearbyPlacesService';
+import { googlePlacesService as placesService } from '../services/googlePlacesService';
+import type { Place, PlaceCategory } from '../services/placesService';
 
 interface DateChallengeProps {
   onBack: () => void;
@@ -117,14 +118,14 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
         }
       } else if (preference === 'middle') {
         if (userLocation && partnerLocation) {
-          targetLocation = nearbyPlacesService.findMidpoint(
+          targetLocation = placesService.findMidpoint(
             { latitude: Number(userLocation.latitude), longitude: Number(userLocation.longitude) },
             { latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }
           );
         } else if (!shareWithApp) {
           const coords = await getCurrentLocation();
           if (partnerLocation) {
-            targetLocation = nearbyPlacesService.findMidpoint(
+            targetLocation = placesService.findMidpoint(
               coords,
               { latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }
             );
@@ -151,7 +152,7 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
       const allPlaces: Place[] = [];
 
       for (const category of allCategories) {
-        const places = await nearbyPlacesService.findNearbyPlaces(targetLocation, 15, category, 3);
+        const places = await placesService.findNearbyPlaces(targetLocation, 15, category, 3);
         allPlaces.push(...places);
       }
 
@@ -762,7 +763,7 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                                         <h5 className="font-semibold text-sm text-gray-900">{place.name}</h5>
                                         <span className="text-xs text-gray-500 flex items-center gap-1 whitespace-nowrap">
                                           <MapPin className="w-3 h-3" />
-                                          {nearbyPlacesService.formatDistance(place.distance)}
+                                          {placesService.formatDistance(place.distance)}
                                         </span>
                                       </div>
 
