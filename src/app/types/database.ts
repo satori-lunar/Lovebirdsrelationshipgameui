@@ -402,6 +402,57 @@ export interface Database {
           end_date?: string | null;
         };
       };
+      icebreaker_questions: {
+        Row: {
+          id: string;
+          question_text: string;
+          category: string;
+          difficulty: 'easy' | 'medium' | 'hard';
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_text: string;
+          category: string;
+          difficulty: 'easy' | 'medium' | 'hard';
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          question_text?: string;
+          category?: string;
+          difficulty?: 'easy' | 'medium' | 'hard';
+          is_active?: boolean;
+        };
+      };
+      icebreaker_responses: {
+        Row: {
+          id: string;
+          question_id: string;
+          user_id: string;
+          relationship_id: string;
+          response_text: string;
+          is_private: boolean;
+          responded_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          user_id: string;
+          relationship_id: string;
+          response_text: string;
+          is_private?: boolean;
+          responded_at?: string;
+        };
+        Update: {
+          id?: string;
+          response_text?: string;
+          is_private?: boolean;
+          responded_at?: string;
+        };
+      };
     };
   };
 }
