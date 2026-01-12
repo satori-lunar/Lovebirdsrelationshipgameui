@@ -38,7 +38,15 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
 
     // Animate for 2 seconds then show result
     setTimeout(async () => {
-      const randomDate = dateSuggestionTemplates[Math.floor(Math.random() * dateSuggestionTemplates.length)];
+      // Filter to outdoor/both dates since we're looking for venue-based dates
+      const goingOutDates = dateSuggestionTemplates.filter(
+        date => date.environment === 'outdoor' || date.environment === 'both'
+      );
+
+      // If no outdoor dates found (shouldn't happen), fall back to all dates
+      const datePool = goingOutDates.length > 0 ? goingOutDates : dateSuggestionTemplates;
+      const randomDate = datePool[Math.floor(Math.random() * datePool.length)];
+
       setSelectedDate(randomDate);
       setIsSpinning(false);
 
@@ -56,6 +64,12 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
 
   const fetchNearbyPlaces = async (preference: LocationPreference, dateIdea: typeof dateSuggestionTemplates[0]) => {
     if (!preference) return;
+
+    // Skip venue search for purely indoor/at-home dates
+    if (dateIdea.environment === 'indoor') {
+      setLoadingPlaces(false);
+      return;
+    }
 
     setLoadingPlaces(true);
 
@@ -127,40 +141,74 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   };
 
   const getDateCategories = (dateIdea: typeof dateSuggestionTemplates[0]): PlaceCategory[] => {
-    // Map date environment/style to place categories
-    const env = dateIdea.environment?.toLowerCase() || '';
+    // Map date type and style to place categories
+    const dateType = dateIdea.dateType?.toLowerCase() || '';
     const styles = dateIdea.dateStyle?.map(s => s.toLowerCase()) || [];
+    const title = dateIdea.title?.toLowerCase() || '';
+    const desc = dateIdea.description?.toLowerCase() || '';
 
     const categories: PlaceCategory[] = [];
 
-    if (env.includes('restaurant') || styles.includes('foodie')) {
-      categories.push('restaurant');
+    // Check date type first
+    if (dateType === 'dinner' || dateType === 'cooking') {
+      categories.push('restaurant', 'cafe');
     }
-    if (env.includes('cafe') || env.includes('coffee')) {
-      categories.push('cafe');
-    }
-    if (env.includes('outdoor') || env.includes('park') || styles.includes('outdoorsy')) {
+    if (dateType === 'picnic') {
       categories.push('park');
     }
-    if (env.includes('museum') || styles.includes('cultural') || env.includes('gallery')) {
+    if (dateType === 'museum') {
       categories.push('museum');
     }
-    if (env.includes('bar') || env.includes('pub')) {
+    if (dateType === 'movie_concert') {
+      categories.push('theater', 'cinema');
+    }
+    if (dateType === 'hiking') {
+      categories.push('park');
+    }
+
+    // Check date styles
+    if (styles.includes('foodie')) {
+      categories.push('restaurant', 'cafe');
+    }
+    if (styles.includes('cultural')) {
+      categories.push('museum', 'theater');
+    }
+    if (styles.includes('adventurous')) {
+      categories.push('park', 'activity');
+    }
+
+    // Check title and description for keywords
+    if (title.includes('restaurant') || desc.includes('restaurant') || desc.includes('dinner')) {
+      categories.push('restaurant');
+    }
+    if (title.includes('cafe') || title.includes('coffee') || desc.includes('coffee')) {
+      categories.push('cafe');
+    }
+    if (title.includes('park') || title.includes('outdoor') || desc.includes('park')) {
+      categories.push('park');
+    }
+    if (title.includes('museum') || title.includes('gallery') || desc.includes('museum')) {
+      categories.push('museum');
+    }
+    if (title.includes('bar') || title.includes('pub') || desc.includes('bar')) {
       categories.push('bar');
     }
-    if (env.includes('activity') || env.includes('entertainment')) {
-      categories.push('activity', 'entertainment');
+    if (title.includes('bowling') || title.includes('arcade') || desc.includes('activity')) {
+      categories.push('activity');
     }
-    if (env.includes('theater') || env.includes('cinema')) {
-      categories.push('theater');
-    }
-
-    // If no specific categories matched, return a mix of romantic date spots
-    if (categories.length === 0) {
-      return ['restaurant', 'cafe', 'park'];
+    if (title.includes('movie') || title.includes('theater') || title.includes('cinema')) {
+      categories.push('theater', 'cinema');
     }
 
-    return categories;
+    // Remove duplicates
+    const uniqueCategories = Array.from(new Set(categories));
+
+    // If no specific categories matched, return a mix of popular date spots
+    if (uniqueCategories.length === 0) {
+      return ['restaurant', 'cafe', 'park', 'museum'];
+    }
+
+    return uniqueCategories;
   };
 
   const acceptChallenge = () => {
