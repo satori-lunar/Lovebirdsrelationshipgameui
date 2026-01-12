@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star } from 'lucide-react';
+import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
@@ -17,7 +17,8 @@ interface DatePlannerProps {
 
 type LocationPreference = 'user' | 'partner' | 'middle' | null;
 type BudgetLevel = '$' | '$$' | '$$$';
-type Step = 'budget' | 'location' | 'loading' | 'results';
+type DurationPreference = 'quick' | 'half-day' | 'full-day';
+type Step = 'budget' | 'duration' | 'location' | 'loading' | 'results';
 
 export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
   const [step, setStep] = useState<Step>('budget');
   const [selectedBudget, setSelectedBudget] = useState<BudgetLevel | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<DurationPreference | null>(null);
   const [locationPreference, setLocationPreference] = useState<LocationPreference>(null);
   const [dateOptions, setDateOptions] = useState<Array<{
     date: typeof dateSuggestionTemplates[0];
@@ -46,8 +48,19 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
     { value: '$$$' as BudgetLevel, label: 'Special Occasion', desc: '$75+', icon: Star }
   ];
 
+  const durationOptions = [
+    { value: 'quick' as DurationPreference, label: 'Quick Date', desc: '1-3 hours', icon: Clock },
+    { value: 'half-day' as DurationPreference, label: 'Half Day', desc: '3-5 hours', icon: Clock },
+    { value: 'full-day' as DurationPreference, label: 'Full Day', desc: '5+ hours', icon: Star }
+  ];
+
   const handleBudgetSelect = (budget: BudgetLevel) => {
     setSelectedBudget(budget);
+    setStep('duration');
+  };
+
+  const handleDurationSelect = (duration: DurationPreference) => {
+    setSelectedDuration(duration);
     setStep('location');
   };
 
@@ -120,12 +133,27 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       console.log(`📍 Total unique venues found: ${uniquePlaces.length}`);
 
-      // Step 3: Filter dates based on budget and love language
+      // Step 3: Filter dates based on budget, duration, and love language
       const filteredDates = dateSuggestionTemplates.filter(date => {
         // Filter by budget
         if (selectedBudget === '$' && date.budget !== '$') return false;
         if (selectedBudget === '$$' && (date.budget === '$$$')) return false;
         // $$$ shows all budgets
+
+        // Filter by duration
+        if (selectedDuration) {
+          const timeReq = date.timeRequired.toLowerCase();
+          if (selectedDuration === 'quick') {
+            // 1-3 hours: matches "1-2 hours", "2-3 hours"
+            if (!timeReq.includes('1-2') && !timeReq.includes('2-3')) return false;
+          } else if (selectedDuration === 'half-day') {
+            // 3-5 hours: matches "2-4 hours", "3-4 hours", "3-5 hours"
+            if (!timeReq.includes('2-4') && !timeReq.includes('3-4') && !timeReq.includes('3-5')) return false;
+          } else if (selectedDuration === 'full-day') {
+            // 5+ hours: matches "4-6 hours", "6-8 hours", etc.
+            if (!timeReq.includes('4-6') && !timeReq.includes('6-8') && !timeReq.includes('5-')) return false;
+          }
+        }
 
         // Filter by love language if available
         if (userLoveLanguage && date.loveLanguage && date.loveLanguage.length > 0) {
@@ -493,6 +521,60 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           </motion.div>
         )}
 
+        {/* Duration Selection */}
+        {step === 'duration' && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-8 border-0 shadow-xl">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Clock className="w-10 h-10 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold mb-3">How long do you have?</h2>
+                <p className="text-gray-600">
+                  We'll suggest dates that fit your timeframe
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {durationOptions.map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <Card
+                      key={option.value}
+                      onClick={() => handleDurationSelect(option.value)}
+                      className="p-5 border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Icon className="w-7 h-7 text-purple-600" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <h3 className="font-semibold text-lg mb-1">{option.label}</h3>
+                          <p className="text-sm text-gray-600">
+                            {option.desc}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <Button
+                onClick={() => setStep('budget')}
+                variant="outline"
+                className="w-full mt-6"
+              >
+                Back to Budget
+              </Button>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Location Selection */}
         {step === 'location' && (
           <motion.div
@@ -565,11 +647,11 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               </div>
 
               <Button
-                onClick={() => setStep('budget')}
+                onClick={() => setStep('duration')}
                 variant="outline"
                 className="w-full mt-6"
               >
-                Back to Budget
+                Back to Duration
               </Button>
             </Card>
           </motion.div>
@@ -696,6 +778,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               onClick={() => {
                 setStep('budget');
                 setSelectedBudget(null);
+                setSelectedDuration(null);
                 setLocationPreference(null);
                 setDateOptions([]);
               }}
@@ -713,12 +796,13 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             <div className="text-6xl mb-4">😔</div>
             <h2 className="text-xl font-bold mb-2">No Dates Found</h2>
             <p className="text-gray-600 mb-6">
-              We couldn't find any venues nearby that match your preferences. Try adjusting your budget or location.
+              We couldn't find any venues nearby that match your preferences. Try adjusting your budget, duration, or location.
             </p>
             <Button
               onClick={() => {
                 setStep('budget');
                 setSelectedBudget(null);
+                setSelectedDuration(null);
                 setLocationPreference(null);
               }}
               className="bg-gradient-to-r from-pink-500 to-purple-500"
