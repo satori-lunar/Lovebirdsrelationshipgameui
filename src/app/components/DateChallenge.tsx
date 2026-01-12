@@ -160,13 +160,17 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
 
       // Fetch places for each category
       const allPlaces: Place[] = [];
+      const placesPerCategory = Math.ceil(5 / categories.length); // Distribute evenly
+
       for (const category of categories) {
-        const places = await nearbyPlacesService.findNearbyPlaces(targetLocation, 10, category, 3);
+        const places = await nearbyPlacesService.findNearbyPlaces(targetLocation, 15, category, placesPerCategory);
         allPlaces.push(...places);
       }
 
-      // Remove duplicates and limit to 5 places
-      const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values()).slice(0, 5);
+      // Remove duplicates, sort by distance, and limit to 5 places
+      const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values())
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 5);
       setNearbyPlaces(uniquePlaces);
     } catch (error) {
       console.error('Error fetching nearby places:', error);
@@ -184,61 +188,78 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
 
     const categories: PlaceCategory[] = [];
 
-    // Check date type first
+    // Check for specific keywords in title and description that indicate venue needs
+    const needsRestaurant = title.includes('dinner') || title.includes('restaurant') || title.includes('meal') ||
+                           desc.includes('dinner') || desc.includes('restaurant') || desc.includes('eat') || desc.includes('food');
+    const needsCafe = title.includes('cafe') || title.includes('coffee') || title.includes('brunch') || title.includes('breakfast') ||
+                     desc.includes('coffee') || desc.includes('cafe');
+    const needsPark = title.includes('park') || title.includes('outdoor') || title.includes('picnic') || title.includes('nature') || title.includes('walk') ||
+                     desc.includes('park') || desc.includes('outdoor') || desc.includes('nature') || desc.includes('walk');
+    const needsMuseum = title.includes('museum') || title.includes('gallery') || title.includes('art') || title.includes('cultural') || title.includes('exhibit') ||
+                       desc.includes('museum') || desc.includes('gallery') || desc.includes('art') || desc.includes('cultural');
+    const needsBar = title.includes('bar') || title.includes('pub') || title.includes('drinks') || title.includes('cocktail') ||
+                    desc.includes('bar') || desc.includes('drinks');
+    const needsActivity = title.includes('bowling') || title.includes('arcade') || title.includes('activity') || title.includes('sport') ||
+                         desc.includes('bowling') || desc.includes('arcade') || desc.includes('activity');
+    const needsTheater = title.includes('movie') || title.includes('cinema') || title.includes('theater') || title.includes('show') ||
+                        desc.includes('movie') || desc.includes('cinema') || desc.includes('show');
+
+    // Add categories based on explicit mentions
+    if (needsRestaurant) categories.push('restaurant');
+    if (needsCafe) categories.push('cafe');
+    if (needsPark) categories.push('park');
+    if (needsMuseum) categories.push('museum');
+    if (needsBar) categories.push('bar');
+    if (needsActivity) categories.push('activity');
+    if (needsTheater) categories.push('theater', 'cinema');
+
+    // Check date type
     if (dateType === 'dinner' || dateType === 'cooking') {
-      categories.push('restaurant', 'cafe');
+      if (!categories.includes('restaurant')) categories.push('restaurant');
+      if (!categories.includes('cafe')) categories.push('cafe');
     }
     if (dateType === 'picnic') {
-      categories.push('park');
+      if (!categories.includes('park')) categories.push('park');
     }
     if (dateType === 'museum') {
-      categories.push('museum');
+      if (!categories.includes('museum')) categories.push('museum');
     }
     if (dateType === 'movie_concert') {
-      categories.push('theater', 'cinema');
+      if (!categories.includes('theater')) categories.push('theater');
+      if (!categories.includes('cinema')) categories.push('cinema');
     }
     if (dateType === 'hiking') {
-      categories.push('park');
+      if (!categories.includes('park')) categories.push('park');
     }
 
-    // Check date styles
+    // Check date styles to add complementary categories
     if (styles.includes('foodie')) {
-      categories.push('restaurant', 'cafe');
+      if (!categories.includes('restaurant')) categories.push('restaurant');
+      if (!categories.includes('cafe')) categories.push('cafe');
     }
     if (styles.includes('cultural')) {
-      categories.push('museum', 'theater');
+      if (!categories.includes('museum')) categories.push('museum');
+      if (!categories.includes('theater')) categories.push('theater');
+    }
+    if (styles.includes('romantic')) {
+      // Romantic dates benefit from restaurants and parks
+      if (!categories.includes('restaurant')) categories.push('restaurant');
+      if (!categories.includes('park')) categories.push('park');
     }
     if (styles.includes('adventurous')) {
-      categories.push('park', 'activity');
+      if (!categories.includes('park')) categories.push('park');
+      if (!categories.includes('activity')) categories.push('activity');
     }
-
-    // Check title and description for keywords
-    if (title.includes('restaurant') || desc.includes('restaurant') || desc.includes('dinner')) {
-      categories.push('restaurant');
-    }
-    if (title.includes('cafe') || title.includes('coffee') || desc.includes('coffee')) {
-      categories.push('cafe');
-    }
-    if (title.includes('park') || title.includes('outdoor') || desc.includes('park')) {
-      categories.push('park');
-    }
-    if (title.includes('museum') || title.includes('gallery') || desc.includes('museum')) {
-      categories.push('museum');
-    }
-    if (title.includes('bar') || title.includes('pub') || desc.includes('bar')) {
-      categories.push('bar');
-    }
-    if (title.includes('bowling') || title.includes('arcade') || desc.includes('activity')) {
-      categories.push('activity');
-    }
-    if (title.includes('movie') || title.includes('theater') || title.includes('cinema')) {
-      categories.push('theater', 'cinema');
+    if (styles.includes('relaxed')) {
+      // Relaxed dates often work well with cafes and parks
+      if (!categories.includes('cafe')) categories.push('cafe');
+      if (!categories.includes('park')) categories.push('park');
     }
 
     // Remove duplicates
     const uniqueCategories = Array.from(new Set(categories));
 
-    // If no specific categories matched, return a mix of popular date spots
+    // If no specific categories matched, return a diverse mix of popular date spots
     if (uniqueCategories.length === 0) {
       return ['restaurant', 'cafe', 'park', 'museum'];
     }
@@ -576,28 +597,64 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                           <div className="flex items-center gap-2 mb-3">
                             <MapPin className="w-5 h-5 text-purple-600" />
                             <h4 className="font-semibold text-gray-800">Nearby Venues</h4>
+                            <span className="text-xs text-gray-500">({nearbyPlaces.length} found)</span>
                           </div>
-                          <div className="space-y-2">
-                            {nearbyPlaces.map((place) => (
-                              <div key={place.id} className="bg-white rounded-lg p-3 text-left">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <h5 className="font-semibold text-sm text-gray-800">{place.name}</h5>
-                                    <p className="text-xs text-gray-600 mt-1">{place.address}</p>
-                                    <div className="flex items-center gap-3 mt-2">
-                                      <span className="text-xs text-gray-500 flex items-center gap-1">
-                                        <MapPin className="w-3 h-3" />
-                                        {nearbyPlacesService.formatDistance(place.distance)}
-                                      </span>
-                                      {place.rating && (
-                                        <span className="text-xs text-yellow-600">⭐ {place.rating}</span>
+                          <div className="space-y-3">
+                            {nearbyPlaces.map((place) => {
+                              const categoryEmoji = {
+                                restaurant: '🍽️',
+                                cafe: '☕',
+                                bar: '🍺',
+                                park: '🌳',
+                                museum: '🎨',
+                                theater: '🎭',
+                                cinema: '🎬',
+                                activity: '🎯',
+                                entertainment: '🎪',
+                              }[place.category] || '📍';
+
+                              return (
+                                <div key={place.id} className="bg-white rounded-lg p-4 text-left shadow-sm hover:shadow-md transition-shadow">
+                                  <div className="flex items-start gap-3">
+                                    <div className="text-2xl">{categoryEmoji}</div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start justify-between gap-2 mb-1">
+                                        <h5 className="font-semibold text-sm text-gray-900">{place.name}</h5>
+                                        <span className="text-xs text-gray-500 flex items-center gap-1 whitespace-nowrap">
+                                          <MapPin className="w-3 h-3" />
+                                          {nearbyPlacesService.formatDistance(place.distance)}
+                                        </span>
+                                      </div>
+
+                                      {place.address && place.address !== 'Address not available' ? (
+                                        <p className="text-xs text-gray-600 mb-2">{place.address}</p>
+                                      ) : (
+                                        <p className="text-xs text-gray-400 mb-2 italic">Address details not available</p>
                                       )}
+
+                                      <div className="flex items-center gap-3 flex-wrap">
+                                        <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full capitalize">
+                                          {place.category}
+                                        </span>
+                                        {place.rating && (
+                                          <span className="text-xs text-yellow-600 font-medium">⭐ {place.rating.toFixed(1)}</span>
+                                        )}
+                                        {place.priceLevel && (
+                                          <span className="text-xs text-gray-600">{place.priceLevel}</span>
+                                        )}
+                                        {place.description && (
+                                          <span className="text-xs text-gray-500">{place.description}</span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
+                          <p className="text-xs text-gray-500 mt-3 text-center">
+                            💡 Tip: Search for these venues online for more details, menus, and hours
+                          </p>
                         </div>
                       )}
 

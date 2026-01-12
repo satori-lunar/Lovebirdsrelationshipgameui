@@ -134,6 +134,13 @@ export const nearbyPlacesService = {
           element.lon
         );
 
+        // Build a more informative description
+        const descParts = [];
+        if (tags.cuisine) descParts.push(tags.cuisine);
+        if (tags.description) descParts.push(tags.description);
+        if (tags['food']) descParts.push(tags['food']);
+        if (tags['specialty']) descParts.push(tags['specialty']);
+
         return {
           id: element.id.toString(),
           name: tags.name || 'Unnamed Place',
@@ -144,7 +151,7 @@ export const nearbyPlacesService = {
           longitude: element.lon,
           rating: tags.stars ? parseFloat(tags.stars) : undefined,
           priceLevel: this.mapPriceLevel(tags),
-          description: tags.description || tags.cuisine || undefined,
+          description: descParts.length > 0 ? descParts.join(' • ') : undefined,
           isOpen: this.determineIfOpen(tags),
         };
       })
@@ -157,10 +164,24 @@ export const nearbyPlacesService = {
   buildAddress(tags: any): string {
     const parts = [];
 
+    // Try to build as complete an address as possible
     if (tags['addr:housenumber']) parts.push(tags['addr:housenumber']);
     if (tags['addr:street']) parts.push(tags['addr:street']);
+
+    // If we don't have street address, try other location info
+    if (parts.length === 0) {
+      if (tags['addr:place']) parts.push(tags['addr:place']);
+      if (tags['addr:suburb']) parts.push(tags['addr:suburb']);
+    }
+
     if (tags['addr:city']) parts.push(tags['addr:city']);
+    if (tags['addr:state']) parts.push(tags['addr:state']);
     if (tags['addr:postcode']) parts.push(tags['addr:postcode']);
+
+    // If we still have nothing, try name-based fallback
+    if (parts.length === 0 && (tags['addr:city'] || tags['addr:suburb'])) {
+      return `Located in ${tags['addr:city'] || tags['addr:suburb']}`;
+    }
 
     return parts.length > 0 ? parts.join(', ') : 'Address not available';
   },
