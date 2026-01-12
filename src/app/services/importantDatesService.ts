@@ -15,6 +15,12 @@ export interface ImportantDate {
   created_at: string;
 }
 
+// Helper to parse date string without timezone conversion
+const parseLocalDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 export const importantDatesService = {
   /**
    * Get all important dates for a relationship
@@ -127,7 +133,7 @@ export const importantDatesService = {
   daysUntil(dateString: string): number {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const targetDate = new Date(dateString);
+    const targetDate = parseLocalDate(dateString);
     targetDate.setHours(0, 0, 0, 0);
     const diffTime = targetDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -140,7 +146,7 @@ export const importantDatesService = {
   daysSince(dateString: string): number {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const pastDate = new Date(dateString);
+    const pastDate = parseLocalDate(dateString);
     pastDate.setHours(0, 0, 0, 0);
     const diffTime = today.getTime() - pastDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -170,7 +176,7 @@ export const importantDatesService = {
    * Get next occurrence of a recurring date
    */
   getNextOccurrence(dateString: string): string {
-    const date = new Date(dateString);
+    const date = parseLocalDate(dateString);
     const today = new Date();
 
     // Set to this year
