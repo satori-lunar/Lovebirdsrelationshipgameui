@@ -36,6 +36,9 @@ export interface Database {
           created_at: string;
           connected_at: string | null;
           relationship_start_date: string | null;
+          couple_photo_url: string | null;
+          partner_a_photo_url: string | null;
+          partner_b_photo_url: string | null;
         };
         Insert: {
           id?: string;
@@ -46,6 +49,9 @@ export interface Database {
           created_at?: string;
           connected_at?: string | null;
           relationship_start_date?: string | null;
+          couple_photo_url?: string | null;
+          partner_a_photo_url?: string | null;
+          partner_b_photo_url?: string | null;
         };
         Update: {
           id?: string;
@@ -55,6 +61,9 @@ export interface Database {
           invite_code_expires_at?: string;
           connected_at?: string | null;
           relationship_start_date?: string | null;
+          couple_photo_url?: string | null;
+          partner_a_photo_url?: string | null;
+          partner_b_photo_url?: string | null;
         };
       };
       onboarding_responses: {
