@@ -84,6 +84,12 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     return relationship.couple_photo_url || null;
   };
 
+  // Parse date string without timezone conversion
+  const parseLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
   const handleSaveAnniversary = async () => {
     if (!user || !formDate) {
       toast.error('Please select a date');
@@ -262,7 +268,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                   <h2 className="font-['Lora',serif] text-[20px] text-[#2c2c2c]">Our Anniversary</h2>
                   {anniversaryDate ? (
                     <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-gray-600">
-                      {new Date(anniversaryDate).toLocaleDateString('en-US', {
+                      {parseLocalDate(anniversaryDate).toLocaleDateString('en-US', {
                         month: 'long',
                         day: 'numeric',
                         year: 'numeric',
@@ -356,7 +362,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                           {date.title}
                         </h3>
                         <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-gray-600 mb-2">
-                          {new Date(date.date).toLocaleDateString('en-US', {
+                          {parseLocalDate(date.date).toLocaleDateString('en-US', {
                             month: 'long',
                             day: 'numeric',
                             year: 'numeric',
