@@ -70,6 +70,20 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     }
   };
 
+  // Get current user's homepage photo
+  const getHomepagePhoto = () => {
+    if (!relationship || !user) return null;
+
+    const isPartnerA = user.id === relationship.partner_a_id;
+    if (isPartnerA && relationship.partner_a_photo_url) {
+      return relationship.partner_a_photo_url;
+    }
+    if (!isPartnerA && relationship.partner_b_photo_url) {
+      return relationship.partner_b_photo_url;
+    }
+    return relationship.couple_photo_url || null;
+  };
+
   const handleSaveAnniversary = async () => {
     if (!user || !formDate) {
       toast.error('Please select a date');
@@ -226,6 +240,17 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
         </div>
       ) : (
         <div className="px-6 py-6 max-w-2xl mx-auto">
+          {/* Homepage Photo */}
+          {getHomepagePhoto() && (
+            <div className="mb-6 rounded-3xl overflow-hidden shadow-lg">
+              <img
+                src={getHomepagePhoto()!}
+                alt="Homepage"
+                className="w-full h-64 object-cover"
+              />
+            </div>
+          )}
+
           {/* Anniversary Card */}
           <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-6 shadow-lg border border-white/60 mb-6">
             <div className="flex items-start justify-between mb-4">
@@ -312,6 +337,16 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                     key={date.id}
                     className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 shadow-lg border border-white/60"
                   >
+                    {/* Photo if exists */}
+                    {date.photo_url && (
+                      <div className="mb-4 rounded-2xl overflow-hidden">
+                        <img
+                          src={date.photo_url}
+                          alt={date.title}
+                          className="w-full h-48 object-cover"
+                        />
+                      </div>
+                    )}
                     <div className="flex items-start gap-4">
                       <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getTypeColor(date.type)} flex items-center justify-center shadow-lg flex-shrink-0`}>
                         {getTypeIcon(date.type)}
@@ -482,6 +517,30 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                 <Switch checked={formRecurring} onCheckedChange={setFormRecurring} />
               </div>
 
+              <div>
+                <Label className="font-['Nunito_Sans',sans-serif] text-[14px] mb-2 block">
+                  Photo (Optional)
+                </Label>
+                <PhotoUpload
+                  currentPhotoUrl={formPhotoUrl}
+                  onPhotoUploaded={setFormPhotoUrl}
+                  title="Edit Photo"
+                  placeholder="Upload a photo for this special date"
+                />
+              </div>
+
+              <div>
+                <Label className="font-['Nunito_Sans',sans-serif] text-[14px] mb-2 block">
+                  Photo (Optional)
+                </Label>
+                <PhotoUpload
+                  currentPhotoUrl={formPhotoUrl}
+                  onPhotoUploaded={setFormPhotoUrl}
+                  title="Add Photo"
+                  placeholder="Upload a photo for this special date"
+                />
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <Button
                   onClick={() => setShowAddDialog(false)}
@@ -567,6 +626,18 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
                   Recurring yearly
                 </Label>
                 <Switch checked={formRecurring} onCheckedChange={setFormRecurring} />
+              </div>
+
+              <div>
+                <Label className="font-['Nunito_Sans',sans-serif] text-[14px] mb-2 block">
+                  Photo (Optional)
+                </Label>
+                <PhotoUpload
+                  currentPhotoUrl={formPhotoUrl}
+                  onPhotoUploaded={setFormPhotoUrl}
+                  title="Edit Photo"
+                  placeholder="Upload a photo for this special date"
+                />
               </div>
 
               <div className="flex gap-3 pt-4">
