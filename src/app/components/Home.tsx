@@ -737,7 +737,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         {/* Anniversary Tracker */}
         <div className="px-5 mb-5">
           <div
-            onClick={() => onNavigate('anniversary-tracker')}
+            onClick={() => onNavigate('tracker')}
             className="bg-gradient-to-br from-[#EC4899] to-[#F472B6] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
           >
             <div className="flex items-center justify-between">

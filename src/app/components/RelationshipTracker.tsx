@@ -34,24 +34,34 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
   const [formRecurring, setFormRecurring] = useState(true);
 
   useEffect(() => {
+    console.log('📅 RelationshipTracker: relationship =', relationship);
     if (relationship) {
       loadData();
+    } else {
+      setIsLoading(false);
     }
   }, [relationship]);
 
   const loadData = async () => {
-    if (!relationship) return;
+    if (!relationship) {
+      console.log('📅 RelationshipTracker: No relationship found');
+      setIsLoading(false);
+      return;
+    }
 
+    console.log('📅 RelationshipTracker: Loading data for relationship', relationship.id);
     setIsLoading(true);
     try {
       // Get anniversary date from relationship
+      console.log('📅 Anniversary date from DB:', relationship.relationship_start_date);
       setAnniversaryDate(relationship.relationship_start_date || null);
 
       // Get all important dates
       const dates = await importantDatesService.getDatesForRelationship(relationship.id);
+      console.log('📅 Loaded important dates:', dates);
       setImportantDates(dates);
     } catch (error) {
-      console.error('Error loading dates:', error);
+      console.error('📅 Error loading dates:', error);
       toast.error('Failed to load dates');
     } finally {
       setIsLoading(false);
@@ -195,7 +205,16 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
         </div>
       </div>
 
-      {isLoading ? (
+      {!relationship && !isLoading ? (
+        <div className="px-6 py-12 text-center">
+          <p className="font-['Nunito_Sans',sans-serif] text-[16px] text-gray-600 mb-2">
+            No relationship found
+          </p>
+          <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-gray-500">
+            Please set up your relationship first
+          </p>
+        </div>
+      ) : isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF2D55]"></div>
         </div>

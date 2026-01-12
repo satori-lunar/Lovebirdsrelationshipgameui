@@ -19,14 +19,21 @@ export const importantDatesService = {
    * Get all important dates for a relationship
    */
   async getDatesForRelationship(relationshipId: string): Promise<ImportantDate[]> {
-    const dates = await handleSupabaseError(
-      api.supabase
-        .from('important_dates')
-        .select('*')
-        .eq('relationship_id', relationshipId)
-        .order('date', { ascending: true })
-    );
-    return dates || [];
+    console.log('📅 importantDatesService: Fetching dates for relationship', relationshipId);
+    try {
+      const dates = await handleSupabaseError(
+        api.supabase
+          .from('important_dates')
+          .select('*')
+          .eq('relationship_id', relationshipId)
+          .order('date', { ascending: true })
+      );
+      console.log('📅 importantDatesService: Fetched dates', dates);
+      return dates || [];
+    } catch (error) {
+      console.error('📅 importantDatesService: Error fetching dates', error);
+      return [];
+    }
   },
 
   /**
