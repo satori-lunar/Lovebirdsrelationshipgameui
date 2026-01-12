@@ -453,6 +453,44 @@ export interface Database {
           responded_at?: string;
         };
       };
+      important_dates: {
+        Row: {
+          id: string;
+          relationship_id: string;
+          user_id: string | null;
+          title: string;
+          date: string;
+          type: 'anniversary' | 'birthday' | 'custom';
+          recurring: boolean;
+          reminder_sent_1week: boolean;
+          reminder_sent_3days: boolean;
+          reminder_sent_dayof: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          relationship_id: string;
+          user_id?: string | null;
+          title: string;
+          date: string;
+          type: 'anniversary' | 'birthday' | 'custom';
+          recurring?: boolean;
+          reminder_sent_1week?: boolean;
+          reminder_sent_3days?: boolean;
+          reminder_sent_dayof?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          date?: string;
+          type?: 'anniversary' | 'birthday' | 'custom';
+          recurring?: boolean;
+          reminder_sent_1week?: boolean;
+          reminder_sent_3days?: boolean;
+          reminder_sent_dayof?: boolean;
+        };
+      };
     };
   };
 }
