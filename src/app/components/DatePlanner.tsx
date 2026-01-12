@@ -872,11 +872,16 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                               entertainment: '🎪',
                             }[primaryVenue.category] || '📍'}
                           </div>
-                          <div className="text-white">
+                          <div className="text-white flex-1">
                             <p className="text-xs font-medium opacity-90 mb-1">Date #{index + 1}</p>
-                            <h3 className="text-xl font-bold leading-tight">
+                            <h3 className="text-xl font-bold leading-tight mb-1">
                               {option.date.title}
                             </h3>
+                            {/* Time Duration Badge */}
+                            <div className="flex items-center gap-1.5 mt-2">
+                              <Clock className="w-3.5 h-3.5" />
+                              <span className="text-sm font-semibold">{option.date.timeRequired}</span>
+                            </div>
                           </div>
                         </div>
                         {primaryVenue.rating && (
@@ -896,13 +901,10 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                       {/* Tags */}
                       <div className="flex items-center gap-2 flex-wrap mb-4">
                         <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-pink-100 to-pink-50 text-pink-700 rounded-full font-medium border border-pink-200">
-                          {getBudgetSymbol(option.date.budget)}
-                        </span>
-                        <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-purple-100 to-purple-50 text-purple-700 rounded-full font-medium border border-purple-200">
-                          ⏱️ {option.date.timeRequired}
+                          💰 {getBudgetSymbol(option.date.budget)}
                         </span>
                         <span className="text-xs px-3 py-1.5 bg-gradient-to-r from-blue-100 to-blue-50 text-blue-700 rounded-full font-medium border border-blue-200 capitalize">
-                          {option.date.environment}
+                          {option.date.environment === 'outdoor' ? '🌤️' : '🏠'} {option.date.environment}
                         </span>
                       </div>
 
