@@ -52,21 +52,42 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
     console.log('🏠 partnerName exact value:', JSON.stringify(partnerName));
   }, [userName, partnerName]);
 
-  // Handle couple photo upload
+  // Determine if current user is partner A or B
+  const isPartnerA = user?.id === relationship?.partner_a_id;
+  const isPartnerB = user?.id === relationship?.partner_b_id;
+
+  // Get the current user's photo URL
+  const getCurrentUserPhotoUrl = () => {
+    if (!relationship) return "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80";
+
+    if (isPartnerA && relationship.partner_a_photo_url) {
+      return relationship.partner_a_photo_url;
+    }
+    if (isPartnerB && relationship.partner_b_photo_url) {
+      return relationship.partner_b_photo_url;
+    }
+    // Fallback to shared couple photo or default
+    return relationship.couple_photo_url || "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80";
+  };
+
+  // Handle couple photo upload - save to per-partner column
   const handleCouplePhotoUploaded = async (photoUrl: string) => {
     if (!relationship?.id) return;
 
     try {
+      // Determine which column to update based on current user
+      const updateColumn = isPartnerA ? 'partner_a_photo_url' : 'partner_b_photo_url';
+
       const { error } = await api.supabase
         .from('relationships')
-        .update({ couple_photo_url: photoUrl })
+        .update({ [updateColumn]: photoUrl })
         .eq('id', relationship.id);
 
       if (error) throw error;
 
       // Refresh relationship data
       queryClient.invalidateQueries({ queryKey: ['relationship'] });
-      toast.success('Couple photo updated!');
+      toast.success('Your homepage photo updated!');
       setShowCouplePhotoUpload(false);
     } catch (error) {
       console.error('Error updating couple photo:', error);
@@ -301,16 +322,17 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         <div className="relative w-full h-[200px] mb-6 px-5">
           <div className="relative w-full h-full rounded-3xl overflow-hidden group">
             <img
-              src={relationship?.couple_photo_url || "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80"}
+              src={getCurrentUserPhotoUrl()}
               alt="Couple"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
 
-            {/* Edit Photo Button */}
+            {/* Edit Photo Button - Visible on mobile, hover on desktop */}
             <button
               onClick={() => setShowCouplePhotoUpload(true)}
-              className="absolute top-3 right-3 bg-white/80 backdrop-blur-xl p-2 rounded-full shadow-lg border border-white/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+              className="absolute top-3 right-3 bg-white/80 backdrop-blur-xl p-2 rounded-full shadow-lg border border-white/60 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+              aria-label="Edit homepage photo"
             >
               <Edit className="w-4 h-4 text-[#2c2c2c]" />
             </button>
@@ -328,13 +350,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
           </div>
         </div>
 
-        {/* Couple Photo Upload Dialog */}
+        {/* Homepage Photo Upload Dialog */}
         {showCouplePhotoUpload && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-['Nunito_Sans',sans-serif] text-[20px] font-semibold">
-                  Upload Couple Photo
+                  Your Homepage Photo
                 </h3>
                 <button
                   onClick={() => setShowCouplePhotoUpload(false)}
@@ -344,10 +366,10 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                 </button>
               </div>
               <PhotoUpload
-                currentPhotoUrl={relationship?.couple_photo_url}
+                currentPhotoUrl={getCurrentUserPhotoUrl()}
                 onPhotoUploaded={handleCouplePhotoUploaded}
-                title="Choose Couple Photo"
-                placeholder="Upload a photo of you two together"
+                title="Choose Your Photo"
+                placeholder="Upload a photo for your homepage"
                 className="mb-4"
               />
             </div>
