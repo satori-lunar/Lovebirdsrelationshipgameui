@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Heart, Plus, Calendar, Edit, Trash2, X, Cake, Sparkles } from 'lucide-react';
+import { ArrowLeft, Heart, Plus, Calendar, Edit, Trash2, X, Cake, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { relationshipService } from '../services/relationshipService';
 import { importantDatesService, ImportantDate } from '../services/importantDatesService';
+import { PhotoUpload } from './PhotoUpload';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -32,6 +33,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
   const [formDate, setFormDate] = useState('');
   const [formType, setFormType] = useState<'anniversary' | 'birthday' | 'custom'>('custom');
   const [formRecurring, setFormRecurring] = useState(true);
+  const [formPhotoUrl, setFormPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('📅 RelationshipTracker: relationship =', relationship);
@@ -98,7 +100,8 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
         formTitle,
         formDate,
         formType,
-        formRecurring
+        formRecurring,
+        formPhotoUrl
       );
       await loadData();
       resetForm();
@@ -122,6 +125,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
         date: formDate,
         type: formType,
         recurring: formRecurring,
+        photo_url: formPhotoUrl,
       });
       await loadData();
       resetForm();
@@ -153,6 +157,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     setFormDate(date.date);
     setFormType(date.type);
     setFormRecurring(date.recurring);
+    setFormPhotoUrl(date.photo_url);
     setShowEditDialog(true);
   };
 
@@ -161,6 +166,7 @@ export function RelationshipTracker({ onBack, partnerName }: RelationshipTracker
     setFormDate('');
     setFormType('custom');
     setFormRecurring(true);
+    setFormPhotoUrl(null);
   };
 
   const getTypeIcon = (type: string) => {

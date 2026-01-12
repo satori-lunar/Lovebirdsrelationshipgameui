@@ -11,6 +11,7 @@ export interface ImportantDate {
   reminder_sent_1week: boolean;
   reminder_sent_3days: boolean;
   reminder_sent_dayof: boolean;
+  photo_url: string | null;
   created_at: string;
 }
 
@@ -45,7 +46,8 @@ export const importantDatesService = {
     title: string,
     date: string,
     type: 'anniversary' | 'birthday' | 'custom',
-    recurring: boolean = true
+    recurring: boolean = true,
+    photoUrl: string | null = null
   ): Promise<ImportantDate> {
     const newDate = await handleSupabaseError(
       api.supabase
@@ -57,6 +59,7 @@ export const importantDatesService = {
           date,
           type,
           recurring,
+          photo_url: photoUrl,
         })
         .select()
         .single()
@@ -74,6 +77,7 @@ export const importantDatesService = {
       date?: string;
       type?: 'anniversary' | 'birthday' | 'custom';
       recurring?: boolean;
+      photo_url?: string | null;
     }
   ): Promise<ImportantDate> {
     const updatedDate = await handleSupabaseError(

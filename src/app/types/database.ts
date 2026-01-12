@@ -313,6 +313,7 @@ export interface Database {
           reminder_sent_1week: boolean;
           reminder_sent_3days: boolean;
           reminder_sent_dayof: boolean;
+          photo_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -326,6 +327,7 @@ export interface Database {
           reminder_sent_1week?: boolean;
           reminder_sent_3days?: boolean;
           reminder_sent_dayof?: boolean;
+          photo_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -337,6 +339,7 @@ export interface Database {
           reminder_sent_1week?: boolean;
           reminder_sent_3days?: boolean;
           reminder_sent_dayof?: boolean;
+          photo_url?: string | null;
         };
       };
       memories: {
@@ -465,6 +468,7 @@ export interface Database {
           reminder_sent_1week: boolean;
           reminder_sent_3days: boolean;
           reminder_sent_dayof: boolean;
+          photo_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -478,6 +482,7 @@ export interface Database {
           reminder_sent_1week?: boolean;
           reminder_sent_3days?: boolean;
           reminder_sent_dayof?: boolean;
+          photo_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -489,6 +494,7 @@ export interface Database {
           reminder_sent_1week?: boolean;
           reminder_sent_3days?: boolean;
           reminder_sent_dayof?: boolean;
+          photo_url?: string | null;
         };
       };
     };
