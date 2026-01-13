@@ -6,6 +6,9 @@ import { giftSuggestionsService, GiftWithSaved, GIFT_CATEGORIES } from '../servi
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import coupleHetero from '../../assets/illustrations/couple-hetero.jpg';
+import coupleLesbian from '../../assets/illustrations/couple-lesbian.jpg';
+import coupleGay from '../../assets/illustrations/couple-gay.jpg';
 
 interface GiftSuggestionsProps {
   onBack: () => void;
@@ -103,9 +106,13 @@ export function GiftSuggestions({ onBack }: GiftSuggestionsProps) {
 
   // Category selection view
   if (!selectedCategory) {
+    // Randomly select a couple illustration
+    const illustrations = [coupleHetero, coupleLesbian, coupleGay];
+    const randomIllustration = illustrations[Math.floor(Math.random() * illustrations.length)];
+
     return (
       <div className="min-h-screen bg-gradient-to-b from-warm-cream to-soft-purple-light">
-        <div className="bg-gradient-to-r from-warm-pink to-warm-orange text-white p-6 pb-12">
+        <div className="bg-gradient-to-r from-warm-pink to-warm-orange text-white p-6 pb-20">
           <div className="max-w-md mx-auto">
             <button
               onClick={onBack}
@@ -115,16 +122,23 @@ export function GiftSuggestions({ onBack }: GiftSuggestionsProps) {
               <span>Back</span>
             </button>
 
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+            {/* Couple Illustration */}
+            <div className="flex justify-center mb-4">
+              <img
+                src={randomIllustration}
+                alt="Couple illustration"
+                className="w-48 h-48 object-contain drop-shadow-lg"
+              />
+            </div>
+
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
                 <Gift className="w-6 h-6" />
-              </div>
-              <div>
                 <h1 className="text-2xl font-bold">Gift Suggestions</h1>
-                <p className="text-white/90 text-sm">
-                  Find the perfect gift for your partner
-                </p>
               </div>
+              <p className="text-white/90 text-sm">
+                Find the perfect gift for your partner
+              </p>
             </div>
           </div>
         </div>
