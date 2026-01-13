@@ -297,7 +297,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   };
 
   return (
-    <div className="bg-[#F5F0F6] flex flex-col h-screen w-full max-w-[430px] mx-auto">
+    <div className="bg-warm-cream flex flex-col h-screen w-full max-w-[430px] mx-auto">
       {/* Status Bar */}
       <div className="bg-transparent h-[44px] px-6 relative flex items-center">
         <p className="text-[16px]">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
@@ -340,10 +340,10 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Anniversary Tracker Overlay */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 min-w-[240px] text-center shadow-lg border border-white/60">
               <div className="flex items-center justify-center gap-2 mb-1">
-                <Heart className="w-4 h-4 text-[#FF2D55]" fill="#FF2D55" />
-                <p className="font-['Lora',serif] text-[16px] text-[#2c2c2c]">Together for</p>
+                <Heart className="w-4 h-4 text-warm-pink" fill="currentColor" />
+                <p className="font-['Lora',serif] text-[16px] text-text-warm">Together for</p>
               </div>
-              <p className="font-['Nunito_Sans',sans-serif] text-[20px] text-[#FF2D55]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              <p className="font-['Nunito_Sans',sans-serif] text-[20px] text-warm-pink" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                 {getTimeTogether()}
               </p>
             </div>
@@ -378,7 +378,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
         {/* Partner's Capacity */}
         <div className="px-5 mb-5">
-          <div className="bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] rounded-3xl p-5 shadow-lg">
+          <div className="bg-gradient-to-br from-warm-pink to-warm-pink-light rounded-3xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -420,7 +420,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               <CollapsibleTrigger asChild>
                 <button className="flex items-center justify-between w-full mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-soft-blue to-warm-beige-dark flex items-center justify-center">
                       <MapPin className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -450,13 +450,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                     disabled={isUpdatingLocation}
                     className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
                       getLocationSharingMode() === 'off'
-                        ? 'border-[#06B6D4] bg-[#06B6D4]/10'
+                        ? 'border-soft-blue bg-soft-blue/10'
                         : 'border-gray-200 bg-white'
                     } disabled:opacity-50`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        getLocationSharingMode() === 'off' ? 'border-[#06B6D4]' : 'border-gray-300'
+                        getLocationSharingMode() === 'off' ? 'border-soft-blue' : 'border-gray-300'
                       }`}>
                         {getLocationSharingMode() === 'off' && (
                           <div className="w-3 h-3 rounded-full bg-[#06B6D4]" />
@@ -479,13 +479,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                     disabled={isUpdatingLocation}
                     className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
                       getLocationSharingMode() === 'app'
-                        ? 'border-[#8B5CF6] bg-[#8B5CF6]/10'
+                        ? 'border-warm-orange bg-warm-orange/10'
                         : 'border-gray-200 bg-white'
                     } disabled:opacity-50`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        getLocationSharingMode() === 'app' ? 'border-[#8B5CF6]' : 'border-gray-300'
+                        getLocationSharingMode() === 'app' ? 'border-warm-orange' : 'border-gray-300'
                       }`}>
                         {getLocationSharingMode() === 'app' && (
                           <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
@@ -508,13 +508,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                     disabled={isUpdatingLocation}
                     className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
                       getLocationSharingMode() === 'partner'
-                        ? 'border-[#FF2D55] bg-[#FF2D55]/10'
+                        ? 'border-warm-pink bg-warm-pink/10'
                         : 'border-gray-200 bg-white'
                     } disabled:opacity-50`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        getLocationSharingMode() === 'partner' ? 'border-[#FF2D55]' : 'border-gray-300'
+                        getLocationSharingMode() === 'partner' ? 'border-warm-pink' : 'border-gray-300'
                       }`}>
                         {getLocationSharingMode() === 'partner' && (
                           <div className="w-3 h-3 rounded-full bg-[#FF2D55]" />
@@ -536,7 +536,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                 {shareWithPartner && partnerLocation && distanceToPartner() && (
                   <div className="mt-4 p-3 bg-gradient-to-br from-[#06B6D4]/10 to-[#3B82F6]/10 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <Navigation className="w-4 h-4 text-[#06B6D4]" />
+                      <Navigation className="w-4 h-4 text-soft-blue" />
                       <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                         {distanceToPartner()!.formatted}
                       </p>
@@ -562,7 +562,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               onClick={() => onNavigate('daily-question')}
               className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center shadow-lg">
                 <MessageCircle className="w-8 h-8 text-white" strokeWidth={2.5} />
               </div>
               <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
@@ -575,7 +575,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               onClick={() => onNavigate('couples-challenges')}
               className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-warm-pink to-warm-pink-light flex items-center justify-center shadow-lg">
                 <Heart className="w-8 h-8 text-white" strokeWidth={2.5} fill="white" />
               </div>
               <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
@@ -588,7 +588,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               onClick={() => onNavigate('something-feels-missing')}
               className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
                 </svg>
@@ -603,7 +603,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               onClick={() => onNavigate('icebreakers')}
               className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-blue to-warm-beige-dark flex items-center justify-center shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
@@ -634,7 +634,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center text-white font-bold text-xl">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center text-white font-bold text-xl">
                     {userName.charAt(0).toUpperCase()}
                   </div>
                 </div>
@@ -722,7 +722,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         <div className="px-5 mb-5">
           <div
             onClick={() => onNavigate('helping-hand')}
-            className="bg-gradient-to-br from-[#8B5CF6] to-[#A78BFA] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+            className="bg-gradient-to-br from-soft-purple to-soft-purple-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -751,7 +751,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         <div className="px-5 mb-5">
           <div
             onClick={() => onNavigate('tracker')}
-            className="bg-gradient-to-br from-[#EC4899] to-[#F472B6] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+            className="bg-gradient-to-br from-warm-pink to-warm-pink-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -812,7 +812,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
         {/* Upcoming Date */}
         <div className="px-5 mb-5">
-          <div className="bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all" onClick={() => onNavigate('dates')}>
+          <div className="bg-gradient-to-br from-soft-blue to-warm-beige-dark rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all" onClick={() => onNavigate('dates')}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <p className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-2" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>

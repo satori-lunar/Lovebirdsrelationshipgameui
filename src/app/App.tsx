@@ -189,9 +189,9 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center">
+      <div className="size-full bg-gradient-to-b from-warm-cream to-soft-purple-light flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-warm-pink border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -209,7 +209,7 @@ export default function App() {
   };
 
   return (
-    <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50">
+    <div className="size-full bg-gradient-to-b from-warm-cream to-soft-purple-light">
       <Toaster />
       
       {currentView === 'entry' && (
