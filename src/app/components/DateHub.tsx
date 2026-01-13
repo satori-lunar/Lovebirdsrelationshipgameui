@@ -1,10 +1,10 @@
-import { ChevronLeft, Sparkles, Zap, Calendar, RotateCw } from 'lucide-react';
+import { ChevronLeft, Sparkles, Zap, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 
 interface DateHubProps {
   onBack: () => void;
-  onSelectMode: (mode: 'personalized' | 'challenge' | 'spinner') => void;
+  onSelectMode: (mode: 'personalized' | 'challenge') => void;
   partnerName: string;
 }
 
@@ -85,34 +85,6 @@ export function DateHub({ onBack, onSelectMode, partnerName }: DateHubProps) {
                 </span>
                 <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
                   No backing out!
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Decision Spinner */}
-        <Card
-          onClick={() => onSelectMode('spinner')}
-          className="p-6 border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer group bg-gradient-to-r from-blue-50 to-cyan-50"
-        >
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 group-hover:rotate-180 transition-all duration-500">
-              <RotateCw className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold mb-1 text-lg">
-                Decision Spinner
-              </h3>
-              <p className="text-sm text-gray-600 mb-3">
-                Can't decide? Customize your options and let the spinner choose for you!
-              </p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                  Customizable
-                </span>
-                <span className="text-xs px-2 py-1 bg-cyan-100 text-cyan-700 rounded-full">
-                  Fun & Easy
                 </span>
               </div>
             </div>

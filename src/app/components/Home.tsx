@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation, Edit, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation, Edit, Settings, ChevronDown, ChevronUp, Gift } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { useLocation } from '../hooks/useLocation';
@@ -610,6 +610,19 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               </div>
               <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                 Ice-<br/>breakers
+              </p>
+            </button>
+
+            {/* Gift Suggestions */}
+            <button
+              onClick={() => onNavigate('gift-suggestions')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#EC4899] to-[#F97316] flex items-center justify-center shadow-lg">
+                <Gift className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Gift<br/>Suggestions
               </p>
             </button>
           </div>
