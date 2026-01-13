@@ -7,9 +7,9 @@
 
 Save your three uploaded couple illustrations in this folder with these exact names:
 
-1. **couple-lesbian.png** - Two women couple illustration (first image you uploaded)
-2. **couple-hetero.png** - Heterosexual couple illustration (second image)
-3. **couple-gay.png** - Two men couple illustration (third image)
+1. **couple-lesbian.jpg** - Two women couple illustration ✅ UPLOADED
+2. **couple-hetero.jpg** - Heterosexual couple illustration ✅ UPLOADED
+3. **couple-gay.jpg** - Two men couple illustration ✅ UPLOADED
 
 ## 📋 File Requirements
 
