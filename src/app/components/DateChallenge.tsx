@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { ChevronLeft, Zap, Check, X, RefreshCw, Calendar, DollarSign, Clock, MapPin } from 'lucide-react';
+import { ChevronLeft, Zap, Check, X, RefreshCw, Calendar, DollarSign, Clock, MapPin, Bookmark } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
 import { dateSuggestionTemplates } from '../data/dateSuggestionTemplates';
+import { usePartnerInsights } from '../hooks/usePartnerInsights';
+import { useRelationship } from '../hooks/useRelationship';
+import { toast } from 'sonner';
 
 interface DateChallengeProps {
   onBack: () => void;
@@ -14,6 +17,9 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedDate, setSelectedDate] = useState<typeof dateSuggestionTemplates[0] | null>(null);
   const [hasAccepted, setHasAccepted] = useState(false);
+
+  const { relationship } = useRelationship();
+  const { saveChallengeInsight: saveInsight, isSaving } = usePartnerInsights();
 
   const spinForDate = () => {
     setIsSpinning(true);
@@ -29,6 +35,30 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
 
   const acceptChallenge = () => {
     setHasAccepted(true);
+  };
+
+  const handleSaveInsight = () => {
+    if (!selectedDate || !relationship) return;
+
+    const partnerId = relationship.partner_a_id === relationship.user_id
+      ? relationship.partner_b_id
+      : relationship.partner_a_id;
+
+    saveInsight(
+      {
+        partnerId,
+        title: `Challenge: ${selectedDate.title}`,
+        content: `We took on the challenge "${selectedDate.title}" - ${selectedDate.description}. This was a fun way to spice things up!`
+      },
+      {
+        onSuccess: () => {
+          toast.success('Challenge insight saved!');
+        },
+        onError: (error: any) => {
+          toast.error('Failed to save insight');
+        },
+      }
+    );
   };
 
   const getBudgetSymbol = (budget: string) => {
@@ -274,12 +304,23 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                       </div>
 
                       <div className="space-y-3">
-                        <Button
-                          onClick={onBack}
-                          className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white h-12"
-                        >
-                          Done - Let's Do This!
-                        </Button>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button
+                            onClick={handleSaveInsight}
+                            disabled={isSaving}
+                            variant="outline"
+                            className="h-12 border-purple-200 text-purple-600 hover:bg-purple-50"
+                          >
+                            <Bookmark className="w-4 h-4 mr-2" />
+                            {isSaving ? 'Saving...' : 'Save Insight'}
+                          </Button>
+                          <Button
+                            onClick={onBack}
+                            className="h-12 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white"
+                          >
+                            Done - Let's Do This!
+                          </Button>
+                        </div>
                         <Button
                           onClick={() => {
                             setSelectedDate(null);

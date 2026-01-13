@@ -24,6 +24,8 @@ import { DragonEvolutionDemo } from './components/DragonEvolutionDemo';
 import { ThingsToRemember } from './components/ThingsToRemember';
 import { CreateLockscreenGift } from './components/CreateLockscreenGift';
 import { ViewLockscreenGift } from './components/ViewLockscreenGift';
+import { InsightsNotes } from './components/InsightsNotes';
+import { Icebreakers } from './components/Icebreakers';
 import { WeeklySuggestions } from './components/WeeklySuggestions';
 import { AuthModal } from './components/AuthModal';
 import RelationshipModeSetup from './components/RelationshipModeSetup';
@@ -42,7 +44,7 @@ import { widgetGiftService } from './services/widgetGiftService';
 import { api } from './services/api';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'need-support-plan';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -354,6 +356,14 @@ export default function App() {
 
       {currentView === 'things-to-remember' && (
         <ThingsToRemember onBack={handleBack} />
+      )}
+
+      {currentView === 'insights-notes' && (
+        <InsightsNotes onBack={handleBack} />
+      )}
+
+      {currentView === 'icebreakers' && (
+        <Icebreakers onBack={handleBack} partnerName={userData?.partnerName || 'Partner'} />
       )}
 
       {currentView === 'create-lockscreen-gift' && (
