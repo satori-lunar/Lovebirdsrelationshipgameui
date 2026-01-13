@@ -39,6 +39,21 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Warm Illustration Theme Colors */
+  --warm-cream: #FAF0E6;
+  --warm-beige: #F5E6D3;
+  --warm-beige-dark: #E8D4BD;
+  --soft-purple: #D4C5E0;
+  --soft-purple-light: #E5DCF0;
+  --soft-blue: #A8C7E7;
+  --warm-orange: #F4A261;
+  --warm-orange-light: #F8B77F;
+  --warm-yellow: #F9C74F;
+  --warm-pink: #EC8B9B;
+  --warm-pink-light: #F5A7B5;
+  --text-warm: #5A4A42;
+  --text-warm-light: #8B7A70;
 }
 
 .dark {
@@ -117,6 +132,21 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Warm Illustration Theme - Available as Tailwind utilities */
+  --color-warm-cream: var(--warm-cream);
+  --color-warm-beige: var(--warm-beige);
+  --color-warm-beige-dark: var(--warm-beige-dark);
+  --color-soft-purple: var(--soft-purple);
+  --color-soft-purple-light: var(--soft-purple-light);
+  --color-soft-blue: var(--soft-blue);
+  --color-warm-orange: var(--warm-orange);
+  --color-warm-orange-light: var(--warm-orange-light);
+  --color-warm-yellow: var(--warm-yellow);
+  --color-warm-pink: var(--warm-pink);
+  --color-warm-pink-light: var(--warm-pink-light);
+  --color-text-warm: var(--text-warm);
+  --color-text-warm-light: var(--text-warm-light);
 }
 
 @layer base {
