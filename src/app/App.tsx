@@ -47,7 +47,6 @@ import { widgetGiftService } from './services/widgetGiftService';
 import { api } from './services/api';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-<<<<<<< HEAD
 type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan' | 'couples-challenges' | 'gift-suggestions' | 'something-feels-missing';
 
 export default function App() {
