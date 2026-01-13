@@ -7,6 +7,7 @@ import { Onboarding } from './components/Onboarding';
 import { Home } from './components/Home';
 import { DailyQuestion } from './components/DailyQuestion';
 import { LoveLanguageSuggestions } from './components/LoveLanguageSuggestions';
+import { LoveLanguageQuiz } from './components/LoveLanguageQuiz';
 import { DatePlanning } from './components/DatePlanning';
 import { DatePlanner } from './components/DatePlanner';
 import { DateChallenge } from './components/DateChallenge';
@@ -23,6 +24,8 @@ import { DragonEvolutionDemo } from './components/DragonEvolutionDemo';
 import { ThingsToRemember } from './components/ThingsToRemember';
 import { CreateLockscreenGift } from './components/CreateLockscreenGift';
 import { ViewLockscreenGift } from './components/ViewLockscreenGift';
+import { InsightsNotes } from './components/InsightsNotes';
+import { Icebreakers } from './components/Icebreakers';
 import { WeeklySuggestions } from './components/WeeklySuggestions';
 import { AuthModal } from './components/AuthModal';
 import RelationshipModeSetup from './components/RelationshipModeSetup';
@@ -31,15 +34,20 @@ import PartnerInsightsForm from './components/PartnerInsightsForm';
 import CapacityCheckIn from './components/CapacityCheckIn';
 import { PartnerProfileOnboarding } from './components/PartnerProfileOnboarding';
 import { NeedSupportPlan } from './components/NeedSupportPlan';
+import { CouplesChallenges } from './components/CouplesChallenges';
+import { SomethingFeelsMissing } from './components/SomethingFeelsMissing';
+import { GiftSuggestions } from './components/GiftSuggestions';
 import { useAuth } from './hooks/useAuth';
+import { useRelationship } from './hooks/useRelationship';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
+import { api } from './services/api';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'need-support-plan';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan' | 'couples-challenges' | 'gift-suggestions' | 'something-feels-missing';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -75,10 +83,68 @@ export default function App() {
     refetchOnWindowFocus: false,
   });
 
-  const userData = onboarding ? {
-    name: onboarding.name,
-    partnerName: onboarding.partner_name || 'Partner',
-  } : null;
+  // Get relationship to find partner's user ID
+  const { relationship } = useRelationship();
+
+  // Get partner's user ID from relationship
+  const partnerId = relationship && user ? (
+    relationship.partner_a_id === user.id ? relationship.partner_b_id : relationship.partner_a_id
+  ) : null;
+
+  // Fetch partner's onboarding data to get their actual name
+  const { data: partnerOnboarding, isLoading: isLoadingPartner, error: partnerError } = useQuery({
+    queryKey: ['partner-onboarding', partnerId],
+    queryFn: () => onboardingService.getOnboarding(partnerId!),
+    enabled: !!partnerId,
+    retry: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Always refetch to get latest data
+  });
+
+  // Fallback: Fetch partner's name from users table if onboarding is null
+  const { data: partnerNameFromUsers } = useQuery({
+    queryKey: ['partner-name-from-users', partnerId],
+    queryFn: async () => {
+      const { data } = await api.supabase
+        .from('users')
+        .select('name')
+        .eq('id', partnerId!)
+        .single();
+      console.log('🔍 Partner name from users table:', data?.name);
+      return data?.name || null;
+    },
+    enabled: !!partnerId && !partnerOnboarding?.name,
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  // Debug: Log partner data
+  useEffect(() => {
+    if (partnerId) {
+      console.log('🔍 Partner ID:', partnerId);
+      console.log('🔍 Is Loading Partner Data:', isLoadingPartner);
+      console.log('🔍 Partner Error:', partnerError);
+      console.log('🔍 Partner Onboarding Data:', partnerOnboarding);
+      console.log('🔍 Partner Name from Data:', partnerOnboarding?.name);
+      console.log('🔍 Partner Name from Users Table:', partnerNameFromUsers);
+    }
+  }, [partnerId, isLoadingPartner, partnerError, partnerOnboarding, partnerNameFromUsers]);
+
+  // Compute partner name with fallback chain
+  const partnerName = partnerOnboarding?.name || partnerNameFromUsers || 'Partner';
+
+  // Always compute userData, even if onboarding is null (use fallbacks)
+  const userData = {
+    name: onboarding?.name || 'there',
+    partnerName: partnerName,
+  };
+
+  // Debug: Log final userData
+  useEffect(() => {
+    console.log('🎯 Final userData:', userData);
+    console.log('🎯 Final partnerName being used:', userData?.partnerName);
+    console.log('🎯 Computed partnerName value:', partnerName);
+    console.log('🎯 partnerOnboarding?.name:', partnerOnboarding?.name);
+  }, [userData, partnerName, partnerOnboarding]);
 
   const handleOnboardingComplete = () => {
     setCurrentView('home');
@@ -124,9 +190,9 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center">
+      <div className="size-full bg-gradient-to-b from-warm-cream to-soft-purple-light flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-warm-pink border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -144,7 +210,7 @@ export default function App() {
   };
 
   return (
-    <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50">
+    <div className="size-full bg-gradient-to-b from-warm-cream to-soft-purple-light">
       <Toaster />
       
       {currentView === 'entry' && (
@@ -209,9 +275,9 @@ export default function App() {
       />
 
       {currentView === 'home' && (
-        <Home 
+        <Home
           userName={userData?.name || 'there'}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
           onNavigate={handleNavigate}
         />
       )}
@@ -219,14 +285,24 @@ export default function App() {
       {currentView === 'daily-question' && (
         <DailyQuestion
           onComplete={handleBack}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
         />
       )}
 
       {currentView === 'love-language' && userData && (
         <LoveLanguageSuggestions
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData.partnerName || 'Partner'}
+        />
+      )}
+
+      {currentView === 'love-language-quiz' && user && (
+        <LoveLanguageQuiz
+          onComplete={() => {
+            setCurrentView('settings');
+            toast.success('Love language quiz completed!');
+          }}
+          onBack={() => setCurrentView('settings')}
         />
       )}
 
@@ -237,14 +313,14 @@ export default function App() {
       {currentView === 'dates' && (
         <DatesWrapper
           onBack={handleBack}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
         />
       )}
 
       {currentView === 'gifts' && userData && (
         <GiftGuidance
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData.partnerName || 'Partner'}
         />
       )}
 
@@ -266,14 +342,14 @@ export default function App() {
       {currentView === 'weekly-wishes' && userData && (
         <WeeklyWishes
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData.partnerName || 'Partner'}
         />
       )}
 
       {currentView === 'tracker' && userData && (
         <RelationshipTracker
           onBack={handleBack}
-          partnerName={userData.partnerName || 'your partner'}
+          partnerName={userData.partnerName || 'Partner'}
         />
       )}
 
@@ -283,6 +359,14 @@ export default function App() {
 
       {currentView === 'things-to-remember' && (
         <ThingsToRemember onBack={handleBack} />
+      )}
+
+      {currentView === 'insights-notes' && (
+        <InsightsNotes onBack={handleBack} />
+      )}
+
+      {currentView === 'icebreakers' && (
+        <Icebreakers onBack={handleBack} partnerName={userData?.partnerName || 'Partner'} />
       )}
 
       {currentView === 'create-lockscreen-gift' && (
@@ -305,7 +389,7 @@ export default function App() {
       {currentView === 'need-support-plan' && supportPlanNeed && (
         <NeedSupportPlan
           need={supportPlanNeed}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
           onBack={() => setCurrentView('home')}
           onComplete={() => {
             setSupportPlanNeed(null);
@@ -314,10 +398,22 @@ export default function App() {
         />
       )}
 
+      {currentView === 'couples-challenges' && (
+        <CouplesChallenges onBack={handleBack} />
+      )}
+
+      {currentView === 'gift-suggestions' && (
+        <GiftSuggestions onBack={handleBack} />
+      )}
+
+      {currentView === 'something-feels-missing' && (
+        <SomethingFeelsMissing onBack={handleBack} />
+      )}
+
       {currentView === 'settings' && (
         <Settings
           onBack={handleBack}
-          partnerName={userData?.partnerName || 'your partner'}
+          partnerName={userData?.partnerName || 'Partner'}
           onNavigate={handleNavigate}
           onPartnerNameUpdate={() => refetchOnboarding()}
         />

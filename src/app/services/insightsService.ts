@@ -1,47 +1,70 @@
 import { api } from './api';
 
+export type InsightType = 'daily_question' | 'couple_challenge' | 'icebreaker' | 'manual_note';
+
 export interface SavedInsight {
   id: string;
   user_id: string;
-  question_id: string;
-  partner_id: string;
-  question_text: string;
-  partner_answer: string;
+  question_id: string | null;
+  partner_id: string | null;
+  question_text: string | null;
+  partner_answer: string | null;
   user_guess: string | null;
+  insight_type: InsightType;
+  title: string | null;
+  content: string | null;
   saved_at: string;
   created_at: string;
 }
 
 export interface SaveInsightParams {
-  questionId: string;
-  partnerId: string;
-  questionText: string;
-  partnerAnswer: string;
+  insightType: InsightType;
+  title?: string;
+  content?: string;
+  // For daily questions
+  questionId?: string;
+  partnerId?: string;
+  questionText?: string;
+  partnerAnswer?: string;
   userGuess?: string;
 }
 
 class InsightsService {
   /**
-   * Save a partner's answer as an insight
+   * Save an insight (daily question, challenge, icebreaker, or manual note)
    */
   async saveInsight(userId: string, params: SaveInsightParams): Promise<SavedInsight> {
+    const insertData: any = {
+      user_id: userId,
+      insight_type: params.insightType,
+    };
+
+    // Add type-specific fields
+    if (params.insightType === 'daily_question') {
+      insertData.question_id = params.questionId;
+      insertData.partner_id = params.partnerId;
+      insertData.question_text = params.questionText;
+      insertData.partner_answer = params.partnerAnswer;
+      insertData.user_guess = params.userGuess || null;
+    } else if (params.insightType === 'manual_note') {
+      insertData.title = params.title;
+      insertData.content = params.content;
+    } else if (params.insightType === 'couple_challenge' || params.insightType === 'icebreaker') {
+      insertData.title = params.title;
+      insertData.content = params.content;
+      insertData.partner_id = params.partnerId;
+    }
+
     const { data, error } = await api.supabase
       .from('saved_partner_insights')
-      .insert({
-        user_id: userId,
-        question_id: params.questionId,
-        partner_id: params.partnerId,
-        question_text: params.questionText,
-        partner_answer: params.partnerAnswer,
-        user_guess: params.userGuess || null,
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (error) {
       // If it's a unique constraint violation, the user already saved this
       if (error.code === '23505') {
-        throw new Error('You already saved this answer');
+        throw new Error('You already saved this insight');
       }
       console.error('Error saving insight:', error);
       throw new Error('Failed to save insight');
@@ -89,6 +112,41 @@ class InsightsService {
     }
 
     return !!data;
+  }
+
+  /**
+   * Create a manual note about partner interactions
+   */
+  async createManualNote(userId: string, title: string, content: string): Promise<SavedInsight> {
+    return this.saveInsight(userId, {
+      insightType: 'manual_note',
+      title,
+      content,
+    });
+  }
+
+  /**
+   * Save insight from a couple challenge
+   */
+  async saveChallengeInsight(userId: string, partnerId: string, title: string, content: string): Promise<SavedInsight> {
+    return this.saveInsight(userId, {
+      insightType: 'couple_challenge',
+      partnerId,
+      title,
+      content,
+    });
+  }
+
+  /**
+   * Save insight from an icebreaker
+   */
+  async saveIcebreakerInsight(userId: string, partnerId: string, title: string, content: string): Promise<SavedInsight> {
+    return this.saveInsight(userId, {
+      insightType: 'icebreaker',
+      partnerId,
+      title,
+      content,
+    });
   }
 
   /**

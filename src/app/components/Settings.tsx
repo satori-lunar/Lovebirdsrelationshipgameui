@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Bell, Users, Link2, Copy, Check, Mail, MessageSquare, LogOut, Trash2, AlertTriangle, Smartphone, ChevronRight, Edit3 } from 'lucide-react';
+import { ChevronLeft, Bell, Users, Link2, Copy, Check, Mail, MessageSquare, LogOut, Trash2, AlertTriangle, Smartphone, ChevronRight, Edit3, Heart, Calendar, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Switch } from './ui/switch';
@@ -8,8 +8,10 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
+import { usePartner } from '../hooks/usePartner';
 import { authService } from '../services/authService';
 import { onboardingService } from '../services/onboardingService';
+import { relationshipService } from '../services/relationshipService';
 import { toast } from 'sonner';
 import { PartnerConnection } from './PartnerConnection';
 
@@ -23,6 +25,7 @@ interface SettingsProps {
 export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate }: SettingsProps) {
   const { user, signOut } = useAuth();
   const { relationship } = useRelationship();
+  const { partnerId } = usePartner(relationship);
 
   const [notificationSettings, setNotificationSettings] = useState({
     weeklyLoveLanguage: true,
@@ -38,6 +41,13 @@ export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate 
   const [showPartnerNameDialog, setShowPartnerNameDialog] = useState(false);
   const [editingPartnerName, setEditingPartnerName] = useState(partnerName);
   const [isUpdatingPartnerName, setIsUpdatingPartnerName] = useState(false);
+  const [showAnniversaryDialog, setShowAnniversaryDialog] = useState(false);
+  const [editingAnniversaryDate, setEditingAnniversaryDate] = useState(
+    relationship?.relationship_start_date
+      ? new Date(relationship.relationship_start_date).toISOString().split('T')[0]
+      : ''
+  );
+  const [isUpdatingAnniversary, setIsUpdatingAnniversary] = useState(false);
 
   const toggleNotification = (key: keyof typeof notificationSettings) => {
     setNotificationSettings(prev => ({
@@ -86,8 +96,8 @@ export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate 
   };
 
   const handleUpdatePartnerName = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
+    if (!partnerId) {
+      toast.error('Partner not found. Please make sure you are connected to your partner.');
       return;
     }
 
@@ -98,8 +108,8 @@ export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate 
 
     setIsUpdatingPartnerName(true);
     try {
-      await onboardingService.updateOnboarding(user.id, {
-        partnerName: editingPartnerName.trim(),
+      await onboardingService.updateOnboarding(partnerId, {
+        name: editingPartnerName.trim(),
       });
       toast.success('Partner name updated successfully');
       setShowPartnerNameDialog(false);
@@ -109,6 +119,39 @@ export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate 
       toast.error('Failed to update partner name');
     } finally {
       setIsUpdatingPartnerName(false);
+    }
+  };
+
+  const handleUpdateAnniversaryDate = async () => {
+    if (!user?.id) {
+      toast.error('User not found');
+      return;
+    }
+
+    if (!editingAnniversaryDate) {
+      toast.error('Please select an anniversary date');
+      return;
+    }
+
+    setIsUpdatingAnniversary(true);
+    try {
+      await relationshipService.updateRelationshipStartDate(user.id, editingAnniversaryDate);
+      toast.success('Anniversary date updated successfully');
+      setShowAnniversaryDialog(false);
+      // Refresh relationship data
+      window.location.reload();
+    } catch (error) {
+      console.error('Update anniversary date error:', error);
+      toast.error('Failed to update anniversary date');
+    } finally {
+      setIsUpdatingAnniversary(false);
+    }
+  };
+
+  const handleRetakeLoveLanguageQuiz = () => {
+    if (onNavigate) {
+      // Navigate to a love language quiz page
+      onNavigate('love-language-quiz');
     }
   };
 
@@ -163,6 +206,68 @@ export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate 
             <p className="text-xs text-gray-600 mt-2">
               Current: {partnerName}
             </p>
+          </div>
+        </Card>
+
+        {/* Relationship Settings */}
+        <Card className="p-6 border-0 shadow-lg bg-white">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
+              <Heart className="w-5 h-5 text-pink-600" />
+            </div>
+            <h2 className="font-semibold text-lg">Relationship Settings</h2>
+          </div>
+
+          <div className="space-y-4">
+            {/* Anniversary Date */}
+            <div className="border-b border-gray-100 pb-4">
+              <Button
+                onClick={() => {
+                  setEditingAnniversaryDate(
+                    relationship?.relationship_start_date
+                      ? new Date(relationship.relationship_start_date).toISOString().split('T')[0]
+                      : new Date().toISOString().split('T')[0]
+                  );
+                  setShowAnniversaryDialog(true);
+                }}
+                variant="outline"
+                className="w-full flex items-center justify-between h-12"
+              >
+                <span className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Anniversary Date
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <p className="text-xs text-gray-600 mt-2">
+                Current: {relationship?.relationship_start_date
+                  ? new Date(relationship.relationship_start_date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
+                  : 'Not set'
+                }
+              </p>
+            </div>
+
+            {/* Retake Love Language Quiz */}
+            <div>
+              <Button
+                onClick={handleRetakeLoveLanguageQuiz}
+                variant="outline"
+                className="w-full flex items-center justify-between h-12"
+              >
+                <span className="flex items-center gap-2">
+                  <RotateCcw className="w-4 h-4" />
+                  Retake Love Language Quiz
+                </span>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <p className="text-xs text-gray-600 mt-2">
+                Discover your love language again or update your preferences
+              </p>
+            </div>
           </div>
         </Card>
 
@@ -454,6 +559,47 @@ export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate 
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               {isDeleting ? 'Deleting...' : 'Delete Everything'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Anniversary Date Dialog */}
+      <Dialog open={showAnniversaryDialog} onOpenChange={setShowAnniversaryDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Anniversary Date</DialogTitle>
+            <DialogDescription>
+              Update the start date of your relationship. This helps us personalize your experience with milestone celebrations and reminders.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="anniversaryDate">Anniversary Date</Label>
+              <Input
+                id="anniversaryDate"
+                type="date"
+                value={editingAnniversaryDate}
+                onChange={(e) => setEditingAnniversaryDate(e.target.value)}
+                className="h-12"
+                disabled={isUpdatingAnniversary}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowAnniversaryDialog(false)}
+              disabled={isUpdatingAnniversary}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateAnniversaryDate}
+              disabled={isUpdatingAnniversary || !editingAnniversaryDate}
+              className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+            >
+              {isUpdatingAnniversary ? 'Updating...' : 'Update Date'}
             </Button>
           </DialogFooter>
         </DialogContent>

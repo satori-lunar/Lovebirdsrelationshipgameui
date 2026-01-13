@@ -263,7 +263,7 @@ export function DailyQuestion({ onComplete, partnerName }: DailyQuestionProps) {
                 </div>
               </div>
               <h2 className="text-2xl">Today's Question</h2>
-              <p className="text-gray-600">Answer honestly - this is private</p>
+              <p className="text-gray-600">Answer honestly - {partnerName} will see your response</p>
             </div>
 
             <div className="p-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl">
@@ -290,7 +290,7 @@ export function DailyQuestion({ onComplete, partnerName }: DailyQuestionProps) {
             </div>
 
             <p className="text-xs text-center text-gray-500">
-              Your answer is private and won't be shared with your partner
+              Your answer will be shared with {partnerName} after you both answer
             </p>
           </motion.div>
         )}
@@ -438,7 +438,7 @@ export function DailyQuestion({ onComplete, partnerName }: DailyQuestionProps) {
 
             <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 text-center">
               <p className="text-xs text-gray-600">
-                🔒 Your partner won't see that you got this wrong. No scores, no pressure - just learning.
+                🔒 {partnerName} can see your answer, but they won't see if your guess was wrong. No scores, no pressure - just learning.
               </p>
             </div>
           </motion.div>

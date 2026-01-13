@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { insightsService, SaveInsightParams } from '../services/insightsService';
+import { insightsService, SaveInsightParams, InsightType } from '../services/insightsService';
 import { useAuth } from './useAuth';
 
 export function usePartnerInsights() {
@@ -45,12 +45,42 @@ export function usePartnerInsights() {
     },
   });
 
+  // Create manual note
+  const createManualNoteMutation = useMutation({
+    mutationFn: ({ title, content }: { title: string; content: string }) =>
+      insightsService.createManualNote(user!.id, title, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedInsights'] });
+    },
+  });
+
+  // Save challenge insight
+  const saveChallengeInsightMutation = useMutation({
+    mutationFn: ({ partnerId, title, content }: { partnerId: string; title: string; content: string }) =>
+      insightsService.saveChallengeInsight(user!.id, partnerId, title, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedInsights'] });
+    },
+  });
+
+  // Save icebreaker insight
+  const saveIcebreakerInsightMutation = useMutation({
+    mutationFn: ({ partnerId, title, content }: { partnerId: string; title: string; content: string }) =>
+      insightsService.saveIcebreakerInsight(user!.id, partnerId, title, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['savedInsights'] });
+    },
+  });
+
   return {
     savedInsights: savedInsights || [],
     isLoading,
     saveInsight: saveInsightMutation.mutate,
     deleteInsight: deleteInsightMutation.mutate,
-    isSaving: saveInsightMutation.isPending,
+    createManualNote: createManualNoteMutation.mutate,
+    saveChallengeInsight: saveChallengeInsightMutation.mutate,
+    saveIcebreakerInsight: saveIcebreakerInsightMutation.mutate,
+    isSaving: saveInsightMutation.isPending || createManualNoteMutation.isPending || saveChallengeInsightMutation.isPending || saveIcebreakerInsightMutation.isPending,
     isDeleting: deleteInsightMutation.isPending,
   };
 }

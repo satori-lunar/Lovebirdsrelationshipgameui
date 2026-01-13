@@ -1,44 +1,27 @@
-﻿/**
- * Home Screen Component
+/**
+ * Home Screen Component - New Figma Design
  *
- * An emotionally intelligent space for couples to understand each other's
- * current state and receive one clear, appropriate way to support each other.
- * Designed with restraint, warmth, and progressive disclosure.
+ * A redesigned home screen with modern UI elements including:
+ * - Couple photo with anniversary tracker
+ * - Partner's capacity display
+ * - Quick action buttons for engagement
+ * - Upcoming dates and streaks
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import {
-  Heart,
-  Sparkles,
-  MessageCircleHeart,
-  ChevronDown,
-  ChevronUp,
-  Settings,
-  Clock,
-  Smile,
-  Meh,
-  Frown,
-  BookHeart,
-  Flame,
-  Gift,
-  ChevronRight,
-  Calendar,
-  Bookmark
-} from 'lucide-react';
-import { Card, CardContent } from './ui/card';
+import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation, Edit, Settings, ChevronDown, ChevronUp, Gift } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
-import { useQuery } from '@tanstack/react-query';
+import { useLocation } from '../hooks/useLocation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { onboardingService } from '../services/onboardingService';
 import { api } from '../services/api';
 import { useSharedCalendar } from '../hooks/useSharedCalendar';
-import { useAdaptiveNotifications } from '../services/adaptiveNotifications';
-import { ProfilePhotos } from './ProfilePhotos';
-import PartnerCapacityView from './PartnerCapacityView';
-import { PartnerNeedsView } from './PartnerNeedsView';
-import PartnerFormInvite from './PartnerFormInvite';
-import WeeklyRhythm from './WeeklyRhythm';
+import { useMoodUpdates } from '../hooks/useMoodUpdates';
+import { toast } from 'sonner';
+import { PhotoUpload } from './PhotoUpload';
+import { PartnerSuggestions } from './PartnerSuggestions';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
 interface HomeProps {
   userName: string;
@@ -47,890 +30,898 @@ interface HomeProps {
   showWelcomeFlow?: boolean;
 }
 
-interface EmotionalState {
-  mood: 'great' | 'good' | 'okay' | 'challenging' | 'tough';
-  energy: 'high' | 'medium' | 'low';
-  lastUpdated: Date;
-}
-
-export function Home({ userName, partnerName: partnerNameProp, onNavigate, showWelcomeFlow = false }: HomeProps) {
+export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
-  const { insights: calendarInsights } = useSharedCalendar();
-  const { scheduleNotification, getOptimalTiming } = useAdaptiveNotifications();
-  const [showDetails, setShowDetails] = useState(false);
-  const [currentSupportAction, setCurrentSupportAction] = useState<string | null>(null);
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [currentStreak, setCurrentStreak] = useState(0);
-  const [totalCompleted, setTotalCompleted] = useState(0);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [canSeeFeedback, setCanSeeFeedback] = useState(false);
-  const [hasCompletedDailyQuestion, setHasCompletedDailyQuestion] = useState(false);
-  // Check if user has completed the welcome flow
-  const [hasSeenWelcome, setHasSeenWelcome] = useState(() => {
-    return localStorage.getItem('lovebirds-has-seen-welcome') === 'true';
-  });
+  const queryClient = useQueryClient();
+  const [currentTab, setCurrentTab] = useState('home');
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [capacityLevel, setCapacityLevel] = useState<number>(50);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showCouplePhotoUpload, setShowCouplePhotoUpload] = useState(false);
+  const [isLocationSharingCollapsed, setIsLocationSharingCollapsed] = useState(true);
 
-  const [currentScreen, setCurrentScreen] = useState<'welcome' | 'capacity' | 'home'>('welcome');
-
-  // Mark welcome as seen when user navigates to capacity
+  // Debug: Log props received by Home component
   useEffect(() => {
-    if (currentScreen === 'capacity') {
-      setHasSeenWelcome(true);
-      localStorage.setItem('lovebirds-has-seen-welcome', 'true');
+    console.log('🏠 Home component received props:', {
+      userName,
+      partnerName,
+      partnerNameLength: partnerName?.length,
+      partnerNameType: typeof partnerName
+    });
+    console.log('🏠 partnerName exact value:', JSON.stringify(partnerName));
+  }, [userName, partnerName]);
+
+  // Determine if current user is partner A or B
+  const isPartnerA = user?.id === relationship?.partner_a_id;
+  const isPartnerB = user?.id === relationship?.partner_b_id;
+
+  // Get the current user's photo URL
+  const getCurrentUserPhotoUrl = () => {
+    if (!relationship) return "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80";
+
+    if (isPartnerA && relationship.partner_a_photo_url) {
+      return relationship.partner_a_photo_url;
     }
-  }, [currentScreen]);
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    if (isPartnerB && relationship.partner_b_photo_url) {
+      return relationship.partner_b_photo_url;
+    }
+    // Fallback to shared couple photo or default
+    return relationship.couple_photo_url || "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80";
+  };
 
-  // Get partner information
-  const { data: partnerProfile } = useQuery({
-    queryKey: ['partnerProfile', relationship?.id, user?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id || !relationship || !user) return null;
-      try {
-        const partnerId = relationship.partner_a_id === user.id
-          ? relationship.partner_b_id
-          : relationship.partner_a_id;
+  // Handle couple photo upload - save to per-partner column
+  const handleCouplePhotoUploaded = async (photoUrl: string) => {
+    if (!relationship?.id) return;
 
-        if (!partnerId) return null;
+    try {
+      // Determine which column to update based on current user
+      const updateColumn = isPartnerA ? 'partner_a_photo_url' : 'partner_b_photo_url';
 
-        const partnerData = await onboardingService.getOnboarding(partnerId);
-        return partnerData;
-      } catch (error) {
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id,
+      const { error } = await api.supabase
+        .from('relationships')
+        .update({ [updateColumn]: photoUrl })
+        .eq('id', relationship.id);
+
+      if (error) throw error;
+
+      // Refresh relationship data
+      queryClient.invalidateQueries({ queryKey: ['relationship'] });
+      toast.success('Your homepage photo updated!');
+      setShowCouplePhotoUpload(false);
+    } catch (error) {
+      console.error('Error updating couple photo:', error);
+      toast.error('Failed to update couple photo');
+    }
+  };
+
+  // Use mood updates hook for partner's capacity
+  const { partnerMood } = useMoodUpdates();
+
+  // Location tracking
+  const {
+    userLocation,
+    partnerLocation,
+    shareWithApp,
+    shareWithPartner,
+    isUpdating: isUpdatingLocation,
+    requestPermission,
+    updateSharingSettings,
+    distanceToPartner,
+  } = useLocation();
+
+  // Start location tracking on mount
+  useEffect(() => {
+    if ((shareWithApp || shareWithPartner) && user?.id) {
+      // Location updates handled by useLocation hook
+    }
+  }, [shareWithApp, shareWithPartner, user?.id]);
+
+  // Fetch user's onboarding data for profile photo
+  const { data: onboardingData } = useQuery({
+    queryKey: ['onboarding', user?.id],
+    queryFn: () => onboardingService.getOnboarding(user!.id),
+    enabled: !!user?.id,
   });
 
-  // Get partner's recent capacity check-in
-  const { data: partnerCapacity } = useQuery({
-    queryKey: ['partnerCapacity', relationship?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id || !relationship || !user) return null;
-      try {
-        const partnerId = relationship.partner_a_id === user.id
-          ? relationship.partner_b_id
-          : relationship.partner_a_id;
-
-        if (!partnerId) return null;
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const { data } = await api.supabase
-          .from('capacity_checkins')
-          .select('*')
-          .eq('couple_id', relationship.id)
-          .eq('user_id', partnerId)
-          .gte('created_at', today.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        return data;
-      } catch (error) {
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id,
-    refetchInterval: 300000, // Refresh every 5 minutes
-  });
-
-  // Get user's recent capacity check-in
-  const { data: userCapacity } = useQuery({
-    queryKey: ['userCapacity', relationship?.id, user?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id || !relationship || !user) return null;
-      try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const { data } = await api.supabase
-          .from('capacity_checkins')
-          .select('*')
-          .eq('couple_id', relationship.id)
-          .eq('user_id', user.id)
-          .gte('created_at', today.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        return data;
-      } catch (error) {
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id,
-    refetchInterval: 300000,
-  });
-
-  // Get time together
+  // Calculate time together
   const getTimeTogether = () => {
-    if (!relationship?.relationship_start_date) return null;
-    const start = new Date(relationship.relationship_start_date);
+    if (!relationship?.relationship_start_date) return 'Just Started';
+
+    const anniversary = new Date(relationship.relationship_start_date);
     const now = new Date();
-    const diffMs = now.getTime() - start.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffTime = Math.abs(now.getTime() - anniversary.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     const years = Math.floor(diffDays / 365);
     const months = Math.floor((diffDays % 365) / 30);
 
     if (years > 0) {
-      return `${years} ${years === 1 ? 'year' : 'years'}`;
+      return `${years} Year${years > 1 ? 's' : ''}, ${months} Month${months !== 1 ? 's' : ''}`;
     } else if (months > 0) {
-      return `${months} ${months === 1 ? 'month' : 'months'}`;
-    }
-    return `${diffDays} days`;
-  };
-
-  const timeTogether = getTimeTogether();
-  const partnerName = partnerProfile?.name || partnerNameProp;
-
-  // Determine primary support action based on partner state and shared context
-  useEffect(() => {
-    if (partnerCapacity && userCapacity) {
-      const partnerEnergy = partnerCapacity.energy_level;
-      const partnerMood = partnerCapacity.mood;
-      const userEnergy = userCapacity.energy_level;
-      const hasSharedTime = calendarInsights?.overlapHours > 1;
-      const hasPotentialDateTime = calendarInsights?.suggestedDateTimes.length > 0;
-
-      // Intelligent support action selection based on emotional intelligence principles
-      if (partnerEnergy <= 3 && partnerMood <= 3) {
-        // Low mood + low energy = gentle, non-demanding support
-        setCurrentSupportAction('gentle_check_in');
-      } else if (partnerEnergy >= 8 && partnerMood >= 7) {
-        // High energy + good mood = celebratory support
-        setCurrentSupportAction('celebrate_energy');
-      } else if (hasSharedTime && userEnergy >= 6 && partnerEnergy >= 5 && hasPotentialDateTime) {
-        // Good shared availability + decent energy levels + potential date times
-        setCurrentSupportAction('quality_time');
-      } else if (partnerMood <= 5 && userEnergy >= 4) {
-        // Partner could use a lift, user has capacity to help
-        setCurrentSupportAction('thoughtful_message');
-      } else {
-        // Default to checking in together
-        setCurrentSupportAction('check_in');
-      }
+      return `${months} Month${months !== 1 ? 's' : ''}`;
     } else {
-      setCurrentSupportAction('check_in');
-    }
-  }, [partnerCapacity, userCapacity, calendarInsights]);
-
-  const getSupportAction = () => {
-    const hasSharedTime = calendarInsights?.overlapHours > 1;
-
-    switch (currentSupportAction) {
-      case 'gentle_check_in':
-        return {
-          title: "A gentle check-in might help",
-          description: hasSharedTime
-            ? "They seem to need some quiet care right now"
-            : "A soft message when they're ready",
-          icon: Heart,
-          action: () => onNavigate('messages'),
-          color: "text-rose-600",
-          bgColor: "bg-rose-50"
-        };
-      case 'celebrate_energy':
-        return {
-          title: "Celebrate their good energy",
-          description: hasSharedTime
-            ? "They're feeling great - share in their joy"
-            : "Acknowledge their positive moment",
-          icon: Sparkles,
-          action: () => onNavigate('messages'),
-          color: "text-amber-600",
-          bgColor: "bg-amber-50"
-        };
-      case 'quality_time':
-        return {
-          title: "Share some quality time",
-          description: calendarInsights?.suggestedDateTimes.length
-            ? "You both have time this evening"
-            : "You both seem available for connection",
-          icon: Clock,
-          action: () => onNavigate('dates'),
-          color: "text-blue-600",
-          bgColor: "bg-blue-50"
-        };
-      case 'thoughtful_message':
-        return {
-          title: "Send a thoughtful message",
-          description: "A kind note can brighten their day",
-          icon: MessageCircleHeart,
-          action: () => onNavigate('messages'),
-          color: "text-pink-600",
-          bgColor: "bg-pink-50"
-        };
-      default:
-        return {
-          title: "Check in with each other",
-          description: "See how you're both doing today",
-          icon: Heart,
-          action: () => onNavigate('capacity-checkin'),
-          color: "text-indigo-600",
-          bgColor: "bg-indigo-50"
-        };
+      return `${diffDays} Day${diffDays !== 1 ? 's' : ''}`;
     }
   };
 
-  const supportAction = getSupportAction();
-
-  const getMoodIcon = (mood?: number) => {
-    if (!mood) return Meh;
-    if (mood >= 7) return Smile;
-    if (mood <= 3) return Frown;
-    return Meh;
+  // Convert capacity percentage to energy level description
+  const getEnergyLevel = (percentage: number): string => {
+    if (percentage >= 80) return 'High Energy';
+    if (percentage >= 60) return 'Good Energy';
+    if (percentage >= 40) return 'Moderate Energy';
+    if (percentage >= 20) return 'Low Energy';
+    return 'Numb and Disconnected';
   };
 
-  const getEnergyColor = (energy?: number) => {
-    if (!energy) return "text-gray-400";
-    if (energy >= 7) return "text-green-600";
-    if (energy <= 3) return "text-red-500";
-    return "text-yellow-600";
+  // Get color for capacity level
+  const getCapacityColor = (percentage: number): string => {
+    if (percentage >= 80) return '#10B981'; // green
+    if (percentage >= 60) return '#3B82F6'; // blue
+    if (percentage >= 40) return '#F59E0B'; // orange
+    if (percentage >= 20) return '#EF4444'; // red
+    return '#6B7280'; // gray
   };
 
-  const { data: onboarding } = useQuery({
-    queryKey: ['onboarding', user?.id],
-    queryFn: () => onboardingService.getOnboarding(user!.id),
-    enabled: !!user,
-  });
+  // Get partner's mood display
+  const getPartnerMood = () => {
+    if (!partnerMood) return 'Not Updated';
 
-  // Query couple data (relationship contains couple data)
-  const couple = relationship;
+    // Map mood string to display text
+    const moodMap: Record<string, string> = {
+      'great': 'Feeling Great',
+      'good': 'Feeling Good',
+      'okay': 'Feeling Okay',
+      'low': 'Feeling Low',
+      'struggling': 'Struggling',
+      'numb': 'Disconnected'
+    };
 
-  // Query user's own latest capacity check-in
-  const { data: myCapacity } = useQuery({
-    queryKey: ['myCapacity', relationship?.id, user?.id],
-    queryFn: async () => {
-      if (!relationship?.id || !user?.id || !relationship || !user) return null;
-      try {
-        // Get user's latest capacity check-in from today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    return moodMap[partnerMood.mood] || 'Unknown';
+  };
 
-        const { data, error } = await api.supabase
-          .from('capacity_checkins')
-          .select('*')
-          .eq('couple_id', relationship.id)
-          .eq('user_id', user.id) // Filter by current user's ID
-          .gte('created_at', today.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(); // Use maybeSingle to handle no results gracefully
+  // Get partner's capacity percentage from mood string
+  const getPartnerCapacityLevel = () => {
+    if (!partnerMood || !partnerMood.mood) return null;
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-          console.error('Failed to fetch my capacity:', error);
-          return null;
-        }
+    // Convert mood string to percentage for display
+    const moodToPercentage: Record<string, number> = {
+      'great': 90,
+      'good': 70,
+      'okay': 50,
+      'low': 30,
+      'struggling': 15,
+      'numb': 5
+    };
 
-        return data;
-      } catch (error) {
-        console.error('Failed to fetch my capacity:', error);
-        return null;
-      }
-    },
-    enabled: !!relationship?.id && !!user?.id && !!relationship?.partner_b_id,
-    refetchInterval: 30000, // Refresh every 30 seconds
-  });
+    return moodToPercentage[partnerMood.mood] || 50;
+  };
 
-  // Determine initial screen based on user state
-  useEffect(() => {
-    if (myCapacity) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const capacityDate = new Date(myCapacity.created_at);
-      capacityDate.setHours(0, 0, 0, 0);
+  const handleTabNavigation = (tab: string) => {
+    setCurrentTab(tab);
 
-      // If user has shared capacity today, show home screen
-      if (capacityDate.getTime() === today.getTime()) {
-        setCurrentScreen('home');
-        return;
-      }
+    // Map tabs to existing navigation routes
+    const tabRouteMap: Record<string, string> = {
+      'calendar': 'tracker',
+      'messages': 'messages',
+      'dates': 'dates',
+      'memories': 'memories',
+    };
+
+    if (tab !== 'home' && tabRouteMap[tab]) {
+      onNavigate(tabRouteMap[tab]);
     }
+  };
 
-    // If user has seen welcome and has capacity data, show home
-    if (hasSeenWelcome && myCapacity) {
-      setCurrentScreen('home');
+  const handleUpdateCapacity = async () => {
+    if (!user?.id || !relationship?.id) {
+      toast.error('Please sign in to update your capacity');
       return;
     }
 
-    // Otherwise show welcome
-    setCurrentScreen('welcome');
-  }, [myCapacity, hasSeenWelcome]);
+    // Convert percentage to mood string that matches database schema
+    let moodString: string;
+    if (capacityLevel >= 80) moodString = 'great';
+    else if (capacityLevel >= 60) moodString = 'good';
+    else if (capacityLevel >= 40) moodString = 'okay';
+    else if (capacityLevel >= 20) moodString = 'low';
+    else if (capacityLevel >= 10) moodString = 'struggling';
+    else moodString = 'numb';
 
-  // Handler for starting need plans
-  const handleStartNeedPlan = (needId: string) => {
-    onNavigate('need-plan', { needId });
-  };
+    setIsUpdating(true);
 
-  // Swipe handling
-  const minSwipeDistance = 50;
+    try {
+      const { error } = await api.supabase
+        .from('capacity_checkins')
+        .insert({
+          user_id: user.id,
+          couple_id: relationship.id,
+          mood: moodString,
+        });
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientY);
-  };
+      if (error) throw error;
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientY);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isUpSwipe = distance > minSwipeDistance;
-
-    if (isUpSwipe && currentScreen === 'welcome') {
-      setCurrentScreen('capacity');
+      toast.success(`Capacity updated: ${getEnergyLevel(capacityLevel)}`);
+    } catch (error) {
+      toast.error('Failed to update capacity. Please try again.');
+      console.error('Capacity update error:', error);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+  const handleLocationSharingChange = async (mode: 'off' | 'app' | 'partner') => {
+    try {
+      // Request permission if enabling any tracking
+      if (mode !== 'off') {
+        const permitted = await requestPermission();
+        if (!permitted) {
+          toast.error('Location permission denied. Please enable it in your device settings.');
+          return;
+        }
+      }
+
+      let success = false;
+      let message = '';
+
+      switch (mode) {
+        case 'off':
+          success = await updateSharingSettings(false, false);
+          message = 'Location sharing disabled';
+          break;
+        case 'app':
+          success = await updateSharingSettings(true, false);
+          message = 'Sharing with app only (for features)';
+          break;
+        case 'partner':
+          success = await updateSharingSettings(true, true);
+          message = 'Sharing with app and partner';
+          break;
+      }
+
+      if (success) {
+        toast.success(message);
+      } else {
+        toast.error('Failed to update location sharing');
+      }
+    } catch (error) {
+      toast.error('Failed to update location sharing');
+      console.error('Location sharing error:', error);
+    }
+  };
+
+  const getLocationSharingMode = (): 'off' | 'app' | 'partner' => {
+    if (!shareWithApp && !shareWithPartner) return 'off';
+    if (shareWithApp && !shareWithPartner) return 'app';
+    return 'partner';
   };
 
   return (
-    <div className="relative">
-      {/* Welcome Screen - Always rendered as base */}
-      <AnimatePresence mode="wait">
-        {currentScreen === 'welcome' ? (
-        // Welcome Screen with Photo and Relationship Info
-        // Welcome Screen - Hero with Photo and Relationship Info
-        <motion.div
-          key="welcome"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, y: -50 }}
-          transition={{ duration: 0.5 }}
-          className="min-h-screen relative overflow-hidden"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
-          {/* Hero Background Image */}
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-400 via-pink-500 to-purple-600">
-            {/* User's chosen photo would go here - for now using a gradient overlay */}
-            <div className="absolute inset-0 bg-black/20"></div>
-          </div>
-
-          {/* Relationship Info Overlay */}
-          <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 text-white text-center">
-            {/* Greeting */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mb-8"
-            >
-              <h1 className="text-3xl font-bold mb-2">
-                {getGreeting()}, {userName} 💕
-              </h1>
-              <p className="text-rose-100 text-lg">
-                How are you feeling today?
-              </p>
-            </motion.div>
-
-            {/* Relationship Stats */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-              className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 max-w-sm"
-            >
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Heart className="w-6 h-6 text-pink-200" fill="currentColor" />
-                <span className="text-xl font-semibold">Together</span>
-                <Heart className="w-6 h-6 text-pink-200" fill="currentColor" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold mb-1">
-                    {timeTogether || '—'}
-                  </div>
-                  <div className="text-sm text-rose-100">
-                    Time Together
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold mb-1">
-                    {currentStreak || 0}
-                  </div>
-                  <div className="text-sm text-rose-100">
-                    Day Streak
-                  </div>
-                </div>
-              </div>
-
-              {/* Anniversary Date */}
-              {relationship?.relationship_start_date && (
-                <div className="mt-4 pt-4 border-t border-white/20">
-                  <div className="text-sm text-rose-100 mb-1">
-                    Anniversary
-                  </div>
-                  <div className="text-lg font-semibold">
-                    {new Date(relationship.relationship_start_date).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Swipe Indicator */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="text-center"
-            >
-              <div className="text-rose-100 text-sm mb-3">
-                Swipe up to share your capacity
-              </div>
-              <motion.div
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="w-8 h-8 mx-auto bg-white/20 rounded-full flex items-center justify-center"
-              >
-                <ChevronUp className="w-5 h-5 text-white" />
-              </motion.div>
-            </motion.div>
-
-            {/* Settings button */}
-            <button
-              onClick={() => onNavigate('settings')}
-              className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
-            >
-              <Settings className="w-5 h-5 text-white" />
-            </button>
-          </div>
-          {/* Hero Background Image */}
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-400 via-pink-500 to-purple-600">
-            {/* User's chosen photo would go here - for now using a gradient overlay */}
-            <div className="absolute inset-0 bg-black/20"></div>
-          </div>
-
-          {/* Relationship Info Overlay */}
-          <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 text-white text-center">
-            {/* Greeting */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="mb-8"
-            >
-              <h1 className="text-3xl font-bold mb-2">
-                {getGreeting()}, {userName} 💕
-              </h1>
-              <p className="text-rose-100 text-lg">
-                How are you feeling today?
-              </p>
-            </motion.div>
-
-            {/* Relationship Stats */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-              className="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-8 max-w-sm"
-            >
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Heart className="w-6 h-6 text-pink-200" fill="currentColor" />
-                <span className="text-xl font-semibold">Together</span>
-                <Heart className="w-6 h-6 text-pink-200" fill="currentColor" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold mb-1">
-                    {timeTogether || '—'}
-                  </div>
-                  <div className="text-sm text-rose-100">
-                    Time Together
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold mb-1">
-                    {currentStreak || 0}
-                  </div>
-                  <div className="text-sm text-rose-100">
-                    Day Streak
-                  </div>
-                </div>
-              </div>
-
-              {/* Anniversary Date */}
-              {relationship?.relationship_start_date && (
-                <div className="mt-4 pt-4 border-t border-white/20">
-                  <div className="text-sm text-rose-100 mb-1">
-                    Anniversary
-                  </div>
-                  <div className="text-lg font-semibold">
-                    {new Date(relationship.relationship_start_date).toLocaleDateString('en-US', {
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Swipe Indicator */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="text-center"
-            >
-              <div className="text-rose-100 text-sm mb-3">
-                Swipe up to share your capacity
-              </div>
-              <motion.div
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="w-8 h-8 mx-auto bg-white/20 rounded-full flex items-center justify-center"
-              >
-                <ChevronUp className="w-5 h-5 text-white" />
-              </motion.div>
-            </motion.div>
-
-            {/* Settings button */}
-            <button
-              onClick={() => onNavigate('settings')}
-              className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
-            >
-              <Settings className="w-5 h-5 text-white" />
-            </button>
-          </div>
-        </motion.div>
-      ) : (
-        // Full Home Screen with all features
-        <motion.div
-          key="home"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50"
-        >
-          {/* Header */}
-          <div className="px-6 pt-6 pb-4">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setCurrentScreen('home')}
-                className="w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
-              >
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              </button>
-              <h1 className="text-xl font-semibold text-gray-900">
-                Share Your Capacity
-              </h1>
-              <div className="w-10"></div> {/* Spacer for centering */}
-            </div>
-          </div>
-
-          {/* Capacity Sharing Interface */}
-          <div className="px-6 pb-6">
-            <div className="max-w-2xl mx-auto space-y-6">
-              {/* Current capacity display */}
-              {myCapacity && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
-                >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center`}>
-                      {myCapacity.energy_level >= 7 ? 'ðŸ˜Š' :
-                       myCapacity.energy_level >= 4 ? 'ðŸ˜' : 'ðŸ˜ž'}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        Current: {myCapacity.mood_label || 'Not shared'}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Energy level: {myCapacity.energy_level}/10
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Capacity check-in button */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <button
-                  onClick={() => onNavigate('capacity-checkin')}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all"
-                >
-                  <div className="flex items-center justify-center gap-4">
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center"
-                    >
-                      <Heart className="w-8 h-8 text-white" fill="white" />
-                    </motion.div>
-                    <div className="text-left">
-                      <h2 className="text-2xl font-bold mb-1">
-                        {myCapacity ? 'Update Your Capacity' : 'Share Your Capacity'}
-                      </h2>
-                      <p className="text-lg opacity-90">
-                        {myCapacity
-                          ? `Let ${partnerName} know how you're doing now`
-                          : `Help ${partnerName} show up better for you`
-                        }
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-6 flex items-center justify-center">
-                    <div className="bg-white/20 rounded-full px-6 py-2">
-                      <span className="text-sm font-medium">Tap to share</span>
-                    </div>
-                  </div>
-                </button>
-              </motion.div>
-
-              {/* Partner's capacity if available */}
-              {partnerCapacity && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50"
-                >
-                  <h3 className="font-semibold text-gray-900 mb-4">
-                    {partnerName}'s capacity today
-                  </h3>
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center`}>
-                      {partnerCapacity.energy_level >= 7 ? 'ðŸ˜Š' :
-                       partnerCapacity.energy_level >= 4 ? 'ðŸ˜' : 'ðŸ˜ž'}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {partnerCapacity.mood_label || 'Shared'}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Energy: {partnerCapacity.energy_level}/10
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(partnerCapacity.created_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Quick actions */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="grid grid-cols-2 gap-4"
-              >
-                <button
-                  onClick={() => onNavigate('messages')}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:bg-white transition-colors"
-                >
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <MessageCircleHeart className="w-6 h-6 text-blue-500" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900">Send Message</h3>
-                  <p className="text-sm text-gray-600">Share what's on your mind</p>
-                </button>
-
-                <button
-                  onClick={() => onNavigate('daily-question')}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50 hover:bg-white transition-colors"
-                >
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <Sparkles className="w-6 h-6 text-purple-500" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900">Daily Question</h3>
-                  <p className="text-sm text-gray-600">Connect deeper today</p>
-                </button>
-              </motion.div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      </AnimatePresence>
-
-      {/* Capacity Screen Modal - Appears over welcome screen */}
-      <AnimatePresence>
-        {currentScreen === 'capacity' && (
-          <motion.div
-            key="capacity-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-            onClick={() => setCurrentScreen('home')}
+    <div className="bg-warm-cream flex flex-col h-screen w-full max-w-[430px] mx-auto">
+      {/* Status Bar */}
+      <div className="bg-transparent h-[44px] px-6 relative flex items-center">
+        <p className="text-[16px]">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+        <div className="absolute right-2 flex gap-3 items-center">
+          <button
+            onClick={() => onNavigate('settings')}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors"
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
+            <Settings className="w-5 h-5 text-[#2c2c2c]" />
+          </button>
+          <div className="flex gap-1 items-center">
+            <div className="w-[18px] h-[10px]" />
+            <div className="w-[15px] h-[11px]" />
+            <div className="w-[27px] h-[13px]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Couple Photo with Anniversary Tracker */}
+        <div className="relative w-full h-[200px] mb-6 px-5">
+          <div className="relative w-full h-full rounded-3xl overflow-hidden group">
+            <img
+              src={getCurrentUserPhotoUrl()}
+              alt="Couple"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
+
+            {/* Edit Photo Button - Visible on mobile, hover on desktop */}
+            <button
+              onClick={() => setShowCouplePhotoUpload(true)}
+              className="absolute top-3 right-3 bg-white/80 backdrop-blur-xl p-2 rounded-full shadow-lg border border-white/60 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+              aria-label="Edit homepage photo"
             >
-              {/* Header */}
-              <div className="px-6 pt-6 pb-4">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setCurrentScreen('home')}
-                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors"
-                  >
-                    <ChevronDown className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <h1 className="text-xl font-semibold text-gray-900">
-                    Share Your Capacity
-                  </h1>
-                  <div className="w-10"></div> {/* Spacer */}
-                </div>
+              <Edit className="w-4 h-4 text-[#2c2c2c]" />
+            </button>
+
+            {/* Anniversary Tracker Overlay */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 min-w-[240px] text-center shadow-lg border border-white/60">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Heart className="w-4 h-4 text-warm-pink" fill="currentColor" />
+                <p className="font-['Lora',serif] text-[16px] text-text-warm">Together for</p>
               </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[20px] text-warm-pink" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                {getTimeTogether()}
+              </p>
+            </div>
+          </div>
+        </div>
 
-              {/* Capacity Sharing Interface */}
-              <div className="px-6 pb-6">
-                <div className="space-y-6">
-                  {/* Current capacity display */}
-                  {myCapacity && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-gray-50 rounded-2xl p-4"
-                    >
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center`}>
-                          {myCapacity.energy_level >= 7 ? '😊' :
-                           myCapacity.energy_level >= 4 ? '😐' : '😞'}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">
-                            Current: {myCapacity.mood_label || 'Not shared'}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Energy level: {myCapacity.energy_level}/10
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Capacity check-in button */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    <button
-                      onClick={() => onNavigate('capacity-checkin')}
-                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all"
-                    >
-                      <div className="flex items-center justify-center gap-4">
-                        <motion.div
-                          animate={{ scale: [1, 1.1, 1] }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                          className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center"
-                        >
-                          <Heart className="w-6 h-6 text-white" fill="white" />
-                        </motion.div>
-                        <div className="text-left">
-                          <h2 className="text-xl font-bold mb-1">
-                            {myCapacity ? 'Update Your Capacity' : 'Share Your Capacity'}
-                          </h2>
-                          <p className="text-sm opacity-90">
-                            {myCapacity
-                              ? `Let ${partnerName} know how you're doing now`
-                              : `Help ${partnerName} show up better for you`
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  </motion.div>
-
-                  {/* Partner's capacity if available */}
-                  {partnerCapacity && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="bg-gray-50 rounded-2xl p-4"
-                    >
-                      <h3 className="font-semibold text-gray-900 mb-4">
-                        {partnerName}'s capacity today
-                      </h3>
-                      <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center`}>
-                          {partnerCapacity.energy_level >= 7 ? '😊' :
-                           partnerCapacity.energy_level >= 4 ? '😐' : '😞'}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {partnerCapacity.mood_label || 'Shared'}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Energy: {partnerCapacity.energy_level}/10
-                          </p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Quick actions */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="grid grid-cols-2 gap-4"
-                  >
-                    <button
-                      onClick={() => onNavigate('messages')}
-                      className="bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                        <MessageCircleHeart className="w-6 h-6 text-blue-500" />
-                      </div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Messages</h3>
-                    </button>
-
-                    <button
-                      onClick={() => onNavigate('daily-question')}
-                      className="bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                        <Sparkles className="w-6 h-6 text-purple-500" />
-                      </div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Daily Question</h3>
-                    </button>
-                  </motion.div>
-                </div>
+        {/* Homepage Photo Upload Dialog */}
+        {showCouplePhotoUpload && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-['Nunito_Sans',sans-serif] text-[20px] font-semibold">
+                  Your Homepage Photo
+                </h3>
+                <button
+                  onClick={() => setShowCouplePhotoUpload(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <Camera className="w-5 h-5 text-gray-600" />
+                </button>
               </div>
-            </motion.div>
-          </motion.div>
+              <PhotoUpload
+                currentPhotoUrl={getCurrentUserPhotoUrl()}
+                onPhotoUploaded={handleCouplePhotoUploaded}
+                title="Choose Your Photo"
+                placeholder="Upload a photo for your homepage"
+                className="mb-4"
+              />
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+
+        {/* Partner's Capacity */}
+        <div className="px-5 mb-5">
+          <div className="bg-gradient-to-br from-warm-pink to-warm-pink-light rounded-3xl p-5 shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center border-2 border-white">
+                    <span className="text-2xl">{partnerName.charAt(0).toUpperCase()}</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="font-['Nunito_Sans',sans-serif] text-[18px] text-white" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    {partnerName}
+                  </p>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    {getPartnerMood()}
+                  </p>
+                  {getPartnerCapacityLevel() !== null && (
+                    <div className="mt-2">
+                      <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-white/90 mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        {getEnergyLevel(getPartnerCapacityLevel()!)} • {getPartnerCapacityLevel()}%
+                      </p>
+                      <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white transition-all duration-300"
+                          style={{ width: `${getPartnerCapacityLevel()}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <Heart className="w-8 h-8 text-white flex-shrink-0" fill="white" />
+            </div>
+          </div>
+        </div>
+
+        {/* Location Tracking */}
+        <div className="px-5 mb-5">
+          <Collapsible open={!isLocationSharingCollapsed} onOpenChange={(open) => setIsLocationSharingCollapsed(!open)}>
+            <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 shadow-md border border-white/60">
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center justify-between w-full mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-soft-blue to-warm-beige-dark flex items-center justify-center">
+                      <MapPin className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        Location Sharing
+                      </h3>
+                      <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        Choose how to share your location
+                      </p>
+                    </div>
+                  </div>
+                  {isLocationSharingCollapsed ? (
+                    <ChevronDown className="w-5 h-5 text-[#6d6d6d]" />
+                  ) : (
+                    <ChevronUp className="w-5 h-5 text-[#6d6d6d]" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="space-y-4">
+
+                {/* Location Sharing Options */}
+                <div className="space-y-3 mb-4">
+                  {/* Off */}
+                  <button
+                    onClick={() => handleLocationSharingChange('off')}
+                    disabled={isUpdatingLocation}
+                    className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                      getLocationSharingMode() === 'off'
+                        ? 'border-soft-blue bg-soft-blue/10'
+                        : 'border-gray-200 bg-white'
+                    } disabled:opacity-50`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        getLocationSharingMode() === 'off' ? 'border-soft-blue' : 'border-gray-300'
+                      }`}>
+                        {getLocationSharingMode() === 'off' && (
+                          <div className="w-3 h-3 rounded-full bg-[#06B6D4]" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          Off
+                        </p>
+                        <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          No location tracking
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* App Only */}
+                  <button
+                    onClick={() => handleLocationSharingChange('app')}
+                    disabled={isUpdatingLocation}
+                    className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                      getLocationSharingMode() === 'app'
+                        ? 'border-warm-orange bg-warm-orange/10'
+                        : 'border-gray-200 bg-white'
+                    } disabled:opacity-50`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        getLocationSharingMode() === 'app' ? 'border-warm-orange' : 'border-gray-300'
+                      }`}>
+                        {getLocationSharingMode() === 'app' && (
+                          <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          App Only
+                        </p>
+                        <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          For date suggestions, not visible to {partnerName}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Share with Partner */}
+                  <button
+                    onClick={() => handleLocationSharingChange('partner')}
+                    disabled={isUpdatingLocation}
+                    className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
+                      getLocationSharingMode() === 'partner'
+                        ? 'border-warm-pink bg-warm-pink/10'
+                        : 'border-gray-200 bg-white'
+                    } disabled:opacity-50`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        getLocationSharingMode() === 'partner' ? 'border-warm-pink' : 'border-gray-300'
+                      }`}>
+                        {getLocationSharingMode() === 'partner' && (
+                          <div className="w-3 h-3 rounded-full bg-[#FF2D55]" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          Share with {partnerName}
+                        </p>
+                        <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                          {partnerName} can see your location in real-time
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Show distance if both are sharing with partner */}
+                {shareWithPartner && partnerLocation && distanceToPartner() && (
+                  <div className="mt-4 p-3 bg-gradient-to-br from-[#06B6D4]/10 to-[#3B82F6]/10 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Navigation className="w-4 h-4 text-soft-blue" />
+                      <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                        {distanceToPartner()!.formatted}
+                      </p>
+                    </div>
+                    <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                      Distance to {partnerName}
+                    </p>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+        </div>
+
+        {/* Three Column Grid */}
+        <div className="px-5 mb-5">
+          <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c] mb-4 px-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+            Connect & Grow
+          </h3>
+          <div className="grid grid-cols-3 gap-4">
+            {/* Daily Questions */}
+            <button
+              onClick={() => onNavigate('daily-question')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center shadow-lg">
+                <MessageCircle className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Daily<br/>Questions
+              </p>
+            </button>
+
+            {/* Couples Challenges */}
+            <button
+              onClick={() => onNavigate('couples-challenges')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-warm-pink to-warm-pink-light flex items-center justify-center shadow-lg">
+                <Heart className="w-8 h-8 text-white" strokeWidth={2.5} fill="white" />
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Couples<br/>Challenges
+              </p>
+            </button>
+
+            {/* Something Feels Missing */}
+            <button
+              onClick={() => onNavigate('something-feels-missing')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                </svg>
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Something<br/>Feels Missing?
+              </p>
+            </button>
+
+            {/* Icebreakers */}
+            <button
+              onClick={() => onNavigate('icebreakers')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-blue to-warm-beige-dark flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Ice-<br/>breakers
+              </p>
+            </button>
+
+            {/* Gift Suggestions */}
+            <button
+              onClick={() => onNavigate('gift-suggestions')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#EC4899] to-[#F97316] flex items-center justify-center shadow-lg">
+                <Gift className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Gift<br/>Suggestions
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* Set Your Capacity */}
+        <div className="px-5 mb-5">
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 shadow-md border border-white/60">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center text-white font-bold text-xl">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Set Your Capacity
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    {userName}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Capacity Slider */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Energy Level
+                </p>
+                <p
+                  className="font-['Nunito_Sans',sans-serif] text-[16px] font-bold"
+                  style={{
+                    fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                    color: getCapacityColor(capacityLevel)
+                  }}
+                >
+                  {capacityLevel}%
+                </p>
+              </div>
+
+              {/* Slider */}
+              <div className="relative mb-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={capacityLevel}
+                  onChange={(e) => setCapacityLevel(Number(e.target.value))}
+                  className="w-full h-3 rounded-full appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, ${getCapacityColor(capacityLevel)} 0%, ${getCapacityColor(capacityLevel)} ${capacityLevel}%, #E5E7EB ${capacityLevel}%, #E5E7EB 100%)`
+                  }}
+                />
+              </div>
+
+              {/* Energy Level Description */}
+              <div className="text-center py-3 px-4 rounded-xl" style={{ backgroundColor: `${getCapacityColor(capacityLevel)}15` }}>
+                <p
+                  className="font-['Nunito_Sans',sans-serif] text-[15px] font-semibold"
+                  style={{
+                    fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                    color: getCapacityColor(capacityLevel)
+                  }}
+                >
+                  {getEnergyLevel(capacityLevel)}
+                </p>
+              </div>
+
+              {/* Energy Level Labels */}
+              <div className="flex justify-between mt-3 text-[11px] text-[#9CA3AF] px-1">
+                <span>Numb</span>
+                <span>Low</span>
+                <span>Moderate</span>
+                <span>Good</span>
+                <span>High</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleUpdateCapacity}
+              disabled={isUpdating}
+              className="w-full text-white rounded-2xl py-3 font-['Nunito_Sans',sans-serif] text-[16px] hover:opacity-90 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                fontVariationSettings: "'YTLC' 500, 'wdth' 100",
+                backgroundColor: getCapacityColor(capacityLevel)
+              }}
+            >
+              {isUpdating ? 'Updating...' : 'Update Capacity'}
+            </button>
+          </div>
+        </div>
+
+        {/* Helping Hand */}
+        <div className="px-5 mb-5">
+          <div
+            onClick={() => onNavigate('helping-hand')}
+            className="bg-gradient-to-br from-soft-purple to-soft-purple-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Helping Hand
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Get suggestions to support {partnerName}
+                  </p>
+                </div>
+              </div>
+              <svg className="w-6 h-6 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Anniversary Tracker */}
+        <div className="px-5 mb-5">
+          <div
+            onClick={() => onNavigate('tracker')}
+            className="bg-gradient-to-br from-warm-pink to-warm-pink-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Anniversary Tracker
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Track milestones & special dates
+                  </p>
+                </div>
+              </div>
+              <svg className="w-6 h-6 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Partner Suggestions */}
+        <div className="px-5 mb-5">
+          <PartnerSuggestions />
+        </div>
+
+        {/* Insights & Notes */}
+        <div className="px-5 mb-5">
+          <div
+            onClick={() => onNavigate('insights-notes')}
+            className="bg-gradient-to-br from-[#F59E0B] to-[#FBBF24] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Insights & Notes
+                  </h3>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Relationship insights & reminders
+                  </p>
+                </div>
+              </div>
+              <svg className="w-6 h-6 text-white/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Upcoming Date */}
+        <div className="px-5 mb-5">
+          <div className="bg-gradient-to-br from-soft-blue to-warm-beige-dark rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift" onClick={() => onNavigate('dates')}>
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <p className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-2" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                  Plan Your Next Date
+                </p>
+                <div className="flex items-center gap-2 text-white/90">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <p className="font-['Nunito_Sans',sans-serif] text-[14px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                    Find perfect date ideas
+                  </p>
+                </div>
+              </div>
+              <div className="text-3xl">💝</div>
+            </div>
+            <p className="font-['Nunito_Sans',sans-serif] text-[12px] text-white/80" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Tap to explore date ideas
+            </p>
+          </div>
+        </div>
+
+        {/* Streaks */}
+        <div className="px-5 mb-6">
+          <h3 className="font-['Nunito_Sans',sans-serif] text-[16px] text-[#2c2c2c] mb-3 px-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+            Your Journey
+          </h3>
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl p-5 text-center shadow-md border border-white/60">
+            <div className="text-3xl mb-2">🔥</div>
+            <p className="font-['Nunito_Sans',sans-serif] text-[28px] text-[#FF2D55] mb-1" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              {relationship?.streak || 0}
+            </p>
+            <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#6d6d6d]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Daily streak
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Navigation Tabs */}
+      <div className="bg-white/80 backdrop-blur-xl border-t border-white/40 pb-6 pt-2 px-4 shadow-lg">
+        <div className="flex justify-around items-center max-w-[430px] mx-auto">
+          <button
+            onClick={() => handleTabNavigation('calendar')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              currentTab === 'calendar' ? 'text-[#d9a0b8]' : 'text-[#6d6d6d]'
+            }`}
+          >
+            <Calendar className="w-6 h-6" />
+            <p className="font-['Nunito_Sans',sans-serif] text-[11px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Calendar
+            </p>
+          </button>
+
+          <button
+            onClick={() => handleTabNavigation('messages')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              currentTab === 'messages' ? 'text-[#d9a0b8]' : 'text-[#6d6d6d]'
+            }`}
+          >
+            <MessageCircle className="w-6 h-6" />
+            <p className="font-['Nunito_Sans',sans-serif] text-[11px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Messages
+            </p>
+          </button>
+
+          <button
+            onClick={() => handleTabNavigation('home')}
+            className="flex flex-col items-center gap-1 px-4 py-2 -mt-8"
+          >
+            <div className="bg-[#d9a0b8] rounded-full p-4 shadow-lg">
+              <Heart className="w-7 h-7 text-white" fill="white" />
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleTabNavigation('dates')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              currentTab === 'dates' ? 'text-[#d9a0b8]' : 'text-[#6d6d6d]'
+            }`}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <p className="font-['Nunito_Sans',sans-serif] text-[11px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Date Ideas
+            </p>
+          </button>
+
+          <button
+            onClick={() => handleTabNavigation('memories')}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+              currentTab === 'memories' ? 'text-[#d9a0b8]' : 'text-[#6d6d6d]'
+            }`}
+          >
+            <Camera className="w-6 h-6" />
+            <p className="font-['Nunito_Sans',sans-serif] text-[11px]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              Memories
+            </p>
+          </button>
+        </div>
+
+        {/* Home Indicator */}
+        <div className="flex justify-center mt-4">
+          <div className="bg-black h-[5px] w-[98px] rounded-full" />
+        </div>
+      </div>
     </div>
   );
 }

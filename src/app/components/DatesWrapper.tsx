@@ -9,12 +9,12 @@ interface DatesWrapperProps {
   partnerName: string;
 }
 
-type DateMode = 'hub' | 'personalized' | 'swipe-together' | 'challenge';
+type DateMode = 'hub' | 'personalized' | 'challenge';
 
 export function DatesWrapper({ onBack, partnerName }: DatesWrapperProps) {
   const [mode, setMode] = useState<DateMode>('hub');
 
-  const handleSelectMode = (selectedMode: 'personalized' | 'swipe-together' | 'challenge') => {
+  const handleSelectMode = (selectedMode: 'personalized' | 'challenge') => {
     setMode(selectedMode);
   };
 
@@ -37,16 +37,6 @@ export function DatesWrapper({ onBack, partnerName }: DatesWrapperProps) {
       <DatePlanner
         onBack={handleBackToHub}
         partnerName={partnerName}
-      />
-    );
-  }
-
-  if (mode === 'swipe-together') {
-    return (
-      <DatePlanning
-        onBack={handleBackToHub}
-        partnerName={partnerName}
-        initialMode="swipe-together"
       />
     );
   }
