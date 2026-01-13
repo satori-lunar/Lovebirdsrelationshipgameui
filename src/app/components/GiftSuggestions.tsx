@@ -151,7 +151,7 @@ export function GiftSuggestions({ onBack }: GiftSuggestionsProps) {
                 <Card
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className="p-4 border-0 shadow-md hover:shadow-xl transition-all cursor-pointer group"
+                  className="p-4 border-0 shadow-md hover:shadow-xl transition-all cursor-pointer group interactive-scale"
                 >
                   <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${category.color} flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform`}>
                     {category.emoji}
@@ -225,7 +225,7 @@ export function GiftSuggestions({ onBack }: GiftSuggestionsProps) {
                 </div>
                 <button
                   onClick={() => handleSaveGift(currentGift.id, currentGift.saved_gift_id)}
-                  className={`p-2 rounded-full transition-colors ${
+                  className={`p-2 rounded-full transition-colors interactive-scale ${
                     currentGift.is_saved
                       ? 'bg-warm-orange-light/30 text-warm-orange'
                       : 'bg-gray-100 text-gray-400 hover:bg-warm-beige hover:text-warm-orange'

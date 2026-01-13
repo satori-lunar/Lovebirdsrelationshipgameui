@@ -560,7 +560,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Daily Questions */}
             <button
               onClick={() => onNavigate('daily-question')}
-              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center shadow-lg">
                 <MessageCircle className="w-8 h-8 text-white" strokeWidth={2.5} />
@@ -573,7 +573,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Couples Challenges */}
             <button
               onClick={() => onNavigate('couples-challenges')}
-              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-warm-pink to-warm-pink-light flex items-center justify-center shadow-lg">
                 <Heart className="w-8 h-8 text-white" strokeWidth={2.5} fill="white" />
@@ -586,7 +586,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Something Feels Missing */}
             <button
               onClick={() => onNavigate('something-feels-missing')}
-              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -601,7 +601,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Icebreakers */}
             <button
               onClick={() => onNavigate('icebreakers')}
-              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-blue to-warm-beige-dark flex items-center justify-center shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -616,7 +616,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Gift Suggestions */}
             <button
               onClick={() => onNavigate('gift-suggestions')}
-              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#EC4899] to-[#F97316] flex items-center justify-center shadow-lg">
                 <Gift className="w-8 h-8 text-white" strokeWidth={2.5} />
@@ -722,7 +722,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         <div className="px-5 mb-5">
           <div
             onClick={() => onNavigate('helping-hand')}
-            className="bg-gradient-to-br from-soft-purple to-soft-purple-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+            className="bg-gradient-to-br from-soft-purple to-soft-purple-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -751,7 +751,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         <div className="px-5 mb-5">
           <div
             onClick={() => onNavigate('tracker')}
-            className="bg-gradient-to-br from-warm-pink to-warm-pink-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+            className="bg-gradient-to-br from-warm-pink to-warm-pink-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -812,7 +812,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
         {/* Upcoming Date */}
         <div className="px-5 mb-5">
-          <div className="bg-gradient-to-br from-soft-blue to-warm-beige-dark rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all" onClick={() => onNavigate('dates')}>
+          <div className="bg-gradient-to-br from-soft-blue to-warm-beige-dark rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift" onClick={() => onNavigate('dates')}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <p className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-2" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
