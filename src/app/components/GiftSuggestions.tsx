@@ -104,8 +104,8 @@ export function GiftSuggestions({ onBack }: GiftSuggestionsProps) {
   // Category selection view
   if (!selectedCategory) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50">
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6 pb-12">
+      <div className="min-h-screen bg-gradient-to-b from-warm-cream to-soft-purple-light">
+        <div className="bg-gradient-to-r from-warm-pink to-warm-orange text-white p-6 pb-12">
           <div className="max-w-md mx-auto">
             <button
               onClick={onBack}
@@ -160,8 +160,8 @@ export function GiftSuggestions({ onBack }: GiftSuggestionsProps) {
 
   // Gift browsing view
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50">
-      <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6 pb-12">
+    <div className="min-h-screen bg-gradient-to-b from-warm-cream to-soft-purple-light">
+      <div className="bg-gradient-to-r from-warm-pink to-warm-orange text-white p-6 pb-12">
         <div className="max-w-md mx-auto">
           <button
             onClick={() => setSelectedCategory(null)}
@@ -204,8 +204,8 @@ export function GiftSuggestions({ onBack }: GiftSuggestionsProps) {
             <Card className="p-6 border-0 shadow-lg">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold mb-2">{currentGift.name}</h2>
-                  <div className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-3">
+                  <h2 className="text-xl font-bold mb-2 text-text-warm">{currentGift.name}</h2>
+                  <div className="inline-block px-3 py-1 bg-warm-orange-light/30 text-warm-orange rounded-full text-sm font-medium mb-3">
                     {currentGift.price_range}
                   </div>
                 </div>
@@ -213,8 +213,8 @@ export function GiftSuggestions({ onBack }: GiftSuggestionsProps) {
                   onClick={() => handleSaveGift(currentGift.id, currentGift.saved_gift_id)}
                   className={`p-2 rounded-full transition-colors ${
                     currentGift.is_saved
-                      ? 'bg-purple-100 text-purple-600'
-                      : 'bg-gray-100 text-gray-400 hover:bg-purple-50 hover:text-purple-500'
+                      ? 'bg-warm-orange-light/30 text-warm-orange'
+                      : 'bg-gray-100 text-gray-400 hover:bg-warm-beige hover:text-warm-orange'
                   }`}
                 >
                   {currentGift.is_saved ? (
