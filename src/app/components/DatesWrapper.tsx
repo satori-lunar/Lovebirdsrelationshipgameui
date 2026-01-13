@@ -3,19 +3,18 @@ import { DateHub } from './DateHub';
 import { DatePlanner } from './DatePlanner';
 import { DatePlanning } from './DatePlanning';
 import { DateChallenge } from './DateChallenge';
-import { DecisionSpinner } from './DecisionSpinner';
 
 interface DatesWrapperProps {
   onBack: () => void;
   partnerName: string;
 }
 
-type DateMode = 'hub' | 'personalized' | 'challenge' | 'spinner';
+type DateMode = 'hub' | 'personalized' | 'challenge';
 
 export function DatesWrapper({ onBack, partnerName }: DatesWrapperProps) {
   const [mode, setMode] = useState<DateMode>('hub');
 
-  const handleSelectMode = (selectedMode: 'personalized' | 'challenge' | 'spinner') => {
+  const handleSelectMode = (selectedMode: 'personalized' | 'challenge') => {
     setMode(selectedMode);
   };
 
@@ -45,15 +44,6 @@ export function DatesWrapper({ onBack, partnerName }: DatesWrapperProps) {
   if (mode === 'challenge') {
     return (
       <DateChallenge
-        onBack={handleBackToHub}
-        partnerName={partnerName}
-      />
-    );
-  }
-
-  if (mode === 'spinner') {
-    return (
-      <DecisionSpinner
         onBack={handleBackToHub}
         partnerName={partnerName}
       />
