@@ -34,6 +34,9 @@ import PartnerInsightsForm from './components/PartnerInsightsForm';
 import CapacityCheckIn from './components/CapacityCheckIn';
 import { PartnerProfileOnboarding } from './components/PartnerProfileOnboarding';
 import { NeedSupportPlan } from './components/NeedSupportPlan';
+import { CouplesChallenges } from './components/CouplesChallenges';
+import { SomethingFeelsMissing } from './components/SomethingFeelsMissing';
+import { GiftSuggestions } from './components/GiftSuggestions';
 import { useAuth } from './hooks/useAuth';
 import { useRelationship } from './hooks/useRelationship';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -44,7 +47,8 @@ import { widgetGiftService } from './services/widgetGiftService';
 import { api } from './services/api';
 import type { PushNotificationData } from './services/pushNotificationService';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan';
+<<<<<<< HEAD
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan' | 'couples-challenges' | 'gift-suggestions' | 'something-feels-missing';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -187,9 +191,9 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50 flex items-center justify-center">
+      <div className="size-full bg-gradient-to-b from-warm-cream to-soft-purple-light flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-warm-pink border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -207,7 +211,7 @@ export default function App() {
   };
 
   return (
-    <div className="size-full bg-gradient-to-b from-pink-50 to-purple-50">
+    <div className="size-full bg-gradient-to-b from-warm-cream to-soft-purple-light">
       <Toaster />
       
       {currentView === 'entry' && (
@@ -393,6 +397,18 @@ export default function App() {
             setCurrentView('home');
           }}
         />
+      )}
+
+      {currentView === 'couples-challenges' && (
+        <CouplesChallenges onBack={handleBack} />
+      )}
+
+      {currentView === 'gift-suggestions' && (
+        <GiftSuggestions onBack={handleBack} />
+      )}
+
+      {currentView === 'something-feels-missing' && (
+        <SomethingFeelsMissing onBack={handleBack} />
       )}
 
       {currentView === 'settings' && (

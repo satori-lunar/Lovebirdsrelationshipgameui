@@ -39,6 +39,21 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Warm Illustration Theme Colors - BOLD & VIBRANT */
+  --warm-cream: #FFFBF0;
+  --warm-beige: #FFD4A3;
+  --warm-beige-dark: #FFAB5C;
+  --soft-purple: #9D5BD2;
+  --soft-purple-light: #C89FEB;
+  --soft-blue: #4A9FE8;
+  --warm-orange: #FF7043;
+  --warm-orange-light: #FF9472;
+  --warm-yellow: #FFD54F;
+  --warm-pink: #FF4081;
+  --warm-pink-light: #FF80AB;
+  --text-warm: #3D2817;
+  --text-warm-light: #6B4E37;
 }
 
 .dark {
@@ -117,6 +132,21 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Warm Illustration Theme - Available as Tailwind utilities */
+  --color-warm-cream: var(--warm-cream);
+  --color-warm-beige: var(--warm-beige);
+  --color-warm-beige-dark: var(--warm-beige-dark);
+  --color-soft-purple: var(--soft-purple);
+  --color-soft-purple-light: var(--soft-purple-light);
+  --color-soft-blue: var(--soft-blue);
+  --color-warm-orange: var(--warm-orange);
+  --color-warm-orange-light: var(--warm-orange-light);
+  --color-warm-yellow: var(--warm-yellow);
+  --color-warm-pink: var(--warm-pink);
+  --color-warm-pink-light: var(--warm-pink-light);
+  --color-text-warm: var(--text-warm);
+  --color-text-warm-light: var(--text-warm-light);
 }
 
 @layer base {
@@ -218,4 +248,80 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 input[type="range"]::-moz-range-thumb:hover {
   transform: scale(1.1);
+}
+
+/* Micro-interaction Animations */
+@keyframes tap-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+@keyframes press-down {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(0.97) translateY(2px); }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Animation Utility Classes */
+.animate-tap {
+  animation: tap-bounce 0.2s ease-in-out;
+}
+
+.animate-press {
+  animation: press-down 0.1s ease-out forwards;
+}
+
+.animate-pop-in {
+  animation: pop-in 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+/* Interactive Element Styles */
+.interactive-scale {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.interactive-scale:active {
+  transform: scale(0.95);
+}
+
+.interactive-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.interactive-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.interactive-lift:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }

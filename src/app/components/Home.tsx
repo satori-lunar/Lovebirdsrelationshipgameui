@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation, Edit, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, MessageCircle, Heart, Camera, Clock, MapPin, Navigation, Edit, Settings, ChevronDown, ChevronUp, Gift } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { useLocation } from '../hooks/useLocation';
@@ -20,6 +20,7 @@ import { useSharedCalendar } from '../hooks/useSharedCalendar';
 import { useMoodUpdates } from '../hooks/useMoodUpdates';
 import { toast } from 'sonner';
 import { PhotoUpload } from './PhotoUpload';
+import { PartnerSuggestions } from './PartnerSuggestions';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
 interface HomeProps {
@@ -51,21 +52,42 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
     console.log('🏠 partnerName exact value:', JSON.stringify(partnerName));
   }, [userName, partnerName]);
 
-  // Handle couple photo upload
+  // Determine if current user is partner A or B
+  const isPartnerA = user?.id === relationship?.partner_a_id;
+  const isPartnerB = user?.id === relationship?.partner_b_id;
+
+  // Get the current user's photo URL
+  const getCurrentUserPhotoUrl = () => {
+    if (!relationship) return "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80";
+
+    if (isPartnerA && relationship.partner_a_photo_url) {
+      return relationship.partner_a_photo_url;
+    }
+    if (isPartnerB && relationship.partner_b_photo_url) {
+      return relationship.partner_b_photo_url;
+    }
+    // Fallback to shared couple photo or default
+    return relationship.couple_photo_url || "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80";
+  };
+
+  // Handle couple photo upload - save to per-partner column
   const handleCouplePhotoUploaded = async (photoUrl: string) => {
     if (!relationship?.id) return;
 
     try {
+      // Determine which column to update based on current user
+      const updateColumn = isPartnerA ? 'partner_a_photo_url' : 'partner_b_photo_url';
+
       const { error } = await api.supabase
         .from('relationships')
-        .update({ couple_photo_url: photoUrl })
+        .update({ [updateColumn]: photoUrl })
         .eq('id', relationship.id);
 
       if (error) throw error;
 
       // Refresh relationship data
       queryClient.invalidateQueries({ queryKey: ['relationship'] });
-      toast.success('Couple photo updated!');
+      toast.success('Your homepage photo updated!');
       setShowCouplePhotoUpload(false);
     } catch (error) {
       console.error('Error updating couple photo:', error);
@@ -275,11 +297,11 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   };
 
   return (
-    <div className="bg-[#F5F0F6] flex flex-col h-screen w-full max-w-[430px] mx-auto">
+    <div className="bg-warm-cream flex flex-col h-screen w-full max-w-[430px] mx-auto">
       {/* Status Bar */}
       <div className="bg-transparent h-[44px] px-6 relative flex items-center">
         <p className="text-[16px]">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
-        <div className="absolute right-6 flex gap-3 items-center">
+        <div className="absolute right-2 flex gap-3 items-center">
           <button
             onClick={() => onNavigate('settings')}
             className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -300,16 +322,17 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         <div className="relative w-full h-[200px] mb-6 px-5">
           <div className="relative w-full h-full rounded-3xl overflow-hidden group">
             <img
-              src={relationship?.couple_photo_url || "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=800&q=80"}
+              src={getCurrentUserPhotoUrl()}
               alt="Couple"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
 
-            {/* Edit Photo Button */}
+            {/* Edit Photo Button - Visible on mobile, hover on desktop */}
             <button
               onClick={() => setShowCouplePhotoUpload(true)}
-              className="absolute top-3 right-3 bg-white/80 backdrop-blur-xl p-2 rounded-full shadow-lg border border-white/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+              className="absolute top-3 right-3 bg-white/80 backdrop-blur-xl p-2 rounded-full shadow-lg border border-white/60 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 hover:bg-white"
+              aria-label="Edit homepage photo"
             >
               <Edit className="w-4 h-4 text-[#2c2c2c]" />
             </button>
@@ -317,23 +340,23 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Anniversary Tracker Overlay */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-xl rounded-2xl px-5 py-3 min-w-[240px] text-center shadow-lg border border-white/60">
               <div className="flex items-center justify-center gap-2 mb-1">
-                <Heart className="w-4 h-4 text-[#FF2D55]" fill="#FF2D55" />
-                <p className="font-['Lora',serif] text-[16px] text-[#2c2c2c]">Together for</p>
+                <Heart className="w-4 h-4 text-warm-pink" fill="currentColor" />
+                <p className="font-['Lora',serif] text-[16px] text-text-warm">Together for</p>
               </div>
-              <p className="font-['Nunito_Sans',sans-serif] text-[20px] text-[#FF2D55]" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+              <p className="font-['Nunito_Sans',sans-serif] text-[20px] text-warm-pink" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                 {getTimeTogether()}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Couple Photo Upload Dialog */}
+        {/* Homepage Photo Upload Dialog */}
         {showCouplePhotoUpload && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-['Nunito_Sans',sans-serif] text-[20px] font-semibold">
-                  Upload Couple Photo
+                  Your Homepage Photo
                 </h3>
                 <button
                   onClick={() => setShowCouplePhotoUpload(false)}
@@ -343,10 +366,10 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                 </button>
               </div>
               <PhotoUpload
-                currentPhotoUrl={relationship?.couple_photo_url}
+                currentPhotoUrl={getCurrentUserPhotoUrl()}
                 onPhotoUploaded={handleCouplePhotoUploaded}
-                title="Choose Couple Photo"
-                placeholder="Upload a photo of you two together"
+                title="Choose Your Photo"
+                placeholder="Upload a photo for your homepage"
                 className="mb-4"
               />
             </div>
@@ -355,7 +378,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
         {/* Partner's Capacity */}
         <div className="px-5 mb-5">
-          <div className="bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] rounded-3xl p-5 shadow-lg">
+          <div className="bg-gradient-to-br from-warm-pink to-warm-pink-light rounded-3xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -397,7 +420,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               <CollapsibleTrigger asChild>
                 <button className="flex items-center justify-between w-full mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-soft-blue to-warm-beige-dark flex items-center justify-center">
                       <MapPin className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -427,13 +450,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                     disabled={isUpdatingLocation}
                     className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
                       getLocationSharingMode() === 'off'
-                        ? 'border-[#06B6D4] bg-[#06B6D4]/10'
+                        ? 'border-soft-blue bg-soft-blue/10'
                         : 'border-gray-200 bg-white'
                     } disabled:opacity-50`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        getLocationSharingMode() === 'off' ? 'border-[#06B6D4]' : 'border-gray-300'
+                        getLocationSharingMode() === 'off' ? 'border-soft-blue' : 'border-gray-300'
                       }`}>
                         {getLocationSharingMode() === 'off' && (
                           <div className="w-3 h-3 rounded-full bg-[#06B6D4]" />
@@ -456,13 +479,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                     disabled={isUpdatingLocation}
                     className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
                       getLocationSharingMode() === 'app'
-                        ? 'border-[#8B5CF6] bg-[#8B5CF6]/10'
+                        ? 'border-warm-orange bg-warm-orange/10'
                         : 'border-gray-200 bg-white'
                     } disabled:opacity-50`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        getLocationSharingMode() === 'app' ? 'border-[#8B5CF6]' : 'border-gray-300'
+                        getLocationSharingMode() === 'app' ? 'border-warm-orange' : 'border-gray-300'
                       }`}>
                         {getLocationSharingMode() === 'app' && (
                           <div className="w-3 h-3 rounded-full bg-[#8B5CF6]" />
@@ -485,13 +508,13 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                     disabled={isUpdatingLocation}
                     className={`w-full p-3 rounded-xl border-2 transition-all text-left ${
                       getLocationSharingMode() === 'partner'
-                        ? 'border-[#FF2D55] bg-[#FF2D55]/10'
+                        ? 'border-warm-pink bg-warm-pink/10'
                         : 'border-gray-200 bg-white'
                     } disabled:opacity-50`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        getLocationSharingMode() === 'partner' ? 'border-[#FF2D55]' : 'border-gray-300'
+                        getLocationSharingMode() === 'partner' ? 'border-warm-pink' : 'border-gray-300'
                       }`}>
                         {getLocationSharingMode() === 'partner' && (
                           <div className="w-3 h-3 rounded-full bg-[#FF2D55]" />
@@ -513,7 +536,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                 {shareWithPartner && partnerLocation && distanceToPartner() && (
                   <div className="mt-4 p-3 bg-gradient-to-br from-[#06B6D4]/10 to-[#3B82F6]/10 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <Navigation className="w-4 h-4 text-[#06B6D4]" />
+                      <Navigation className="w-4 h-4 text-soft-blue" />
                       <p className="font-['Nunito_Sans',sans-serif] text-[14px] text-[#2c2c2c] font-semibold" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                         {distanceToPartner()!.formatted}
                       </p>
@@ -537,9 +560,9 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             {/* Daily Questions */}
             <button
               onClick={() => onNavigate('daily-question')}
-              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center shadow-lg">
                 <MessageCircle className="w-8 h-8 text-white" strokeWidth={2.5} />
               </div>
               <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
@@ -549,10 +572,10 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
             {/* Couples Challenges */}
             <button
-              onClick={() => onNavigate('weekly-suggestions')}
-              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+              onClick={() => onNavigate('couples-challenges')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF2D55] to-[#FF6B9D] flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-warm-pink to-warm-pink-light flex items-center justify-center shadow-lg">
                 <Heart className="w-8 h-8 text-white" strokeWidth={2.5} fill="white" />
               </div>
               <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
@@ -560,18 +583,46 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               </p>
             </button>
 
+            {/* Something Feels Missing */}
+            <button
+              onClick={() => onNavigate('something-feels-missing')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                </svg>
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Something<br/>Feels Missing?
+              </p>
+            </button>
+
             {/* Icebreakers */}
             <button
               onClick={() => onNavigate('icebreakers')}
-              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80"
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
             >
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-soft-blue to-warm-beige-dark flex items-center justify-center shadow-lg">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
               <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
                 Ice-<br/>breakers
+              </p>
+            </button>
+
+            {/* Gift Suggestions */}
+            <button
+              onClick={() => onNavigate('gift-suggestions')}
+              className="bg-white/70 backdrop-blur-lg rounded-3xl p-4 flex flex-col items-center justify-center gap-3 min-h-[140px] hover:shadow-xl transition-all shadow-md border border-white/60 hover:bg-white/80 interactive-scale"
+            >
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#EC4899] to-[#F97316] flex items-center justify-center shadow-lg">
+                <Gift className="w-8 h-8 text-white" strokeWidth={2.5} />
+              </div>
+              <p className="font-['Nunito_Sans',sans-serif] text-[13px] text-[#2c2c2c] text-center leading-tight" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>
+                Gift<br/>Suggestions
               </p>
             </button>
           </div>
@@ -583,7 +634,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] flex items-center justify-center text-white font-bold text-xl">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-soft-purple to-soft-purple-light flex items-center justify-center text-white font-bold text-xl">
                     {userName.charAt(0).toUpperCase()}
                   </div>
                 </div>
@@ -671,7 +722,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         <div className="px-5 mb-5">
           <div
             onClick={() => onNavigate('helping-hand')}
-            className="bg-gradient-to-br from-[#8B5CF6] to-[#A78BFA] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+            className="bg-gradient-to-br from-soft-purple to-soft-purple-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -699,8 +750,8 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         {/* Anniversary Tracker */}
         <div className="px-5 mb-5">
           <div
-            onClick={() => onNavigate('anniversary-tracker')}
-            className="bg-gradient-to-br from-[#EC4899] to-[#F472B6] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all"
+            onClick={() => onNavigate('tracker')}
+            className="bg-gradient-to-br from-warm-pink to-warm-pink-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -723,6 +774,11 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
               </svg>
             </div>
           </div>
+        </div>
+
+        {/* Partner Suggestions */}
+        <div className="px-5 mb-5">
+          <PartnerSuggestions />
         </div>
 
         {/* Insights & Notes */}
@@ -756,7 +812,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
 
         {/* Upcoming Date */}
         <div className="px-5 mb-5">
-          <div className="bg-gradient-to-br from-[#06B6D4] to-[#3B82F6] rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all" onClick={() => onNavigate('dates')}>
+          <div className="bg-gradient-to-br from-soft-blue to-warm-beige-dark rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift" onClick={() => onNavigate('dates')}>
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <p className="font-['Nunito_Sans',sans-serif] text-[18px] text-white mb-2" style={{ fontVariationSettings: "'YTLC' 500, 'wdth' 100" }}>

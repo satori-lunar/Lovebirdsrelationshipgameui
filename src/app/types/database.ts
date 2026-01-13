@@ -36,6 +36,9 @@ export interface Database {
           created_at: string;
           connected_at: string | null;
           relationship_start_date: string | null;
+          couple_photo_url: string | null;
+          partner_a_photo_url: string | null;
+          partner_b_photo_url: string | null;
         };
         Insert: {
           id?: string;
@@ -46,6 +49,9 @@ export interface Database {
           created_at?: string;
           connected_at?: string | null;
           relationship_start_date?: string | null;
+          couple_photo_url?: string | null;
+          partner_a_photo_url?: string | null;
+          partner_b_photo_url?: string | null;
         };
         Update: {
           id?: string;
@@ -55,6 +61,9 @@ export interface Database {
           invite_code_expires_at?: string;
           connected_at?: string | null;
           relationship_start_date?: string | null;
+          couple_photo_url?: string | null;
+          partner_a_photo_url?: string | null;
+          partner_b_photo_url?: string | null;
         };
       };
       onboarding_responses: {
@@ -304,6 +313,7 @@ export interface Database {
           reminder_sent_1week: boolean;
           reminder_sent_3days: boolean;
           reminder_sent_dayof: boolean;
+          photo_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -317,6 +327,7 @@ export interface Database {
           reminder_sent_1week?: boolean;
           reminder_sent_3days?: boolean;
           reminder_sent_dayof?: boolean;
+          photo_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -328,6 +339,7 @@ export interface Database {
           reminder_sent_1week?: boolean;
           reminder_sent_3days?: boolean;
           reminder_sent_dayof?: boolean;
+          photo_url?: string | null;
         };
       };
       memories: {
@@ -391,6 +403,98 @@ export interface Database {
           id?: string;
           status?: 'active' | 'cancelled' | 'expired';
           end_date?: string | null;
+        };
+      };
+      icebreaker_questions: {
+        Row: {
+          id: string;
+          question_text: string;
+          category: string;
+          difficulty: 'easy' | 'medium' | 'hard';
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_text: string;
+          category: string;
+          difficulty: 'easy' | 'medium' | 'hard';
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          question_text?: string;
+          category?: string;
+          difficulty?: 'easy' | 'medium' | 'hard';
+          is_active?: boolean;
+        };
+      };
+      icebreaker_responses: {
+        Row: {
+          id: string;
+          question_id: string;
+          user_id: string;
+          relationship_id: string;
+          response_text: string;
+          is_private: boolean;
+          responded_at: string;
+        };
+        Insert: {
+          id?: string;
+          question_id: string;
+          user_id: string;
+          relationship_id: string;
+          response_text: string;
+          is_private?: boolean;
+          responded_at?: string;
+        };
+        Update: {
+          id?: string;
+          response_text?: string;
+          is_private?: boolean;
+          responded_at?: string;
+        };
+      };
+      important_dates: {
+        Row: {
+          id: string;
+          relationship_id: string;
+          user_id: string | null;
+          title: string;
+          date: string;
+          type: 'anniversary' | 'birthday' | 'custom';
+          recurring: boolean;
+          reminder_sent_1week: boolean;
+          reminder_sent_3days: boolean;
+          reminder_sent_dayof: boolean;
+          photo_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          relationship_id: string;
+          user_id?: string | null;
+          title: string;
+          date: string;
+          type: 'anniversary' | 'birthday' | 'custom';
+          recurring?: boolean;
+          reminder_sent_1week?: boolean;
+          reminder_sent_3days?: boolean;
+          reminder_sent_dayof?: boolean;
+          photo_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          date?: string;
+          type?: 'anniversary' | 'birthday' | 'custom';
+          recurring?: boolean;
+          reminder_sent_1week?: boolean;
+          reminder_sent_3days?: boolean;
+          reminder_sent_dayof?: boolean;
+          photo_url?: string | null;
         };
       };
     };

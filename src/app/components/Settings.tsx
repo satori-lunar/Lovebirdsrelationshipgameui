@@ -8,6 +8,7 @@ import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
+import { usePartner } from '../hooks/usePartner';
 import { authService } from '../services/authService';
 import { onboardingService } from '../services/onboardingService';
 import { relationshipService } from '../services/relationshipService';
@@ -24,6 +25,7 @@ interface SettingsProps {
 export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate }: SettingsProps) {
   const { user, signOut } = useAuth();
   const { relationship } = useRelationship();
+  const { partnerId } = usePartner(relationship);
 
   const [notificationSettings, setNotificationSettings] = useState({
     weeklyLoveLanguage: true,
@@ -94,8 +96,8 @@ export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate 
   };
 
   const handleUpdatePartnerName = async () => {
-    if (!user?.id) {
-      toast.error('User not found');
+    if (!partnerId) {
+      toast.error('Partner not found. Please make sure you are connected to your partner.');
       return;
     }
 
@@ -106,8 +108,8 @@ export function Settings({ onBack, partnerName, onNavigate, onPartnerNameUpdate 
 
     setIsUpdatingPartnerName(true);
     try {
-      await onboardingService.updateOnboarding(user.id, {
-        partnerName: editingPartnerName.trim(),
+      await onboardingService.updateOnboarding(partnerId, {
+        name: editingPartnerName.trim(),
       });
       toast.success('Partner name updated successfully');
       setShowPartnerNameDialog(false);

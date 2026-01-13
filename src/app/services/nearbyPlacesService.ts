@@ -41,33 +41,58 @@ export const nearbyPlacesService = {
     category: PlaceCategory = 'all',
     limit: number = 20
   ): Promise<Place[]> {
-    try {
-      const radiusMeters = radiusMiles * MILES_TO_KM * 1000;
+    const maxRetries = 2;
+    let lastError: any = null;
 
-      // Build Overpass query based on category
-      const amenityTags = this.getCategoryTags(category);
-      const query = this.buildOverpassQuery(location, radiusMeters, amenityTags);
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const radiusMeters = radiusMiles * MILES_TO_KM * 1000;
 
-      const response = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: query,
-      });
+        // Build Overpass query based on category
+        const amenityTags = this.getCategoryTags(category);
+        const query = this.buildOverpassQuery(location, radiusMeters, amenityTags);
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch nearby places');
+        console.log(`🔍 Fetching ${category} venues (attempt ${attempt + 1}/${maxRetries + 1})...`);
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+        const response = await fetch('https://overpass-api.de/api/interpreter', {
+          method: 'POST',
+          body: query,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const places = this.parseOverpassResponse(data, location);
+
+        console.log(`✅ Found ${places.length} ${category} venues`);
+
+        // Sort by distance and limit results
+        return places
+          .sort((a, b) => a.distance - b.distance)
+          .slice(0, limit);
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`⚠️ Attempt ${attempt + 1} failed for ${category}:`, error.message);
+
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff: 1s, 2s)
+          const delay = Math.pow(2, attempt) * 1000;
+          console.log(`⏳ Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-
-      const data = await response.json();
-      const places = this.parseOverpassResponse(data, location);
-
-      // Sort by distance and limit results
-      return places
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, limit);
-    } catch (error) {
-      console.error('Error fetching nearby places:', error);
-      return [];
     }
+
+    console.error(`❌ All attempts failed for ${category}:`, lastError);
+    return [];
   },
 
   /**
@@ -95,23 +120,25 @@ export const nearbyPlacesService = {
   },
 
   /**
-   * Build Overpass API query
+   * Build Overpass API query (optimized for speed)
    */
   buildOverpassQuery(
     location: LocationCoordinates,
     radiusMeters: number,
     amenityTags: string[]
   ): string {
-    const tagQuery = amenityTags.map(tag => `node["amenity"="${tag}"](around:${radiusMeters},${location.latitude},${location.longitude});`).join('\n');
+    // Limit tags to reduce query complexity
+    const limitedTags = amenityTags.slice(0, 3);
+    const tagQuery = limitedTags.map(tag =>
+      `node["amenity"="${tag}"](around:${radiusMeters},${location.latitude},${location.longitude});`
+    ).join('\n');
 
     return `
-      [out:json][timeout:25];
+      [out:json][timeout:10];
       (
         ${tagQuery}
       );
-      out body;
-      >;
-      out skel qt;
+      out body 20;
     `;
   },
 
@@ -134,6 +161,13 @@ export const nearbyPlacesService = {
           element.lon
         );
 
+        // Build a more informative description
+        const descParts = [];
+        if (tags.cuisine) descParts.push(tags.cuisine);
+        if (tags.description) descParts.push(tags.description);
+        if (tags['food']) descParts.push(tags['food']);
+        if (tags['specialty']) descParts.push(tags['specialty']);
+
         return {
           id: element.id.toString(),
           name: tags.name || 'Unnamed Place',
@@ -144,7 +178,7 @@ export const nearbyPlacesService = {
           longitude: element.lon,
           rating: tags.stars ? parseFloat(tags.stars) : undefined,
           priceLevel: this.mapPriceLevel(tags),
-          description: tags.description || tags.cuisine || undefined,
+          description: descParts.length > 0 ? descParts.join(' • ') : undefined,
           isOpen: this.determineIfOpen(tags),
         };
       })
@@ -157,10 +191,24 @@ export const nearbyPlacesService = {
   buildAddress(tags: any): string {
     const parts = [];
 
+    // Try to build as complete an address as possible
     if (tags['addr:housenumber']) parts.push(tags['addr:housenumber']);
     if (tags['addr:street']) parts.push(tags['addr:street']);
+
+    // If we don't have street address, try other location info
+    if (parts.length === 0) {
+      if (tags['addr:place']) parts.push(tags['addr:place']);
+      if (tags['addr:suburb']) parts.push(tags['addr:suburb']);
+    }
+
     if (tags['addr:city']) parts.push(tags['addr:city']);
+    if (tags['addr:state']) parts.push(tags['addr:state']);
     if (tags['addr:postcode']) parts.push(tags['addr:postcode']);
+
+    // If we still have nothing, try name-based fallback
+    if (parts.length === 0 && (tags['addr:city'] || tags['addr:suburb'])) {
+      return `Located in ${tags['addr:city'] || tags['addr:suburb']}`;
+    }
 
     return parts.length > 0 ? parts.join(', ') : 'Address not available';
   },
