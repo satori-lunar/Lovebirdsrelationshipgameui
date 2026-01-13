@@ -40,20 +40,20 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Warm Illustration Theme Colors */
-  --warm-cream: #FAF0E6;
-  --warm-beige: #F5E6D3;
-  --warm-beige-dark: #E8D4BD;
-  --soft-purple: #D4C5E0;
-  --soft-purple-light: #E5DCF0;
-  --soft-blue: #A8C7E7;
-  --warm-orange: #F4A261;
-  --warm-orange-light: #F8B77F;
-  --warm-yellow: #F9C74F;
-  --warm-pink: #EC8B9B;
-  --warm-pink-light: #F5A7B5;
-  --text-warm: #5A4A42;
-  --text-warm-light: #8B7A70;
+  /* Warm Illustration Theme Colors - Vibrant */
+  --warm-cream: #FFF5E1;
+  --warm-beige: #FFE4C4;
+  --warm-beige-dark: #F4C18D;
+  --soft-purple: #B794E8;
+  --soft-purple-light: #D4B5F7;
+  --soft-blue: #7FB3E8;
+  --warm-orange: #FF8C42;
+  --warm-orange-light: #FFB27A;
+  --warm-yellow: #FFC857;
+  --warm-pink: #FF6B9D;
+  --warm-pink-light: #FF9BBB;
+  --text-warm: #4A3728;
+  --text-warm-light: #7A6253;
 }
 
 .dark {
