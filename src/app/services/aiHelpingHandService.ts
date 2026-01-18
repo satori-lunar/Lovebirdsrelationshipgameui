@@ -161,7 +161,7 @@ class AIHelpingHandService {
       relationshipData: relationship,
       partnerHints: partnerHints || [],
       userCalendarEvents: calendarEvents || [],
-      previousSuggestions: previousSuggestions?.map(s => helpingHandService['mapSuggestionFromDb'](s)) || []
+      previousSuggestions: previousSuggestions?.map(s => helpingHandService.mapSuggestionFromDb(s)) || []
     };
   }
 
@@ -625,7 +625,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           continue;
         }
 
-        saved.push(helpingHandService['mapSuggestionFromDb'](data));
+        saved.push(helpingHandService.mapSuggestionFromDb(data));
       } catch (error) {
         console.error('❌ Error saving suggestion:', error);
       }

@@ -178,7 +178,7 @@ class HelpingHandService {
       throw error;
     }
 
-    let suggestions = data.map(this.mapSuggestionWithCategoryFromDb);
+    let suggestions = data.map(item => this.mapSuggestionWithCategoryFromDb(item));
 
     // Filter out completed if not requested
     if (!request.includeCompleted) {
@@ -627,7 +627,8 @@ class HelpingHandService {
     };
   }
 
-  private mapSuggestionFromDb(data: any): HelpingHandSuggestion {
+  // Public method - used by aiHelpingHandService for mapping suggestions
+  mapSuggestionFromDb(data: any): HelpingHandSuggestion {
     return {
       id: data.id,
       userId: data.user_id,
