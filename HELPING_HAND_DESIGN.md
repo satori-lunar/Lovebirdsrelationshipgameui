@@ -94,6 +94,9 @@ CREATE TABLE helping_hand_suggestions (
   -- Categorization
   category_id UUID REFERENCES helping_hand_categories(id) ON DELETE CASCADE NOT NULL,
 
+  -- Source
+  source_type TEXT NOT NULL DEFAULT 'ai', -- 'ai' or 'user_created'
+
   -- Suggestion Content
   title TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -313,6 +316,7 @@ export interface HelpingHandCategory {
 export type LoveLanguage = 'words' | 'quality_time' | 'gifts' | 'acts' | 'touch';
 export type BestTiming = 'morning' | 'afternoon' | 'evening' | 'weekend' | 'any';
 export type UserFeedback = 'helpful' | 'not_helpful' | 'too_much';
+export type SuggestionSourceType = 'ai' | 'user_created';
 
 export interface SuggestionStep {
   step: number;
@@ -331,6 +335,9 @@ export interface HelpingHandSuggestion {
   categoryId: string;
   category?: HelpingHandCategory; // Populated via join
 
+  // Source
+  sourceType: SuggestionSourceType; // 'ai' or 'user_created'
+
   // Content
   title: string;
   description: string;
@@ -341,14 +348,14 @@ export interface HelpingHandSuggestion {
   effortLevel: EffortLevel;
   bestTiming?: BestTiming;
 
-  // Personalization
-  loveLanguageAlignment: LoveLanguage[];
-  whySuggested: string;
+  // Personalization (optional for user-created suggestions)
+  loveLanguageAlignment?: LoveLanguage[];
+  whySuggested?: string; // AI explanation (empty for user-created)
   basedOnFactors?: Record<string, any>;
 
-  // Partner Context
+  // Partner Context (AI-generated only)
   partnerHint?: string;
-  partnerPreferenceMatch: boolean;
+  partnerPreferenceMatch?: boolean;
 
   // Tracking
   isSelected: boolean;
@@ -357,9 +364,9 @@ export interface HelpingHandSuggestion {
   userFeedback?: UserFeedback;
   userNotes?: string;
 
-  // AI Metadata
-  aiConfidenceScore: number; // 0.00 to 1.00
-  generatedBy: string;
+  // AI Metadata (only for AI-generated suggestions)
+  aiConfidenceScore?: number; // 0.00 to 1.00 (null for user-created)
+  generatedBy?: string; // AI model used (null for user-created)
 
   // Metadata
   createdAt: string;
@@ -483,6 +490,20 @@ export interface UpdateUserStatusRequest {
   userId: string;
   weekStartDate: string;
   status: Partial<Omit<HelpingHandUserStatus, 'id' | 'userId' | 'weekStartDate' | 'createdAt' | 'updatedAt'>>;
+}
+
+export interface CreateCustomSuggestionRequest {
+  userId: string;
+  relationshipId: string;
+  weekStartDate: string;
+  categoryId: string;
+  title: string;
+  description: string;
+  detailedSteps?: SuggestionStep[];
+  timeEstimateMinutes: number;
+  effortLevel: EffortLevel;
+  bestTiming?: BestTiming;
+  loveLanguageAlignment?: LoveLanguage[];
 }
 
 export interface AddPartnerHintRequest {
@@ -633,9 +654,118 @@ After AI generation, filter and rank suggestions:
 
 ---
 
+## Partner Hint/Nudge UI
+
+### Heart Button Long-Press Interaction
+
+**Trigger**: User long-presses the heart icon on home/main screen
+
+**UI Flow**:
+
+1. **Long-Press Detection** (500ms)
+   - Heart icon scales up and pulses
+   - Haptic feedback
+   - Opens hint modal with animation
+
+2. **Hint Modal** → HelpingHandHintModal component
+```
+┌─────────────────────────────────────┐
+│ 💝 Send a hint to [Partner Name]   │
+│                                     │
+│ Help them help you! Share something │
+│ that would make your week better.   │
+│                                     │
+│ What kind of hint?                  │
+│ ○ I could use support              │
+│ ○ Something I'd love                │
+│ ○ How to help me                    │
+│ ○ Special occasion coming           │
+│                                     │
+│ [Next]                              │
+└─────────────────────────────────────┘
+```
+
+3. **Hint Details Screen**
+```
+┌─────────────────────────────────────┐
+│ ← Back                              │
+│                                     │
+│ What would help you this week?      │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ [Text input area]               │ │
+│ │ Example: "I've been stressed    │ │
+│ │ about work, could use some      │ │
+│ │ encouragement"                  │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+│ How should we share this?           │
+│ ● Use this for AI suggestions only  │
+│   (They won't see your exact words) │
+│                                     │
+│ ○ Show them directly                │
+│   (They'll see this message)        │
+│                                     │
+│ ⏰ This hint expires:               │
+│ [Dropdown: This week / This month / │
+│            Never]                   │
+│                                     │
+│ [Send Hint]                         │
+└─────────────────────────────────────┘
+```
+
+4. **Confirmation**
+```
+┌─────────────────────────────────────┐
+│ ✨ Hint sent!                       │
+│                                     │
+│ [Partner Name] will get suggestions │
+│ based on your hint this week.       │
+│                                     │
+│ You can manage your hints in        │
+│ Settings > Partner Hints            │
+│                                     │
+│ [Done]                              │
+└─────────────────────────────────────┘
+```
+
+### Quick Nudge Option
+
+For faster interaction, also add quick nudge buttons:
+
+```
+┌─────────────────────────────────────┐
+│ 💝 Quick Nudges                     │
+│                                     │
+│ Send a quick hint to [Partner]:    │
+│                                     │
+│ [😊 Could use encouragement]        │
+│ [🫂 Need some extra affection]      │
+│ [⏰ Running low on energy]          │
+│ [💬 Want to talk]                   │
+│ [🎉 Celebrating something]          │
+│                                     │
+│ Or write your own ↓                 │
+└─────────────────────────────────────┘
+```
+
+**Backend Flow**:
+1. Save to `helping_hand_partner_hints` table
+2. Trigger AI to regenerate suggestions if user has active week
+3. Send subtle notification to receiving partner: "New suggestions available for [Partner Name]"
+4. Include hint context in next suggestion generation
+
+**Settings Management**: Add "Partner Hints" section in settings
+- View active hints sent to partner
+- View hints partner sent to you (if marked as "show directly")
+- Edit/delete your hints
+- See how hints were used in suggestions
+
+---
+
 ## User Flow
 
-### 1. Weekly Assessment (Monday)
+### 1. Weekly Assessment (Default: Monday, User Configurable)
 User receives notification: "Let's plan your week for [Partner Name]"
 
 Flow:
@@ -654,18 +784,20 @@ Flow:
    - "Creating personalized suggestions for you..."
 
 ### 2. Browse Suggestions → HelpingHandCategories component
-Display categories as cards:
+Display categories as cards with add custom option:
 ```
 ┌─────────────────────────────────┐
 │ ⚡ Quick Wins                    │
 │ Simple 5-minute gestures        │
 │ 5 suggestions                   │
+│ [+ Add Your Own]                │
 └─────────────────────────────────┘
 
 ┌─────────────────────────────────┐
 │ 💬 Thoughtful Messages          │
 │ Meaningful words for their day  │
 │ 4 suggestions                   │
+│ [+ Add Your Own]                │
 └─────────────────────────────────┘
 ```
 
@@ -712,9 +844,69 @@ After selecting:
 │ Start date: [Today]             │
 │ End date: [This Sunday]         │
 │                                 │
+│ 📅 Add to device calendar       │
+│ [Toggle: ON]                    │
+│                                 │
 │ [Set Reminder]                  │
 └─────────────────────────────────┘
 ```
+
+**Calendar Integration** (when enabled):
+- Creates calendar event(s) using Capacitor Calendar plugin
+- Event title: "💝 [Suggestion Title]"
+- Event description: Brief description + steps
+- Event duration: Based on time estimate
+- Event reminder: 15 min before
+- Recurring: Based on frequency selection
+
+### 4b. Add Custom Suggestion → HelpingHandCustomSuggestion component
+When user clicks "+ Add Your Own" in a category:
+```
+┌─────────────────────────────────┐
+│ ← Back to Quick Wins            │
+│                                 │
+│ ✨ Create Your Own Suggestion   │
+│                                 │
+│ Title                           │
+│ ┌─────────────────────────────┐ │
+│ │ [Text input]                │ │
+│ └─────────────────────────────┘ │
+│                                 │
+│ Description                     │
+│ ┌─────────────────────────────┐ │
+│ │ [Textarea]                  │ │
+│ │ What makes this special?    │ │
+│ └─────────────────────────────┘ │
+│                                 │
+│ Steps (optional)                │
+│ [+ Add Step]                    │
+│ 1. [Input]                      │
+│ 2. [Input]                      │
+│                                 │
+│ Time estimate                   │
+│ [Slider: 5 min ... 180 min]    │
+│                                 │
+│ Effort level                    │
+│ ○ Minimal  ● Low  ○ Moderate    │
+│                                 │
+│ Best timing                     │
+│ [Dropdown: Morning/Afternoon/   │
+│            Evening/Weekend/Any] │
+│                                 │
+│ Love languages this serves      │
+│ ☑ Words of Affirmation         │
+│ ☐ Quality Time                  │
+│ ☐ Acts of Service               │
+│                                 │
+│ [Save Suggestion]               │
+└─────────────────────────────────┘
+```
+
+**After saving:**
+- Custom suggestion appears in category alongside AI suggestions
+- Tagged with "Your idea" badge
+- Can be selected, set reminders, and tracked like AI suggestions
+- AI learns from frequently-used custom suggestions
 
 ### 5. Track Progress → HelpingHandProgress component
 Show active suggestions with completion:
@@ -744,8 +936,10 @@ Add new AppState views:
 - `'helping-hand-assessment'`
 - `'helping-hand-categories'`
 - `'helping-hand-suggestion-details'`
+- `'helping-hand-custom-suggestion'`
 - `'helping-hand-reminder-setup'`
 - `'helping-hand-progress'`
+- `'helping-hand-hint-modal'` (modal overlay, not full view)
 
 ### 2. Dashboard Entry Point
 Add card to main dashboard:
@@ -770,11 +964,22 @@ async getBestTimesForHelpingHandReminders(userId: string): Promise<Date[]> {
 }
 ```
 
+**Notification Preferences Extension:**
+Update `user_notification_preferences` table to include:
+```typescript
+interface NotificationPreferences {
+  // ... existing fields
+  helping_hand_planning_day?: number; // 0=Sunday, 1=Monday (default), 2=Tuesday, etc.
+  helping_hand_planning_time?: string; // "09:00" default
+}
+```
+
 ### 4. Weekly Refresh
 Add cron job or scheduled task:
-- Every Monday at user's preferred time
+- Every [user's preferred day] at user's preferred time (default: Monday 9 AM)
 - Trigger weekly assessment notification
 - Generate new suggestions if user completes assessment
+- If user doesn't complete assessment, use previous week's data as fallback
 
 ---
 
@@ -872,26 +1077,54 @@ Track these metrics to measure feature success:
 
 ---
 
-## Open Questions
+## Design Decisions ✅
 
-1. Should partner hints be bidirectional (both can hint about each other)?
-   - **Recommendation: Yes** - Creates symmetry and mutual support
+### 1. Partner Hints - Bidirectional with Heart Button
+**Decision: YES - Both partners can send hints**
+- **UI Pattern**: Long-press on heart home button opens hint/nudge interface
+- Creates symmetry and mutual support
+- Hints can be nudges ("I could use some encouragement") or preferences ("I've been craving sushi")
 
-2. What happens if partner doesn't fill out their weekly status?
-   - **Fallback: Use previous week's data + onboarding data**
-   - Show message: "We're using [Partner]'s info from last week"
+### 2. Custom Suggestions
+**Decision: YES - Allow from day 1**
+- Start with AI-generated suggestions as primary content
+- Include "+ Add Your Own" button in each category
+- Custom suggestions follow same structure (title, description, steps, time estimate)
+- AI can learn from custom suggestions user creates frequently
 
-3. Should we allow users to add their own custom suggestions?
-   - **Phase 2 feature** - Start with AI-generated, add custom later
+### 3. Weekly Assessment Day
+**Decision: User preference with Monday as default**
+- Add setting: "Preferred planning day" in notification preferences
+- Default: Monday morning
+- Options: Any day of week
+- User receives weekly assessment notification on their chosen day
 
-4. How to handle long-distance relationships differently?
-   - **Filter suggestions by feasibility**
-   - Show more digital connection options (messages, calls, gifts)
-   - Highlight planning ahead category
+### 4. Calendar Integration
+**Decision: YES - Sync to device calendar**
+- Use Capacitor Calendar plugin
+- When setting reminder, offer: "Add to calendar?"
+- Creates calendar event with:
+  - Title: "💝 [Suggestion Title]"
+  - Description: Brief description + steps
+  - Reminder: Based on user's chosen notification time
+  - Duration: Based on time estimate
 
-5. Should reminders integrate with device calendar?
-   - **Yes, optional** - Use Capacitor Calendar plugin
-   - Allow adding to calendar when setting reminder
+### 5. Handling Missing Partner Status
+**Fallback Strategy:**
+- Use previous week's data + onboarding data
+- Show friendly message: "We're using [Partner]'s info from last week"
+- Still generate suggestions (better than nothing)
+- Encourage partner to fill out status with gentle nudge
+
+### 6. Long-Distance Relationships
+**Adaptive Filtering:**
+- Detect from onboarding: `living_together`, `proximity_status`
+- Filter out in-person only suggestions
+- Prioritize:
+  - Thoughtful Messages (texts, voice notes, video calls)
+  - Thoughtful Gifts (deliverable items, digital gifts)
+  - Planning Ahead (visit planning, countdown surprises)
+- Add virtual/digital category options
 
 ---
 
