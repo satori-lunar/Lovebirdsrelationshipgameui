@@ -333,8 +333,7 @@ export default function HelpingHandProgress({ onBack, onViewSuggestion, weekStar
                                 Delete
                               </DropdownMenuItem>
                             )}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
+                          </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
                     </CardContent>
