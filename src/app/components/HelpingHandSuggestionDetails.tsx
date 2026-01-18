@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { helpingHandService } from '../services/helpingHandService';
 import { toast } from 'sonner';
 import {
@@ -23,6 +24,7 @@ export default function HelpingHandSuggestionDetails({
 }: HelpingHandSuggestionDetailsProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
+  const { partnerLoveLanguages } = usePartnerOnboarding();
   const queryClient = useQueryClient();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -106,6 +108,31 @@ export default function HelpingHandSuggestionDetails({
       touch: '🤗'
     };
     return map[lang] || '❤️';
+  };
+
+  // Map full love language names to short codes
+  const mapLoveLanguageToShortCode = (fullName: string | null | undefined): string | null => {
+    if (!fullName) return null;
+    const mapping: Record<string, string> = {
+      'Words of Affirmation': 'words',
+      'Quality Time': 'quality_time',
+      'Acts of Service': 'acts',
+      'Receiving Gifts': 'gifts',
+      'Physical Touch': 'touch'
+    };
+    return mapping[fullName] || null;
+  };
+
+  // Check if suggestion matches partner's primary love language
+  const isRecommended = (suggestion: HelpingHandSuggestionWithCategory): boolean => {
+    if (!partnerLoveLanguages?.primary || !suggestion.loveLanguageAlignment) {
+      return false;
+    }
+    const primaryLoveLang = mapLoveLanguageToShortCode(partnerLoveLanguages.primary);
+    if (!primaryLoveLang) {
+      return false;
+    }
+    return suggestion.loveLanguageAlignment.includes(primaryLoveLang);
   };
 
   if (isLoading) {
@@ -205,12 +232,20 @@ export default function HelpingHandSuggestionDetails({
                             <h3 className="font-semibold text-text-warm flex-1">
                               {suggestion.title}
                             </h3>
-                            {!isAI && (
-                              <Badge variant="secondary" className="text-xs shrink-0">
-                                <User className="w-3 h-3 mr-1" />
-                                Your idea
-                              </Badge>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {isRecommended(suggestion) && (
+                                <Badge className="text-xs bg-warm-pink/10 text-warm-pink border-warm-pink/20">
+                                  <Heart className="w-3 h-3 mr-1" />
+                                  Recommended
+                                </Badge>
+                              )}
+                              {!isAI && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <User className="w-3 h-3 mr-1" />
+                                  Your idea
+                                </Badge>
+                              )}
+                            </div>
                           </div>
 
                           {/* Description */}
