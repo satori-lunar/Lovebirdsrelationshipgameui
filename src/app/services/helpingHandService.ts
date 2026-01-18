@@ -185,10 +185,151 @@ class HelpingHandService {
       suggestions = suggestions.filter(s => !s.isCompleted);
     }
 
+    // Sort by love language alignment (highest match first)
+    suggestions = await this.sortSuggestionsByLoveLanguage(request.userId, suggestions);
+
     return {
       suggestions,
       total: suggestions.length
     };
+  }
+
+  /**
+   * Sort suggestions by how well they match partner's love languages
+   */
+  private async sortSuggestionsByLoveLanguage(
+    userId: string,
+    suggestions: HelpingHandSuggestionWithCategory[]
+  ): Promise<HelpingHandSuggestionWithCategory[]> {
+    // Get partner's love languages
+    const partnerLoveLanguages = await this.getPartnerLoveLanguages(userId);
+    
+    if (!partnerLoveLanguages || partnerLoveLanguages.length === 0) {
+      // No love language data, return as-is (sorted by AI confidence already)
+      return suggestions;
+    }
+
+    // Create scoring function
+    const getLoveLanguageScore = (suggestion: HelpingHandSuggestionWithCategory): number => {
+      const alignment = suggestion.loveLanguageAlignment || [];
+      if (alignment.length === 0) return 0;
+
+      let score = 0;
+      
+      // Primary love language gets highest weight (100 points)
+      if (alignment.includes(partnerLoveLanguages[0])) {
+        score += 100;
+      }
+      
+      // Secondary love language gets medium weight (50 points)
+      if (partnerLoveLanguages.length > 1 && alignment.includes(partnerLoveLanguages[1])) {
+        score += 50;
+      }
+      
+      // Other partner love languages get lower weight (25 points)
+      partnerLoveLanguages.slice(2).forEach(ll => {
+        if (alignment.includes(ll)) {
+          score += 25;
+        }
+      });
+
+      // Also consider AI confidence score (0-100 scale)
+      const aiScore = (suggestion.aiConfidenceScore || 0) * 10; // Convert 0-1 to 0-10
+      score += aiScore;
+
+      return score;
+    };
+
+    // Sort: highest love language match first, then by AI confidence
+    return [...suggestions].sort((a, b) => {
+      const scoreA = getLoveLanguageScore(a);
+      const scoreB = getLoveLanguageScore(b);
+      
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA; // Higher score first
+      }
+      
+      // If scores are equal, maintain original order (already sorted by category and AI confidence)
+      return 0;
+    });
+  }
+
+  /**
+   * Get partner's love languages (primary first, then secondary, etc.)
+   */
+  private async getPartnerLoveLanguages(userId: string): Promise<string[]> {
+    try {
+      // Get relationship to find partner
+      const { data: relationships } = await api.supabase
+        .from('relationships')
+        .select('partner_a_id, partner_b_id')
+        .or(`partner_a_id.eq.${userId},partner_b_id.eq.${userId}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (!relationships) {
+        return [];
+      }
+
+      const partnerId = relationships.partner_a_id === userId
+        ? relationships.partner_b_id
+        : relationships.partner_a_id;
+
+      // Get partner's onboarding data
+      const { data: partnerOnboarding } = await api.supabase
+        .from('onboarding_responses')
+        .select('love_language_primary, love_language_secondary, love_languages')
+        .eq('user_id', partnerId)
+        .maybeSingle();
+
+      if (!partnerOnboarding) {
+        return [];
+      }
+
+      const loveLanguages: string[] = [];
+
+      // Map full names to short codes
+      const mapToShortCode = (fullName: string | null | undefined): string | null => {
+        if (!fullName) return null;
+        const mapping: Record<string, string> = {
+          'Words of Affirmation': 'words',
+          'Quality Time': 'quality_time',
+          'Acts of Service': 'acts',
+          'Receiving Gifts': 'gifts',
+          'Physical Touch': 'touch'
+        };
+        return mapping[fullName] || null;
+      };
+
+      // Add primary
+      if (partnerOnboarding.love_language_primary) {
+        const primary = mapToShortCode(partnerOnboarding.love_language_primary);
+        if (primary) loveLanguages.push(primary);
+      }
+
+      // Add secondary
+      if (partnerOnboarding.love_language_secondary) {
+        const secondary = mapToShortCode(partnerOnboarding.love_language_secondary);
+        if (secondary && !loveLanguages.includes(secondary)) {
+          loveLanguages.push(secondary);
+        }
+      }
+
+      // Add any from array (if available and not already included)
+      if (Array.isArray(partnerOnboarding.love_languages)) {
+        partnerOnboarding.love_languages.forEach((ll: string) => {
+          const shortCode = mapToShortCode(ll);
+          if (shortCode && !loveLanguages.includes(shortCode)) {
+            loveLanguages.push(shortCode);
+          }
+        });
+      }
+
+      return loveLanguages;
+    } catch (error) {
+      console.error('❌ Failed to fetch partner love languages:', error);
+      return [];
+    }
   }
 
   /**
