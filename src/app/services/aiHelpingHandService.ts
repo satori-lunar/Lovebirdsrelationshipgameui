@@ -37,8 +37,8 @@ class AIHelpingHandService {
       if (existingSuggestions.total > 0) {
         console.log('ℹ️ Using existing suggestions for this week');
         return {
-          suggestions: existingSuggestions.suggestions,
-          categoryCounts: await this.getCategoryCounts(existingSuggestions.suggestions),
+          suggestions: existingSuggestions.suggestions || [],
+          categoryCounts: await this.getCategoryCounts(existingSuggestions.suggestions || []),
           generatedAt: new Date().toISOString()
         };
       }
@@ -69,8 +69,8 @@ class AIHelpingHandService {
     const savedSuggestions = await this.saveSuggestions(allSuggestions);
 
     return {
-      suggestions: savedSuggestions,
-      categoryCounts: await this.getCategoryCounts(savedSuggestions),
+      suggestions: savedSuggestions || [],
+      categoryCounts: await this.getCategoryCounts(savedSuggestions || []),
       generatedAt: new Date().toISOString()
     };
   }
