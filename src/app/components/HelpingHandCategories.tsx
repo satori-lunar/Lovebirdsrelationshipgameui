@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, ChevronRight, Plus, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Plus, Loader2, Sparkles, Heart } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { useAuth } from '../hooks/useAuth';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { helpingHandService } from '../services/helpingHandService';
 import { toast } from 'sonner';
+import { Badge } from './ui/badge';
 import {
   HelpingHandCategoriesProps,
   HelpingHandCategory,
@@ -16,7 +18,9 @@ import { useQuery } from '@tanstack/react-query';
 
 export default function HelpingHandCategories({ onBack, onSelectCategory, onAddCustom, weekStartDate }: HelpingHandCategoriesProps) {
   const { user } = useAuth();
+  const { partnerLoveLanguages } = usePartnerOnboarding();
   const [categoryStats, setCategoryStats] = useState<Map<string, number>>(new Map());
+  const [recommendedCategories, setRecommendedCategories] = useState<Set<string>>(new Set());
 
   // Fetch categories
   const { data: categories, isLoading: categoriesLoading } = useQuery({
@@ -36,6 +40,34 @@ export default function HelpingHandCategories({ onBack, onSelectCategory, onAddC
     staleTime: 1 * 60 * 1000 // Cache for 1 minute
   });
 
+  // Fetch all suggestions to determine which categories are recommended
+  const { data: allSuggestionsResponse } = useQuery({
+    queryKey: ['helping-hand-all-suggestions', user?.id, weekStartDate],
+    queryFn: () => {
+      if (!user) throw new Error('User not found');
+      return helpingHandService.getSuggestions({
+        userId: user.id,
+        weekStartDate,
+        includeCompleted: false
+      });
+    },
+    enabled: !!user,
+    staleTime: 1 * 60 * 1000 // Cache for 1 minute
+  });
+
+  // Map full love language names to short codes
+  const mapLoveLanguageToShortCode = (fullName: string | null | undefined): string | null => {
+    if (!fullName) return null;
+    const mapping: Record<string, string> = {
+      'Words of Affirmation': 'words',
+      'Quality Time': 'quality_time',
+      'Acts of Service': 'acts',
+      'Receiving Gifts': 'gifts',
+      'Physical Touch': 'touch'
+    };
+    return mapping[fullName] || null;
+  };
+
   useEffect(() => {
     if (countsResponse) {
       const stats = new Map<string, number>();
@@ -45,6 +77,29 @@ export default function HelpingHandCategories({ onBack, onSelectCategory, onAddC
       setCategoryStats(stats);
     }
   }, [countsResponse]);
+
+  // Determine which categories are recommended based on partner's love language
+  useEffect(() => {
+    if (!allSuggestionsResponse?.suggestions || !partnerLoveLanguages?.primary) {
+      setRecommendedCategories(new Set());
+      return;
+    }
+
+    const primaryLoveLang = mapLoveLanguageToShortCode(partnerLoveLanguages.primary);
+    if (!primaryLoveLang) {
+      setRecommendedCategories(new Set());
+      return;
+    }
+
+    const recommended = new Set<string>();
+    allSuggestionsResponse.suggestions.forEach(suggestion => {
+      if (suggestion.loveLanguageAlignment?.includes(primaryLoveLang)) {
+        recommended.add(suggestion.categoryId);
+      }
+    });
+
+    setRecommendedCategories(recommended);
+  }, [allSuggestionsResponse, partnerLoveLanguages]);
 
   const getIconComponent = (iconName: string) => {
     const Icon = (Icons as any)[iconName];
@@ -117,10 +172,14 @@ export default function HelpingHandCategories({ onBack, onSelectCategory, onAddC
                   <h3 className="font-semibold text-text-warm mb-1">
                     Your personalized suggestions are ready!
                   </h3>
-                  <p className="text-sm text-text-warm-light">
+                  <p className="text-sm text-text-warm-light mb-2">
                     We've created ideas that match your time, energy, and what your partner loves.
-                    Tap a category to see suggestions or add your own.
+                    Tap a category to see suggestions ranked by your partner's love language, or add your own.
                   </p>
+                  <div className="flex items-center gap-1.5 text-xs text-warm-pink/80">
+                    <Heart className="w-3.5 h-3.5" />
+                    <span>Top matches for your partner's love language are marked with "Recommended"</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -129,9 +188,21 @@ export default function HelpingHandCategories({ onBack, onSelectCategory, onAddC
 
         {/* Categories */}
         <div className="space-y-3">
-          {categories?.map((category, index) => {
+          {categories
+            ?.slice()
+            .sort((a, b) => {
+              // Sort recommended categories first
+              const aRecommended = recommendedCategories.has(a.id);
+              const bRecommended = recommendedCategories.has(b.id);
+              if (aRecommended && !bRecommended) return -1;
+              if (!aRecommended && bRecommended) return 1;
+              // Then by sort order
+              return a.sortOrder - b.sortOrder;
+            })
+            .map((category, index) => {
             const Icon = getIconComponent(category.icon);
             const count = categoryStats.get(category.id) || 0;
+            const isRecommended = recommendedCategories.has(category.id) && count > 0;
 
             return (
               <motion.div
@@ -157,10 +228,16 @@ export default function HelpingHandCategories({ onBack, onSelectCategory, onAddC
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-bold text-text-warm text-lg">
                             {category.displayName}
                           </h3>
+                          {isRecommended && (
+                            <Badge className="text-xs bg-warm-pink/10 text-warm-pink border-warm-pink/20">
+                              <Heart className="w-3 h-3 mr-1" />
+                              Recommended
+                            </Badge>
+                          )}
                           {count > 0 && (
                             <span className="px-2 py-0.5 rounded-full bg-warm-pink/10 text-warm-pink text-xs font-semibold">
                               {count}
