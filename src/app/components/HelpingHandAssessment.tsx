@@ -135,7 +135,8 @@ export default function HelpingHandAssessment({ onBack, onComplete, existingStat
       });
 
       toast.dismiss();
-      toast.success(`Generated ${result.totalSuggestions} suggestions for you!`);
+      const suggestionCount = result.suggestions?.length || 0;
+      toast.success(`Generated ${suggestionCount} suggestions for you!`);
 
       onComplete(status);
     } catch (error) {
