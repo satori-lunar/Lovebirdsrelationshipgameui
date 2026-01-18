@@ -28,9 +28,10 @@ interface HomeProps {
   partnerName: string;
   onNavigate: (page: string, data?: any) => void;
   showWelcomeFlow?: boolean;
+  onShowHintModal?: () => void;
 }
 
-export function Home({ userName, partnerName, onNavigate }: HomeProps) {
+export function Home({ userName, partnerName, onNavigate, onShowHintModal }: HomeProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
   const queryClient = useQueryClient();
@@ -40,6 +41,10 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showCouplePhotoUpload, setShowCouplePhotoUpload] = useState(false);
   const [isLocationSharingCollapsed, setIsLocationSharingCollapsed] = useState(true);
+
+  // Heart button long-press state
+  const [heartPressTimer, setHeartPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isHeartPressed, setIsHeartPressed] = useState(false);
 
   // Debug: Log props received by Home component
   useEffect(() => {
@@ -290,6 +295,36 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
     }
   };
 
+  // Heart button long-press handlers
+  const handleHeartPressStart = () => {
+    setIsHeartPressed(true);
+    const timer = setTimeout(() => {
+      // Long press detected (500ms)
+      if (onShowHintModal) {
+        onShowHintModal();
+        toast.success('💝 Send a hint to help ' + partnerName + ' know what you need');
+      }
+    }, 500);
+    setHeartPressTimer(timer);
+  };
+
+  const handleHeartPressEnd = () => {
+    setIsHeartPressed(false);
+    if (heartPressTimer) {
+      clearTimeout(heartPressTimer);
+      setHeartPressTimer(null);
+    }
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (heartPressTimer) {
+        clearTimeout(heartPressTimer);
+      }
+    };
+  }, [heartPressTimer]);
+
   const getLocationSharingMode = (): 'off' | 'app' | 'partner' => {
     if (!shareWithApp && !shareWithPartner) return 'off';
     if (shareWithApp && !shareWithPartner) return 'app';
@@ -408,7 +443,24 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
                   )}
                 </div>
               </div>
-              <Heart className="w-8 h-8 text-white flex-shrink-0" fill="white" />
+              <button
+                onMouseDown={handleHeartPressStart}
+                onMouseUp={handleHeartPressEnd}
+                onMouseLeave={handleHeartPressEnd}
+                onTouchStart={handleHeartPressStart}
+                onTouchEnd={handleHeartPressEnd}
+                className={`flex-shrink-0 p-2 rounded-full transition-all ${
+                  isHeartPressed ? 'scale-110 bg-white/20' : 'hover:bg-white/10'
+                }`}
+                title="Long press to send a hint"
+              >
+                <Heart
+                  className={`w-8 h-8 text-white transition-transform ${
+                    isHeartPressed ? 'scale-110' : ''
+                  }`}
+                  fill="white"
+                />
+              </button>
             </div>
           </div>
         </div>
@@ -721,7 +773,7 @@ export function Home({ userName, partnerName, onNavigate }: HomeProps) {
         {/* Helping Hand */}
         <div className="px-5 mb-5">
           <div
-            onClick={() => onNavigate('helping-hand')}
+            onClick={() => onNavigate('helping-hand-assessment')}
             className="bg-gradient-to-br from-soft-purple to-soft-purple-light rounded-3xl p-5 shadow-lg cursor-pointer hover:shadow-xl transition-all interactive-lift"
           >
             <div className="flex items-center justify-between">

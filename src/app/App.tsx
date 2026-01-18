@@ -37,6 +37,13 @@ import { NeedSupportPlan } from './components/NeedSupportPlan';
 import { CouplesChallenges } from './components/CouplesChallenges';
 import { SomethingFeelsMissing } from './components/SomethingFeelsMissing';
 import { GiftSuggestions } from './components/GiftSuggestions';
+import HelpingHandAssessment from './components/HelpingHandAssessment';
+import HelpingHandCategories from './components/HelpingHandCategories';
+import HelpingHandSuggestionDetails from './components/HelpingHandSuggestionDetails';
+import HelpingHandReminderSetup from './components/HelpingHandReminderSetup';
+import HelpingHandCustomSuggestion from './components/HelpingHandCustomSuggestion';
+import HelpingHandProgress from './components/HelpingHandProgress';
+import HelpingHandHintModal from './components/HelpingHandHintModal';
 import { useAuth } from './hooks/useAuth';
 import { useRelationship } from './hooks/useRelationship';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -44,16 +51,26 @@ import { useWidgetRefresh, useWidgetGiftSync } from './hooks/useWidgetRefresh';
 import { useQuery } from '@tanstack/react-query';
 import { onboardingService } from './services/onboardingService';
 import { widgetGiftService } from './services/widgetGiftService';
+import { helpingHandService } from './services/helpingHandService';
 import { api } from './services/api';
 import type { PushNotificationData } from './services/pushNotificationService';
+import type { HelpingHandCategory, HelpingHandSuggestionWithCategory } from './types/helpingHand';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan' | 'couples-challenges' | 'gift-suggestions' | 'something-feels-missing';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan' | 'couples-challenges' | 'gift-suggestions' | 'something-feels-missing' | 'helping-hand-assessment' | 'helping-hand-categories' | 'helping-hand-suggestion-details' | 'helping-hand-reminder-setup' | 'helping-hand-custom-suggestion' | 'helping-hand-progress';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
   const [currentView, setCurrentView] = useState<AppState>('entry');
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [supportPlanNeed, setSupportPlanNeed] = useState<any>(null);
+
+  // Helping Hand state
+  const [helpingHandWeekStartDate, setHelpingHandWeekStartDate] = useState<string>(
+    helpingHandService.getWeekStartDate()
+  );
+  const [helpingHandSelectedCategory, setHelpingHandSelectedCategory] = useState<HelpingHandCategory | null>(null);
+  const [helpingHandSelectedSuggestion, setHelpingHandSelectedSuggestion] = useState<HelpingHandSuggestionWithCategory | null>(null);
+  const [showHintModal, setShowHintModal] = useState(false);
 
   // Handle push notification taps
   const handleNotificationTap = useCallback((data: PushNotificationData) => {
@@ -279,6 +296,7 @@ export default function App() {
           userName={userData?.name || 'there'}
           partnerName={userData?.partnerName || 'Partner'}
           onNavigate={handleNavigate}
+          onShowHintModal={() => setShowHintModal(true)}
         />
       )}
 
@@ -409,6 +427,96 @@ export default function App() {
       {currentView === 'something-feels-missing' && (
         <SomethingFeelsMissing onBack={handleBack} />
       )}
+
+      {/* Helping Hand Views */}
+      {currentView === 'helping-hand-assessment' && (
+        <HelpingHandAssessment
+          onBack={handleBack}
+          onComplete={() => {
+            setCurrentView('helping-hand-categories');
+          }}
+          weekStartDate={helpingHandWeekStartDate}
+        />
+      )}
+
+      {currentView === 'helping-hand-categories' && (
+        <HelpingHandCategories
+          onBack={handleBack}
+          onSelectCategory={(category) => {
+            setHelpingHandSelectedCategory(category);
+            setCurrentView('helping-hand-suggestion-details');
+          }}
+          onAddCustom={(category) => {
+            setHelpingHandSelectedCategory(category);
+            setCurrentView('helping-hand-custom-suggestion');
+          }}
+          weekStartDate={helpingHandWeekStartDate}
+        />
+      )}
+
+      {currentView === 'helping-hand-suggestion-details' && helpingHandSelectedCategory && (
+        <HelpingHandSuggestionDetails
+          category={helpingHandSelectedCategory}
+          onBack={() => setCurrentView('helping-hand-categories')}
+          onSelectSuggestion={(suggestion) => {
+            setHelpingHandSelectedSuggestion(suggestion);
+            setCurrentView('helping-hand-reminder-setup');
+          }}
+          onSaveForLater={() => {
+            setCurrentView('helping-hand-categories');
+          }}
+          weekStartDate={helpingHandWeekStartDate}
+        />
+      )}
+
+      {currentView === 'helping-hand-reminder-setup' && helpingHandSelectedSuggestion && (
+        <HelpingHandReminderSetup
+          suggestion={helpingHandSelectedSuggestion}
+          onBack={() => setCurrentView('helping-hand-suggestion-details')}
+          onComplete={() => {
+            setCurrentView('helping-hand-progress');
+          }}
+        />
+      )}
+
+      {currentView === 'helping-hand-custom-suggestion' && helpingHandSelectedCategory && (
+        <HelpingHandCustomSuggestion
+          category={helpingHandSelectedCategory}
+          onBack={() => setCurrentView('helping-hand-categories')}
+          onSave={() => {
+            setCurrentView('helping-hand-categories');
+          }}
+          weekStartDate={helpingHandWeekStartDate}
+        />
+      )}
+
+      {currentView === 'helping-hand-progress' && (
+        <HelpingHandProgress
+          onBack={() => setCurrentView('helping-hand-categories')}
+          onViewSuggestion={(suggestion) => {
+            setHelpingHandSelectedSuggestion(suggestion);
+            setHelpingHandSelectedCategory({
+              id: suggestion.categoryId,
+              displayName: suggestion.categoryDisplayName,
+              description: '',
+              icon: '',
+              colorClass: suggestion.categoryColorClass,
+              minTimeRequired: 0,
+              maxTimeRequired: 0,
+              effortLevel: 'low',
+              isActive: true
+            } as HelpingHandCategory);
+            setCurrentView('helping-hand-suggestion-details');
+          }}
+          weekStartDate={helpingHandWeekStartDate}
+        />
+      )}
+
+      {/* Helping Hand Hint Modal */}
+      <HelpingHandHintModal
+        isOpen={showHintModal}
+        onClose={() => setShowHintModal(false)}
+      />
 
       {currentView === 'settings' && (
         <Settings
