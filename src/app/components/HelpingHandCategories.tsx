@@ -215,11 +215,8 @@ export default function HelpingHandCategories({ onBack, onSelectCategory, onAddC
                   <CardContent className="p-0">
                     {/* Main category button */}
                     <button
-                      onClick={() => count > 0 && onSelectCategory(category)}
-                      className={`w-full p-4 text-left flex items-center gap-4 ${
-                        count > 0 ? 'cursor-pointer hover:bg-warm-beige/10' : 'cursor-default'
-                      } transition-colors`}
-                      disabled={count === 0}
+                      onClick={() => onSelectCategory(category)}
+                      className="w-full p-4 text-left flex items-center gap-4 cursor-pointer hover:bg-warm-beige/10 transition-colors"
                     >
                       {/* Icon */}
                       <div className={`shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br ${category.colorClass} flex items-center justify-center shadow-md`}>
@@ -255,9 +252,7 @@ export default function HelpingHandCategories({ onBack, onSelectCategory, onAddC
                       </div>
 
                       {/* Arrow */}
-                      {count > 0 && (
-                        <ChevronRight className="w-6 h-6 text-text-warm-light group-hover:text-warm-pink group-hover:translate-x-1 transition-all" />
-                      )}
+                      <ChevronRight className="w-6 h-6 text-text-warm-light group-hover:text-warm-pink group-hover:translate-x-1 transition-all" />
                     </button>
 
                     {/* Add custom button */}
