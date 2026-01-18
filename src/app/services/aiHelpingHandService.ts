@@ -309,21 +309,39 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
   /**
    * Generate template-based suggestions as fallback
    * This provides basic functionality until AI API is integrated
+   * Now personalizes based on user status, partner preferences, and context
    */
   private generateTemplateSuggestions(
     category: HelpingHandCategory,
     context: AIGenerationContext
   ): Partial<HelpingHandSuggestion>[] {
-    const { userStatus, partnerOnboarding, partnerHints } = context;
+    const { userStatus, partnerStatus, partnerOnboarding, partnerHints, relationshipData } = context;
     const partnerName = partnerOnboarding?.name || 'your partner';
-    const primaryLoveLanguage = partnerOnboarding?.love_languages?.[0] || 'quality_time';
+    const allLoveLanguages = partnerOnboarding?.love_languages || ['quality_time'];
+    const favoriteActivities = partnerOnboarding?.favorite_activities || [];
+    const isLivingTogether = relationshipData?.living_together || false;
+    const challenges = userStatus.currentChallenges || [];
 
-    // Generate 3-5 suggestions based on category
-    const templates = this.getCategoryTemplates(category.name, partnerName, primaryLoveLanguage);
+    // Get base templates
+    const baseTemplates = this.getCategoryTemplates(category.name);
+    
+    // Personalize each template based on context
+    const personalizedTemplates = baseTemplates
+      .map(template => this.personalizeTemplate(template, {
+        partnerName,
+        allLoveLanguages,
+        favoriteActivities,
+        userStatus,
+        partnerStatus,
+        challenges,
+        isLivingTogether,
+        partnerHints
+      }))
+      .filter(t => t !== null) as Partial<HelpingHandSuggestion>[];
 
-    // Filter by user capacity
-    return templates
-      .filter(t => t.timeEstimateMinutes <= category.maxTimeRequired)
+    // Filter by user capacity and category requirements
+    return personalizedTemplates
+      .filter(t => t.timeEstimateMinutes! <= category.maxTimeRequired)
       .filter(t => {
         const effortScore = this.getEffortScore(t.effortLevel!);
         const capacityScore = this.getEmotionalScore(userStatus.emotionalCapacity);
@@ -334,27 +352,115 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
         ...template,
         basedOnFactors: {
           userCapacity: userStatus.emotionalCapacity,
-          partnerLoveLanguage: primaryLoveLanguage,
+          workSchedule: userStatus.workScheduleType,
+          stressLevel: userStatus.stressLevel,
+          challenges: challenges,
+          partnerLoveLanguages: allLoveLanguages,
+          partnerActivities: favoriteActivities,
           hasPartnerHints: partnerHints.length > 0
         },
-        aiConfidenceScore: 0.75,
+        aiConfidenceScore: 0.80,
         generatedBy: 'template'
       }));
   }
 
   /**
-   * Get template suggestions for each category
+   * Personalize a template based on user/partner context
+   */
+  private personalizeTemplate(
+    template: Partial<HelpingHandSuggestion>,
+    context: {
+      partnerName: string;
+      allLoveLanguages: string[];
+      favoriteActivities: string[];
+      userStatus: HelpingHandUserStatus;
+      partnerStatus?: HelpingHandUserStatus;
+      challenges: string[];
+      isLivingTogether: boolean;
+      partnerHints: HelpingHandPartnerHint[];
+    }
+  ): Partial<HelpingHandSuggestion> | null {
+    const { 
+      partnerName, 
+      allLoveLanguages, 
+      favoriteActivities, 
+      userStatus, 
+      challenges,
+      isLivingTogether,
+      partnerHints
+    } = context;
+
+    const isStressed = userStatus.stressLevel === 'very_stressed' || userStatus.stressLevel === 'stressed';
+    const isLowEnergy = userStatus.energyLevel === 'exhausted' || userStatus.energyLevel === 'tired';
+    const hasWorkChallenge = challenges.includes('work_deadline');
+    const hasFamilyChallenge = challenges.includes('family_issue');
+    const isStudent = userStatus.workScheduleType === 'student';
+    const isFullTime = userStatus.workScheduleType === 'full_time';
+
+    // Personalize title and description with partner name
+    let personalizedTitle = template.title?.replace(/\bpartner\b/gi, partnerName) || template.title || '';
+    let personalizedDescription = template.description?.replace(/\bpartner\b/gi, partnerName) || template.description || '';
+
+    // Add context-specific details to descriptions
+    if (isStressed && template.effortLevel === 'minimal') {
+      personalizedDescription += ` Perfect for when you're feeling stretched - this takes almost no mental energy.`;
+    }
+
+    if (hasWorkChallenge && template.loveLanguageAlignment?.includes('acts')) {
+      personalizedDescription += ` With your work deadline this week, this practical gesture shows care without adding pressure.`;
+    }
+
+    if (favoriteActivities.length > 0 && template.loveLanguageAlignment?.includes('quality_time')) {
+      const activity = favoriteActivities[0];
+      personalizedDescription = personalizedDescription.replace(
+        'activities they would enjoy',
+        `activities like ${activity}`
+      );
+    }
+
+    // Adjust timing based on work schedule
+    let bestTiming = template.bestTiming || 'any';
+    if (isFullTime && bestTiming === 'any') {
+      bestTiming = 'evening'; // Default to evening for full-time workers
+    }
+    if (isStudent && bestTiming === 'any') {
+      bestTiming = 'afternoon'; // Afternoon might work better for students
+    }
+
+    // Use partner hints if available
+    let whySuggested = template.whySuggested || '';
+    if (partnerHints.length > 0 && template.loveLanguageAlignment?.includes('gifts')) {
+      const giftHint = partnerHints.find(h => h.hintType === 'like' || h.hintType === 'preference');
+      if (giftHint) {
+        personalizedDescription += ` ${partnerName} mentioned they like things related to "${giftHint.hintText}" - this could align with that.`;
+      }
+    }
+
+    // Adjust love language alignment to include all partner's languages
+    const loveLanguageAlignment = template.loveLanguageAlignment || [];
+    const alignedLanguages = new Set([...loveLanguageAlignment, ...allLoveLanguages].slice(0, 3));
+
+    return {
+      ...template,
+      title: personalizedTitle,
+      description: personalizedDescription,
+      bestTiming: bestTiming as any,
+      loveLanguageAlignment: Array.from(alignedLanguages),
+      whySuggested: whySuggested || `This fits your ${userStatus.availableTimeLevel} available time and ${userStatus.emotionalCapacity} emotional capacity.`
+    };
+  }
+
+  /**
+   * Get template suggestions for each category (base templates, will be personalized)
    */
   private getCategoryTemplates(
-    categoryName: string,
-    partnerName: string,
-    loveLanguage: string
+    categoryName: string
   ): Partial<HelpingHandSuggestion>[] {
     const templates: Record<string, Partial<HelpingHandSuggestion>[]> = {
       quick_wins: [
         {
           title: 'Send a sweet good morning text',
-          description: `Start ${partnerName}'s day with a thoughtful message. A simple "thinking of you" can set a positive tone for their whole day.`,
+          description: `Start your partner's day with a thoughtful message. A simple "thinking of you" can set a positive tone for their whole day.`,
           detailedSteps: [
             { step: 1, action: 'Think of something specific you appreciate about them', tip: 'Be genuine and specific' },
             { step: 2, action: 'Send the text when they usually wake up', estimatedMinutes: 2 }
@@ -367,7 +473,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
         },
         {
           title: 'Leave a sticky note surprise',
-          description: `Hide a loving note where ${partnerName} will find it unexpectedly. These small surprises create moments of joy throughout the day.`,
+          description: `Hide a loving note where your partner will find it unexpectedly. These small surprises create moments of joy throughout the day.`,
           detailedSteps: [
             { step: 1, action: 'Write a short loving message on a sticky note', estimatedMinutes: 2 },
             { step: 2, action: 'Place it somewhere they\'ll discover (mirror, laptop, lunch bag)', estimatedMinutes: 1 }
@@ -382,7 +488,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       thoughtful_messages: [
         {
           title: 'Share a favorite memory together',
-          description: `Remind ${partnerName} of a special moment you shared. Reminiscing strengthens your bond and shows you cherish your time together.`,
+          description: `Remind your partner of a special moment you shared. Reminiscing strengthens your bond and shows you cherish your time together.`,
           detailedSteps: [
             { step: 1, action: 'Think of a recent happy memory', tip: 'Choose something specific and meaningful', estimatedMinutes: 2 },
             { step: 2, action: 'Write 2-3 sentences about why that moment was special', estimatedMinutes: 5 },
@@ -397,8 +503,8 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       ],
       acts_of_service: [
         {
-          title: `Do a chore ${partnerName} usually handles`,
-          description: `Take something off ${partnerName}'s plate by handling a task they usually do. Actions speak louder than words.`,
+          title: `Do a chore your partner usually handles`,
+          description: `Take something off your partner's plate by handling a task they usually do. Actions speak louder than words.`,
           detailedSteps: [
             { step: 1, action: 'Notice a task they usually handle', tip: 'Choose something you can do well', estimatedMinutes: 5 },
             { step: 2, action: 'Complete it before they have to think about it', estimatedMinutes: 20 },
@@ -414,7 +520,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       quality_time: [
         {
           title: 'Have a device-free dinner together',
-          description: `Share a meal with ${partnerName} with phones put away. Undivided attention is one of the greatest gifts you can give.`,
+          description: `Share a meal with your partner with phones put away. Undivided attention is one of the greatest gifts you can give.`,
           detailedSteps: [
             { step: 1, action: 'Suggest a device-free dinner', estimatedMinutes: 1 },
             { step: 2, action: 'Both put phones in another room', estimatedMinutes: 2 },
@@ -429,7 +535,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       ],
       thoughtful_gifts: [
         {
-          title: `Get ${partnerName}'s favorite snack`,
+          title: `Get your partner's favorite snack`,
           description: `Pick up something they love next time you're out. Small thoughtful gestures show you pay attention to what makes them happy.`,
           detailedSteps: [
             { step: 1, action: 'Think of a treat or snack they enjoy', estimatedMinutes: 2 },
@@ -446,7 +552,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       physical_touch: [
         {
           title: 'Give a shoulder massage',
-          description: `Offer ${partnerName} a gentle shoulder massage. Physical touch is a powerful way to show care and help them relax.`,
+          description: `Offer your partner a gentle shoulder massage. Physical touch is a powerful way to show care and help them relax.`,
           detailedSteps: [
             { step: 1, action: 'Ask if they\'d like a shoulder massage', estimatedMinutes: 1 },
             { step: 2, action: 'Massage their shoulders and neck for 5-10 minutes', tip: 'Ask about pressure preference', estimatedMinutes: 10 }
@@ -463,7 +569,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           title: 'Plan a weekend date together',
           description: `Take the initiative to plan something fun for the upcoming weekend. Having something to look forward to brightens the whole week.`,
           detailedSteps: [
-            { step: 1, action: `Research activities ${partnerName} would enjoy`, estimatedMinutes: 15 },
+            { step: 1, action: `Research activities your partner would enjoy`, estimatedMinutes: 15 },
             { step: 2, action: 'Pick 2-3 options and present them', estimatedMinutes: 5 },
             { step: 3, action: 'Make reservations or plans once you decide together', estimatedMinutes: 10 }
           ],
