@@ -175,8 +175,11 @@ class AIHelpingHandService {
   ): Promise<HelpingHandSuggestion[]> {
     console.log(`💡 Generating suggestions for category: ${category.name}`);
 
-    // Filter by user's capacity and category requirements
-    if (!this.isCategoryFeasible(category, context.userStatus)) {
+    // Check if category matches partner's love languages - if so, always include it
+    const matchesLoveLanguage = await this.categoryMatchesPartnerLoveLanguage(category, context);
+    
+    // Filter by user's capacity, but always include if it matches love language
+    if (!matchesLoveLanguage && !this.isCategoryFeasible(category, context.userStatus)) {
       console.log(`⏭️ Skipping ${category.name} - not feasible given user capacity`);
       return [];
     }
@@ -204,19 +207,72 @@ class AIHelpingHandService {
   }
 
   /**
+   * Check if category matches partner's love languages
+   */
+  private async categoryMatchesPartnerLoveLanguage(
+    category: HelpingHandCategory,
+    context: AIGenerationContext
+  ): Promise<boolean> {
+    const partnerOnboarding = context.partnerOnboarding;
+    if (!partnerOnboarding) return false;
+
+    // Map love language names to category alignment
+    const loveLanguageMap: Record<string, string[]> = {
+      'Words of Affirmation': ['words'],
+      'Quality Time': ['quality_time'],
+      'Acts of Service': ['acts'],
+      'Receiving Gifts': ['gifts'],
+      'Physical Touch': ['touch']
+    };
+
+    const partnerPrimary = partnerOnboarding.love_language_primary;
+    const partnerSecondary = partnerOnboarding.love_language_secondary;
+    const partnerLanguages = partnerOnboarding.love_languages || [];
+
+    // Check all partner love languages
+    const allPartnerLanguages = [
+      partnerPrimary,
+      partnerSecondary,
+      ...(Array.isArray(partnerLanguages) ? partnerLanguages : [])
+    ].filter(Boolean) as string[];
+
+    // Map category to potential love languages
+    const categoryToLoveLanguage: Record<string, string[]> = {
+      quick_wins: ['words', 'acts', 'gifts', 'touch'],
+      thoughtful_messages: ['words', 'quality_time'],
+      acts_of_service: ['acts'],
+      quality_time: ['quality_time'],
+      thoughtful_gifts: ['gifts'],
+      physical_touch: ['touch'],
+      planning_ahead: ['quality_time', 'acts', 'gifts']
+    };
+
+    const categoryLoveLanguages = categoryToLoveLanguage[category.name] || [];
+
+    // Check if any partner love language matches the category
+    return allPartnerLanguages.some(ll => {
+      const mappedLLs = loveLanguageMap[ll] || [];
+      return mappedLLs.some(mapped => categoryLoveLanguages.includes(mapped));
+    });
+  }
+
+  /**
    * Check if category is feasible given user's capacity
+   * Made more lenient - only filter out if truly incompatible
    */
   private isCategoryFeasible(category: HelpingHandCategory, userStatus: HelpingHandUserStatus): boolean {
-    // Check time availability
-    if (userStatus.availableTimeLevel === 'very_limited' && category.minTimeRequired > 10) {
+    // Only filter out if user has very limited time AND category requires significant time
+    if (userStatus.availableTimeLevel === 'very_limited' && category.minTimeRequired > 30) {
       return false;
     }
 
-    // Check emotional capacity
-    const emotionalScore = this.getEmotionalScore(userStatus.emotionalCapacity);
-    const requiredScore = this.getRequiredEmotionalScore(category.emotionalCapacityRequired);
+    // Only filter out if emotional capacity is very low AND category requires high capacity
+    if (userStatus.emotionalCapacity === 'very_low' && category.emotionalCapacityRequired === 'high') {
+      return false;
+    }
 
-    return emotionalScore >= requiredScore;
+    // Otherwise, include the category (we can adapt suggestions to capacity later)
+    return true;
   }
 
   /**
@@ -317,7 +373,39 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
   ): Partial<HelpingHandSuggestion>[] {
     const { userStatus, partnerStatus, partnerOnboarding, partnerHints, relationshipData } = context;
     const partnerName = partnerOnboarding?.name || 'your partner';
-    const allLoveLanguages = partnerOnboarding?.love_languages || ['quality_time'];
+    
+    // Map partner's love languages from full names to short codes
+    const mapLoveLanguageToShortCode = (fullName: string | null | undefined): string | null => {
+      if (!fullName) return null;
+      const mapping: Record<string, string> = {
+        'Words of Affirmation': 'words',
+        'Quality Time': 'quality_time',
+        'Acts of Service': 'acts',
+        'Receiving Gifts': 'gifts',
+        'Physical Touch': 'touch'
+      };
+      return mapping[fullName] || null;
+    };
+    
+    const allLoveLanguages: string[] = [];
+    if (partnerOnboarding?.love_language_primary) {
+      const primary = mapLoveLanguageToShortCode(partnerOnboarding.love_language_primary);
+      if (primary) allLoveLanguages.push(primary);
+    }
+    if (partnerOnboarding?.love_language_secondary) {
+      const secondary = mapLoveLanguageToShortCode(partnerOnboarding.love_language_secondary);
+      if (secondary && !allLoveLanguages.includes(secondary)) allLoveLanguages.push(secondary);
+    }
+    if (Array.isArray(partnerOnboarding?.love_languages)) {
+      partnerOnboarding.love_languages.forEach((ll: string) => {
+        const shortCode = mapLoveLanguageToShortCode(ll);
+        if (shortCode && !allLoveLanguages.includes(shortCode)) allLoveLanguages.push(shortCode);
+      });
+    }
+    if (allLoveLanguages.length === 0) {
+      allLoveLanguages.push('quality_time'); // Default fallback
+    }
+    
     const favoriteActivities = partnerOnboarding?.favorite_activities || [];
     const isLivingTogether = relationshipData?.living_together || false;
     const challenges = userStatus.currentChallenges || [];
@@ -410,12 +498,26 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       personalizedDescription += ` With your work deadline this week, this practical gesture shows care without adding pressure.`;
     }
 
-    if (favoriteActivities.length > 0 && template.loveLanguageAlignment?.includes('quality_time')) {
-      const activity = favoriteActivities[0];
+    // Personalize with partner's favorite activities
+    if (favoriteActivities.length > 0) {
+      const activities = favoriteActivities.slice(0, 2).join(' or ');
+      
+      // Replace generic activity references with specific ones
       personalizedDescription = personalizedDescription.replace(
-        'activities they would enjoy',
-        `activities like ${activity}`
+        /activities (your partner|they) would enjoy/g,
+        `${activities}`
       );
+      personalizedDescription = personalizedDescription.replace(
+        /something (your partner|they) would enjoy/g,
+        `something related to ${activities}`
+      );
+      
+      // For quality time suggestions, specifically mention activities
+      if (template.loveLanguageAlignment?.includes('quality_time')) {
+        if (!personalizedDescription.includes(activities)) {
+          personalizedDescription += ` Consider activities like ${activities}.`;
+        }
+      }
     }
 
     // Adjust timing based on work schedule
@@ -436,9 +538,40 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       }
     }
 
-    // Adjust love language alignment to include all partner's languages
-    const loveLanguageAlignment = template.loveLanguageAlignment || [];
-    const alignedLanguages = new Set([...loveLanguageAlignment, ...allLoveLanguages].slice(0, 3));
+    // Adjust love language alignment to prioritize partner's languages
+    const templateLanguages = template.loveLanguageAlignment || [];
+    const alignedLanguages = new Set([...templateLanguages]);
+    // Add partner's love languages if category supports them
+    allLoveLanguages.forEach(ll => {
+      if (templateLanguages.includes(ll)) {
+        alignedLanguages.add(ll);
+      }
+    });
+
+      // Enhance whySuggested with specific context
+      if (!whySuggested || whySuggested === template.whySuggested) {
+        const reasons: string[] = [];
+        
+        if (allLoveLanguages.length > 0 && template.loveLanguageAlignment?.some(ll => allLoveLanguages.includes(ll))) {
+          reasons.push(`This aligns with ${partnerName}'s love language`);
+        }
+        
+        if (userStatus.availableTimeLevel !== 'plenty') {
+          reasons.push(`fits your ${userStatus.availableTimeLevel} available time`);
+        }
+        
+        if (isStressed || isLowEnergy) {
+          reasons.push(`perfect for when you're feeling ${isStressed ? 'stressed' : 'low on energy'}`);
+        }
+        
+        if (favoriteActivities.length > 0 && template.loveLanguageAlignment?.includes('quality_time')) {
+          reasons.push(`incorporates activities ${partnerName} enjoys`);
+        }
+        
+        whySuggested = reasons.length > 0 
+          ? reasons.join(', ') + '.'
+          : `This fits your current capacity and ${partnerName}'s preferences.`;
+      }
 
     return {
       ...template,
@@ -446,7 +579,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       description: personalizedDescription,
       bestTiming: bestTiming as any,
       loveLanguageAlignment: Array.from(alignedLanguages),
-      whySuggested: whySuggested || `This fits your ${userStatus.availableTimeLevel} available time and ${userStatus.emotionalCapacity} emotional capacity.`
+      whySuggested: whySuggested
     };
   }
 
@@ -483,6 +616,45 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['words', 'acts'],
           whySuggested: 'Takes just a few minutes but creates a delightful surprise moment.'
+        },
+        {
+          title: 'Send a quick compliment',
+          description: `Tell your partner something you love about them right now. Genuine compliments build connection and make them feel seen.`,
+          detailedSteps: [
+            { step: 1, action: 'Notice something positive about them today', tip: 'Be specific - not just "you\'re pretty"' },
+            { step: 2, action: 'Send it via text or say it in person', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Compliments take seconds but make a lasting positive impact.'
+        },
+        {
+          title: 'Make their favorite drink',
+          description: `Surprise your partner with their preferred coffee, tea, or other beverage. Small acts of service show you pay attention to their preferences.`,
+          detailedSteps: [
+            { step: 1, action: 'Prepare their favorite drink just how they like it', estimatedMinutes: 3 },
+            { step: 2, action: 'Bring it to them without being asked', tip: 'The surprise element makes it special' }
+          ],
+          timeEstimateMinutes: 3,
+          effortLevel: 'minimal',
+          bestTiming: 'morning',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Shows thoughtfulness and care with minimal effort.'
+        },
+        {
+          title: 'Give a quick hug or kiss',
+          description: `Physical affection is powerful. A brief moment of touch can communicate love and support without words.`,
+          detailedSteps: [
+            { step: 1, action: 'Initiate physical contact when you see them', tip: 'Make eye contact and smile' },
+            { step: 2, action: 'Hold it for a moment longer than usual', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 1,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Physical touch is one of the fastest ways to show love and connection.'
         }
       ],
       thoughtful_messages: [
@@ -499,6 +671,48 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'evening',
           loveLanguageAlignment: ['words', 'quality_time'],
           whySuggested: 'Sharing memories takes minimal effort but creates deep emotional connection.'
+        },
+        {
+          title: 'Write them a thank you message',
+          description: `Express gratitude for something specific they did recently. Acknowledging their efforts makes them feel appreciated.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of something they did that helped you or made you happy', estimatedMinutes: 2 },
+            { step: 2, action: 'Write a message explaining why it mattered to you', estimatedMinutes: 5 },
+            { step: 3, action: 'Send it when they\'ll have time to read it', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Gratitude strengthens relationships and shows you notice their contributions.'
+        },
+        {
+          title: 'Send an encouraging message',
+          description: `If your partner has something coming up or is going through a challenge, send words of support and belief in them.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about what they\'re facing or working toward', estimatedMinutes: 2 },
+            { step: 2, action: 'Write a message of encouragement and belief', tip: 'Be specific about why you believe in them', estimatedMinutes: 5 },
+            { step: 3, action: 'Send it at a meaningful time (before an event, during a tough day)', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Encouragement during challenges shows deep care and support.'
+        },
+        {
+          title: 'Tell them why you love them today',
+          description: `Share something specific about them that you're grateful for right now. Be present and genuine.`,
+          detailedSteps: [
+            { step: 1, action: 'Reflect on what you appreciate about them at this moment', estimatedMinutes: 3 },
+            { step: 2, action: 'Write a heartfelt message explaining why', tip: 'Focus on qualities, not just appearance', estimatedMinutes: 5 },
+            { step: 3, action: 'Send it or tell them in person', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Regular expressions of love keep the relationship strong and connected.'
         }
       ],
       acts_of_service: [
@@ -515,6 +729,48 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['acts'],
           whySuggested: 'Practical help shows you notice what they do and want to lighten their load.'
+        },
+        {
+          title: 'Make their lunch or prepare a meal',
+          description: `Prepare food for your partner - whether it's packing their lunch, making breakfast, or cooking dinner. Food is love in action.`,
+          detailedSteps: [
+            { step: 1, action: 'Decide what they would enjoy', tip: 'Think about their preferences and what they like', estimatedMinutes: 3 },
+            { step: 2, action: 'Prepare it with care and attention', estimatedMinutes: 20 },
+            { step: 3, action: 'Present it nicely or pack it up for them', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 25,
+          effortLevel: 'moderate',
+          bestTiming: 'morning',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Preparing food shows care and consideration for their wellbeing.'
+        },
+        {
+          title: 'Clean up something they left out',
+          description: `Without asking or making a big deal, tidy up something they left behind. Small acts of service show you care about their comfort.`,
+          detailedSteps: [
+            { step: 1, action: 'Notice something they left out that needs tidying', estimatedMinutes: 1 },
+            { step: 2, action: 'Put it away or clean it up without mention', estimatedMinutes: 10 },
+            { step: 3, action: 'Don\'t make a big deal about it', tip: 'The quiet service is more meaningful' }
+          ],
+          timeEstimateMinutes: 11,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Quiet acts of service show love without expecting recognition.'
+        },
+        {
+          title: 'Take care of an errand for them',
+          description: `Run an errand they need to do but haven't gotten to yet. Lightening their to-do list shows you pay attention and want to help.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of an errand or task they\'ve mentioned needing to do', estimatedMinutes: 2 },
+            { step: 2, action: 'Handle it without being asked', estimatedMinutes: 30 },
+            { step: 3, action: 'Let them know casually or let them discover it', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 33,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Taking care of errands shows proactive care and reduces their stress.'
         }
       ],
       quality_time: [
@@ -531,6 +787,48 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'evening',
           loveLanguageAlignment: ['quality_time'],
           whySuggested: 'Quality time is most meaningful when you\'re fully present with each other.'
+        },
+        {
+          title: 'Go for a walk together',
+          description: `Take a walk together, whether around the neighborhood or a favorite park. Walking side-by-side creates natural conversation and connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Suggest going for a walk', tip: 'Pick a nice time of day', estimatedMinutes: 1 },
+            { step: 2, action: 'Walk together at a comfortable pace', estimatedMinutes: 30 },
+            { step: 3, action: 'Talk, listen, and enjoy being together', tip: 'Let conversation flow naturally' }
+          ],
+          timeEstimateMinutes: 35,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Walking together creates relaxed quality time and natural conversation.'
+        },
+        {
+          title: 'Watch a show or movie together',
+          description: `Pick something you both want to watch and enjoy it together. Shared entertainment creates connection and gives you things to discuss.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose something you\'ll both enjoy', tip: 'Take turns or find mutual interest', estimatedMinutes: 5 },
+            { step: 2, action: 'Settle in together and watch', tip: 'Put phones away', estimatedMinutes: 60 },
+            { step: 3, action: 'Discuss it afterward', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 75,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Shared entertainment experiences create bonding and conversation topics.'
+        },
+        {
+          title: 'Have a coffee or tea break together',
+          description: `Take 20-30 minutes to sit together with drinks and just be together. Sometimes the simplest quality time is the most meaningful.`,
+          detailedSteps: [
+            { step: 1, action: 'Suggest taking a break together', estimatedMinutes: 1 },
+            { step: 2, action: 'Make or get drinks for both of you', estimatedMinutes: 5 },
+            { step: 3, action: 'Sit together and chat, or just enjoy quiet companionship', estimatedMinutes: 20 }
+          ],
+          timeEstimateMinutes: 26,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Simple moments of togetherness strengthen connection without requiring elaborate plans.'
         }
       ],
       thoughtful_gifts: [
@@ -547,6 +845,48 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['gifts'],
           whySuggested: 'Small gifts show thoughtfulness without requiring much time or money.'
+        },
+        {
+          title: 'Pick flowers or a small plant',
+          description: `Bring home flowers or a small plant they would like. The gesture shows you were thinking of them while you were away.`,
+          detailedSteps: [
+            { step: 1, action: 'Stop by a flower shop or grocery store', estimatedMinutes: 10 },
+            { step: 2, action: 'Choose something you think they\'d appreciate', tip: 'Consider their favorite colors or flowers', estimatedMinutes: 5 },
+            { step: 3, action: 'Present it to them with a smile', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 16,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Flowers are a classic way to show you were thinking of them.'
+        },
+        {
+          title: 'Get them something small from a place you visited',
+          description: `If you went somewhere without them, bring back a small token - even a postcard or local treat. It shows you thought of them.`,
+          detailedSteps: [
+            { step: 1, action: 'While you\'re out, look for something small they\'d like', estimatedMinutes: 5 },
+            { step: 2, action: 'Pick something that represents where you were or what you did', estimatedMinutes: 5 },
+            { step: 3, action: 'Give it to them and share a bit about your experience', estimatedMinutes: 3 }
+          ],
+          timeEstimateMinutes: 13,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Small souvenirs show you thought of them even when you were apart.'
+        },
+        {
+          title: 'Leave them a small surprise on their desk or workspace',
+          description: `Place something thoughtful where they\'ll find it at work or home. Small surprises brighten their day unexpectedly.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a small gift or treat they\'d enjoy', estimatedMinutes: 2 },
+            { step: 2, action: 'Place it where they\'ll discover it', tip: 'Their desk, workspace, or a spot they frequent', estimatedMinutes: 2 },
+            { step: 3, action: 'Maybe add a small note', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 6,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Surprise gifts discovered during the day create unexpected moments of joy.'
         }
       ],
       physical_touch: [
@@ -562,6 +902,45 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'evening',
           loveLanguageAlignment: ['touch'],
           whySuggested: 'Physical touch helps them relax and feel cared for after a long day.'
+        },
+        {
+          title: 'Hold hands while walking or sitting',
+          description: `Simple physical connection through hand-holding. It's a gentle way to maintain closeness throughout the day.`,
+          detailedSteps: [
+            { step: 1, action: 'Reach for their hand when walking together', estimatedMinutes: 1 },
+            { step: 2, action: 'Hold it naturally and comfortably', tip: 'Don\'t force it if they\'re doing something', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 16,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Hand-holding is a simple but powerful way to maintain physical connection.'
+        },
+        {
+          title: 'Give them a long hug',
+          description: `Offer a genuine, longer hug - not just a quick peck. Physical affection releases oxytocin and strengthens bonds.`,
+          detailedSteps: [
+            { step: 1, action: 'Initiate a hug when you greet them or say goodbye', estimatedMinutes: 1 },
+            { step: 2, action: 'Hold it for 10-20 seconds', tip: 'Let it be meaningful, not rushed', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Longer hugs release bonding hormones and create deeper connection.'
+        },
+        {
+          title: 'Sit close together on the couch',
+          description: `Simply be physically close while doing other activities. Sometimes just being near each other is meaningful touch.`,
+          detailedSteps: [
+            { step: 1, action: 'Sit next to them instead of across the room', estimatedMinutes: 1 },
+            { step: 2, action: 'Let your legs or shoulders touch, or put an arm around them', estimatedMinutes: 30 }
+          ],
+          timeEstimateMinutes: 31,
+          effortLevel: 'minimal',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Physical proximity even during other activities maintains connection.'
         }
       ],
       planning_ahead: [
@@ -578,6 +957,48 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['quality_time', 'acts'],
           whySuggested: 'Planning ahead shows you prioritize your time together and want to create special moments.'
+        },
+        {
+          title: 'Plan a surprise outing',
+          description: `Organize a surprise activity or outing for your partner. Planning something special shows you want to create memorable experiences together.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of something they would enjoy that\'s a surprise', estimatedMinutes: 10 },
+            { step: 2, action: 'Make any necessary reservations or arrangements', estimatedMinutes: 15 },
+            { step: 3, action: 'Tell them when to be ready, but keep the destination a surprise', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 30,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time', 'acts'],
+          whySuggested: 'Surprise outings create anticipation and show thoughtfulness in planning.'
+        },
+        {
+          title: 'Schedule a special evening at home',
+          description: `Plan a cozy evening together at home - maybe with special food, activities, or just dedicated time. Sometimes the best plans are simple.`,
+          detailedSteps: [
+            { step: 1, action: 'Decide what would make the evening special', tip: 'Favorite food, movies, activities', estimatedMinutes: 5 },
+            { step: 2, action: 'Prepare or arrange what you need', estimatedMinutes: 20 },
+            { step: 3, action: 'Set aside the time and let them know you\'ve planned something', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 30,
+          effortLevel: 'moderate',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Planning special time at home shows intentionality about your connection.'
+        },
+        {
+          title: 'Plan a future trip or vacation',
+          description: `Start researching and planning a trip you can take together. Having something to look forward to creates excitement and shared dreams.`,
+          detailedSteps: [
+            { step: 1, action: 'Discuss places you\'d both like to visit', estimatedMinutes: 10 },
+            { step: 2, action: 'Research destinations, dates, and logistics', estimatedMinutes: 30 },
+            { step: 3, action: 'Start creating a rough itinerary together', estimatedMinutes: 20 }
+          ],
+          timeEstimateMinutes: 60,
+          effortLevel: 'high',
+          bestTiming: 'weekend',
+          loveLanguageAlignment: ['quality_time', 'acts'],
+          whySuggested: 'Planning future trips creates shared anticipation and shows commitment to spending time together.'
         }
       ]
     };
