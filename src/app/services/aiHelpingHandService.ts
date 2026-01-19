@@ -282,21 +282,19 @@ class AIHelpingHandService {
 
   /**
    * Check if category is feasible given user's capacity
-   * Made more lenient - only filter out if truly incompatible
+   * Made very lenient - only filter out if truly incompatible
+   * We want to include all categories and let the scoring system handle filtering
    */
   private isCategoryFeasible(category: HelpingHandCategory, userStatus: HelpingHandUserStatus): boolean {
-    // Only filter out if user has very limited time AND category requires significant time
-    if (userStatus.availableTimeLevel === 'very_limited' && category.minTimeRequired > 30) {
+    // Only filter out if user has very limited time AND category requires very significant time
+    if (userStatus.availableTimeLevel === 'very_limited' && category.minTimeRequired > 60) {
       return false;
     }
 
-    // Only filter out if emotional capacity is very low AND category requires high capacity
-    if (userStatus.emotionalCapacity === 'very_low' && category.emotionalCapacityRequired === 'high') {
-      return false;
-    }
-
-    // Otherwise, include the category (we can adapt suggestions to capacity later)
-    return true;
+    // Only filter out if emotional capacity is very low AND category requires very high capacity
+    // But even then, we might have some low-effort suggestions in the category
+    // So let's be very lenient
+    return true; // Always include categories - let scoring handle it
   }
 
   /**
@@ -397,34 +395,43 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
     const { userStatus, partnerStatus, userOnboarding, partnerOnboarding, relationshipData } = context;
     let score = 0;
 
-    // Assessment Match (40 points)
+    // Assessment Match (40 points max)
     const timeScore = this.scoreTimeMatch(template.timeEstimateMinutes!, userStatus.availableTimeLevel);
     const energyScore = this.scoreEnergyMatch(template.effortLevel!, userStatus.energyLevel);
     const capacityScore = this.scoreCapacityMatch(template.effortLevel!, userStatus.emotionalCapacity);
     const workScheduleScore = this.scoreWorkScheduleMatch(template.bestTiming!, userStatus.workScheduleType);
     const challengeScore = this.scoreChallengeMatch(template, userStatus.currentChallenges || []);
     
-    score += (timeScore + energyScore + capacityScore + workScheduleScore + challengeScore) * 0.4; // 40% of 40 points
+    // Normalize to 40 points: each component contributes proportionally
+    const assessmentTotal = timeScore + energyScore + capacityScore + workScheduleScore + challengeScore;
+    const assessmentMax = 100; // Max possible from all components
+    score += (assessmentTotal / assessmentMax) * 40;
 
-    // Onboarding Match (35 points)
+    // Onboarding Match (35 points max)
     const loveLanguageScore = this.scoreLoveLanguageMatch(template.loveLanguageAlignment || [], partnerOnboarding);
     const activityScore = this.scoreActivityMatch(template, partnerOnboarding?.favorite_activities || []);
     const dateStyleScore = this.scoreDateStyleMatch(template, partnerOnboarding?.wants_needs?.date_style);
     const giftPreferenceScore = this.scoreGiftPreferenceMatch(template, partnerOnboarding);
     const communicationScore = this.scoreCommunicationMatch(template, partnerOnboarding?.communication_style);
     
-    score += (loveLanguageScore + activityScore + dateStyleScore + giftPreferenceScore + communicationScore) * 0.35; // 35% of 35 points
+    // Normalize to 35 points
+    const onboardingTotal = loveLanguageScore + activityScore + dateStyleScore + giftPreferenceScore + communicationScore;
+    const onboardingMax = 50; // Max possible (20+10+10+10+10)
+    score += (onboardingTotal / onboardingMax) * 35;
 
-    // Relationship Context (15 points)
+    // Relationship Context (15 points max)
     const livingTogetherScore = this.scoreLivingTogetherMatch(template, relationshipData?.living_together || false);
     const dateFrequencyScore = this.scoreDateFrequencyMatch(template, partnerOnboarding?.date_frequency);
     const planningStyleScore = this.scorePlanningStyleMatch(template, partnerOnboarding?.wants_needs?.planning_style);
     
-    score += (livingTogetherScore + dateFrequencyScore + planningStyleScore) * 0.15; // 15% of 15 points
+    // Normalize to 15 points
+    const relationshipTotal = livingTogetherScore + dateFrequencyScore + planningStyleScore;
+    const relationshipMax = 15; // Max possible (5+5+5)
+    score += (relationshipTotal / relationshipMax) * 15;
 
-    // Weekly Variety (10 points)
+    // Weekly Variety (10 points max)
     const varietyScore = this.scoreWeeklyVariety(template, previousSuggestions);
-    score += varietyScore * 0.1; // 10% of 10 points
+    score += varietyScore; // Already 0-10
 
     return Math.min(100, Math.max(0, score));
   }
@@ -632,14 +639,31 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       }))
       .filter(t => t !== null) as Partial<HelpingHandSuggestion>[];
 
-    // Filter by user capacity and category requirements
-    const feasibleTemplates = personalizedTemplates
+    // Filter by user capacity and category requirements, but be lenient
+    let feasibleTemplates = personalizedTemplates
       .filter(t => t.timeEstimateMinutes! <= category.maxTimeRequired)
       .filter(t => {
         const effortScore = this.getEffortScore(t.effortLevel!);
         const capacityScore = this.getEmotionalScore(userStatus.emotionalCapacity);
-        return effortScore <= capacityScore;
+        // Be lenient - only filter out if effort is way too high
+        return effortScore <= capacityScore + 1; // Allow one level above capacity
       });
+    
+    // If we filtered out too many, be more lenient
+    if (feasibleTemplates.length < 3) {
+      feasibleTemplates = personalizedTemplates
+        .filter(t => t.timeEstimateMinutes! <= category.maxTimeRequired * 1.5) // Allow slightly over max time
+        .filter(t => {
+          const effortScore = this.getEffortScore(t.effortLevel!);
+          const capacityScore = this.getEmotionalScore(userStatus.emotionalCapacity);
+          return effortScore <= capacityScore + 2; // Allow two levels above capacity
+        });
+    }
+    
+    // If still not enough, use all personalized templates
+    if (feasibleTemplates.length < 3) {
+      feasibleTemplates = personalizedTemplates.filter(t => t !== null);
+    }
 
     // Score all templates for relevance
     const previousSuggestions = context.previousSuggestions || [];
@@ -647,9 +671,39 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       template,
       score: this.scoreTemplateRelevance(template, context, previousSuggestions)
     }));
+    
+    console.log(`📊 Category ${category.name}: ${feasibleTemplates.length} feasible templates, scores range: ${Math.min(...scoredTemplates.map(st => st.score))}-${Math.max(...scoredTemplates.map(st => st.score))}`);
 
-    // Filter out templates with score < 30 (too irrelevant)
-    const relevantTemplates = scoredTemplates.filter(st => st.score >= 30);
+    // Filter out templates with very low scores, but keep most templates
+    // Lower threshold to ensure we always have suggestions
+    const relevantTemplates = scoredTemplates.filter(st => st.score >= 10);
+    
+    console.log(`✅ Category ${category.name}: ${relevantTemplates.length} templates passed score threshold (>=10)`);
+    
+    // If we still don't have enough, lower threshold even more
+    if (relevantTemplates.length < 3) {
+      const allTemplates = scoredTemplates.filter(st => st.score >= 0);
+      if (allTemplates.length > 0) {
+        // Use all templates, sorted by score
+        const sorted = allTemplates.sort((a, b) => b.score - a.score);
+        const selectedCount = Math.min(5, Math.max(3, sorted.length));
+        return sorted.slice(0, selectedCount).map(st => st.template)
+          .map(template => ({
+            ...template,
+            basedOnFactors: {
+              userCapacity: userStatus.emotionalCapacity,
+              workSchedule: userStatus.workScheduleType,
+              stressLevel: userStatus.stressLevel,
+              challenges: challenges,
+              partnerLoveLanguages: allLoveLanguages,
+              partnerActivities: favoriteActivities,
+              hasPartnerHints: partnerHints.length > 0
+            },
+            aiConfidenceScore: 0.80,
+            generatedBy: 'template'
+          }));
+      }
+    }
 
     // Sort by score (highest first), then add some randomization for weekly variety
     const sorted = relevantTemplates.sort((a, b) => {
@@ -661,9 +715,35 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       return Math.random() - 0.5;
     });
 
-    // Select top 3-5 templates
-    const selectedCount = Math.min(5, Math.max(3, sorted.length));
-    return sorted.slice(0, selectedCount).map(st => st.template)
+    // Select top 3-5 templates, but ensure we always have at least some suggestions
+    let selected: Partial<HelpingHandSuggestion>[] = [];
+    
+    if (sorted.length > 0) {
+      const selectedCount = Math.min(5, Math.max(3, sorted.length));
+      selected = sorted.slice(0, selectedCount).map(st => st.template);
+      
+      // If we somehow still don't have enough, fill with any remaining templates
+      if (selected.length < 3 && sorted.length > selected.length) {
+        const remaining = sorted.slice(selectedCount).map(st => st.template);
+        selected.push(...remaining.slice(0, 3 - selected.length));
+      }
+    }
+    
+    // Final safety check: if we still don't have enough, use any feasible templates
+    if (selected.length < 3 && feasibleTemplates.length > 0) {
+      const remaining = feasibleTemplates.filter(t => !selected.some(s => s.title === t.title));
+      selected.push(...remaining.slice(0, 3 - selected.length));
+    }
+    
+    // If we still don't have enough, use any personalized templates
+    if (selected.length < 3 && personalizedTemplates.length > 0) {
+      const remaining = personalizedTemplates.filter(t => !selected.some(s => s.title === t.title));
+      selected.push(...remaining.slice(0, 3 - selected.length));
+    }
+    
+    console.log(`✅ Category ${category.name}: Selected ${selected.length} suggestions`);
+    
+    return selected
       .map(template => ({
         ...template,
         basedOnFactors: {
@@ -751,11 +831,12 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       personalizedDescription += ` Acts of service can be especially helpful when dealing with health concerns.`;
     }
     if (hasFinancialChallenge && template.loveLanguageAlignment?.includes('gifts')) {
-      // Skip expensive gift suggestions or modify them
+      // Modify expensive gift suggestions to emphasize low cost
       if (template.timeEstimateMinutes! > 30) {
-        return null; // Filter out expensive/time-consuming gifts
+        personalizedDescription += ` Consider a simpler, lower-cost version of this idea.`;
+      } else {
+        personalizedDescription += ` This is a thoughtful gesture that doesn't require spending money.`;
       }
-      personalizedDescription += ` This is a thoughtful gesture that doesn't require spending money.`;
     }
     if (hasTravelChallenge && template.timeEstimateMinutes! > 30) {
       personalizedDescription += ` Since you're traveling, consider a shorter version or doing this before/after your trip.`;
