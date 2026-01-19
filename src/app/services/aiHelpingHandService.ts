@@ -578,11 +578,21 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
 
   private scoreWeeklyVariety(template: Partial<HelpingHandSuggestion>, previousSuggestions: HelpingHandSuggestion[]): number {
     const templateTitle = template.title?.toLowerCase() || '';
+    
+    // Check if this template was used in previous weeks
+    // We want to strongly prefer templates that haven't been used recently
     const wasUsed = previousSuggestions.some(s => s.title?.toLowerCase() === templateTitle);
-    if (!wasUsed) return 10;
-    // Reduce score if used recently, but don't eliminate completely
-    // Give it a lower score but still allow it through
-    return 2;
+    
+    if (!wasUsed) {
+      // Never used before - highest priority for weekly variety
+      return 10;
+    }
+    
+    // Was used before - significantly reduce score to avoid repeats
+    // This ensures we get different suggestions each week
+    // With 15-20+ templates per category and only showing 3 per week,
+    // we can go 5-6 weeks without repeating
+    return 1; // Very low score to strongly discourage repeats
   }
 
   /**
@@ -718,25 +728,33 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       }
     }
 
-    // Sort by score (highest first), but add significant randomization for weekly variety
-    // Group templates by score ranges and randomize within each range
+    // Sort by score (highest first), but prioritize weekly variety
+    // Templates that haven't been used recently get a boost
     const sorted = relevantTemplates.sort((a, b) => {
+      // First priority: templates not used recently (higher weekly variety score)
+      // This ensures we get different suggestions each week
+      const varietyDiff = (b.score % 10) - (a.score % 10); // Weekly variety is last digit
+      if (Math.abs(varietyDiff) >= 5) {
+        // If one template was used recently and the other wasn't, prioritize the unused one
+        return varietyDiff;
+      }
+      
+      // Second priority: overall score (but only if significantly different)
       // Group into score tiers (0-20, 21-40, 41-60, 61-80, 81-100)
       const tierA = Math.floor(a.score / 20);
       const tierB = Math.floor(b.score / 20);
       
-      // If in different tiers, sort by tier
       if (tierA !== tierB) {
         return tierB - tierA;
       }
       
-      // Within the same tier, add heavy randomization for variety
+      // Within the same tier, add heavy randomization for weekly variety
       // Only use score as tiebreaker if scores are very different (>15 points)
       if (Math.abs(a.score - b.score) > 15) {
         return b.score - a.score;
       }
       
-      // Heavy randomization for weekly variety
+      // Heavy randomization for weekly variety - ensures different suggestions each week
       return Math.random() - 0.5;
     });
 
@@ -745,15 +763,27 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
     
     if (sorted.length > 0) {
       // For weekly variety: take a larger pool and randomly select from it
-      // Take top 10-15 templates (or all if less) and randomly pick 3-5
-      const poolSize = Math.min(15, Math.max(10, sorted.length));
+      // With 15-20+ templates per category, we have enough for 5-6 weeks of unique combinations
+      // Take top 12-18 templates (or all if less) to ensure good variety
+      const poolSize = Math.min(18, Math.max(12, sorted.length));
       const candidatePool = sorted.slice(0, poolSize);
       
-      // Shuffle the candidate pool for maximum variety
-      const shuffled = [...candidatePool].sort(() => Math.random() - 0.5);
+      // Prioritize templates not used recently by filtering them first
+      const unusedTemplates = candidatePool.filter(st => {
+        const templateTitle = st.template.title?.toLowerCase() || '';
+        return !previousSuggestions.some(s => s.title?.toLowerCase() === templateTitle);
+      });
       
-      // Select 3-5 random templates from the pool
-      const selectedCount = Math.min(5, Math.max(3, shuffled.length));
+      // If we have enough unused templates, use those for maximum variety
+      // Otherwise, use the full candidate pool
+      const varietyPool = unusedTemplates.length >= 3 ? unusedTemplates : candidatePool;
+      
+      // Shuffle the pool for maximum weekly variety
+      const shuffled = [...varietyPool].sort(() => Math.random() - 0.5);
+      
+      // Always select exactly 3 templates for weekly variety
+      // With 15-20+ templates per category, showing 3 per week gives us 5-6 weeks before any repeat
+      const selectedCount = Math.min(3, shuffled.length);
       selected = shuffled.slice(0, selectedCount).map(st => st.template);
       
       // If we somehow still don't have enough, fill with any remaining templates
@@ -781,7 +811,9 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
     
     console.log(`✅ Category ${category.name}: Selected ${selected.length} suggestions (titles: ${selected.map(s => s.title).join(', ')})`);
     
-    return selected
+    // Always return exactly 3 suggestions for consistency and weekly variety
+    // If we have fewer than 3, we've already tried to fill from fallbacks above
+    return selected.slice(0, 3) // Ensure we never return more than 3
       .map(template => ({
         ...template,
         basedOnFactors: {
@@ -1045,7 +1077,19 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
 
   /**
    * Get template suggestions for each category (base templates, will be personalized)
-   * Expanded to 15-20+ templates per category for weekly variety
+   * 
+   * Template counts per category (for weekly variety):
+   * - quick_wins: 18 templates (6 weeks of unique combinations showing 3/week)
+   * - thoughtful_messages: 17 templates (5-6 weeks of unique combinations)
+   * - acts_of_service: 19 templates (6 weeks of unique combinations)
+   * - quality_time: 19 templates (6 weeks of unique combinations)
+   * - thoughtful_gifts: 18 templates (6 weeks of unique combinations)
+   * - physical_touch: 18 templates (6 weeks of unique combinations)
+   * - planning_ahead: 19 templates (6 weeks of unique combinations)
+   * 
+   * Total: ~128 templates across all categories
+   * With 3 suggestions per category per week, we can go 5-6 weeks without repeating
+   * Combined with randomization and weekly variety tracking, this ensures fresh suggestions each week
    */
   private getCategoryTemplates(
     categoryName: string
