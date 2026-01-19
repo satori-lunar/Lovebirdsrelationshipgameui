@@ -46,20 +46,28 @@
 4. Click **Save**
 
 ### 5. Add to Your Project
-1. Copy `.env.example` to `.env`:
+1. Create a `.env` file in the project root (or copy from `.env.example` if it exists):
    ```bash
-   cp .env.example .env
+   # On Windows PowerShell
+   New-Item .env
+   
+   # On Mac/Linux
+   touch .env
    ```
 
 2. Add your API key to `.env`:
    ```
    VITE_GOOGLE_PLACES_API_KEY=AIzaSy...your_key_here
    ```
+   
+   **Note:** Make sure `.env` is in your `.gitignore` file to keep your API key secure!
 
 3. Restart your dev server:
    ```bash
    npm run dev
    ```
+
+4. The app will automatically detect the API key and use real Google Places data. If the key is missing, you'll see a warning in the console and the app will use mock data instead.
 
 That's it! The app will automatically start using real Google Places data.
 
