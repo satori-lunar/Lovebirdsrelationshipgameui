@@ -207,7 +207,8 @@ export function Home({ userName, partnerName, onNavigate, onShowHintModal }: Hom
 
     // Map tabs to existing navigation routes
     const tabRouteMap: Record<string, string> = {
-      'calendar': 'tracker',
+      // Calendar is a shared couple calendar (separate from Relationship Tracker)
+      'calendar': 'calendar',
       'messages': 'messages',
       'dates': 'dates',
       'memories': 'memories',
