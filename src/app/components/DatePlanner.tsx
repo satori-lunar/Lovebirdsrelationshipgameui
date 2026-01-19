@@ -146,25 +146,66 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         return;
       }
 
-      // Step 2: Fetch venues from all categories
+      // Step 2: Fetch venues from all categories with a smaller radius for more local results
       console.log('🔍 Starting venue search for date planning...');
       const allCategories: PlaceCategory[] = ['restaurant', 'cafe', 'bar', 'park', 'museum', 'theater', 'activity'];
       const allPlaces: Place[] = [];
 
+      // Use a smaller radius (5 miles) to get more local, relevant results
+      const searchRadius = 5; // Reduced from 15 to focus on nearby venues
+      const maxDistanceMiles = 10; // Maximum distance to consider for date suggestions
+
       for (const category of allCategories) {
-        const places = await placesService.findNearbyPlaces(targetLocation, 15, category, 5);
+        const places = await placesService.findNearbyPlaces(targetLocation, searchRadius, category, 10);
         allPlaces.push(...places);
       }
 
+      // Filter to only include venues within reasonable distance
       const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values())
-        .sort((a, b) => a.distance - b.distance);
+        .filter(place => place.distance <= maxDistanceMiles) // Only venues within 10 miles
+        .sort((a, b) => a.distance - b.distance); // Sort by distance (closest first)
 
-      console.log(`📍 Total unique venues found: ${uniquePlaces.length}`);
+      console.log(`📍 Found ${uniquePlaces.length} venues within ${maxDistanceMiles} miles`);
+      
+      // Group venues by category to see what's actually available
+      const venuesByCategory = uniquePlaces.reduce((acc, place) => {
+        if (!acc[place.category]) {
+          acc[place.category] = [];
+        }
+        acc[place.category].push(place);
+        return acc;
+      }, {} as Record<string, Place[]>);
+      
+      console.log('🏪 Available venue categories:', Object.keys(venuesByCategory).map(cat => 
+        `${cat} (${venuesByCategory[cat]?.length || 0})`
+      ).join(', '));
 
-      // Step 3: Filter dates to only outdoor/both (since we're finding venues)
-      const venueDates = dateSuggestionTemplates.filter(
-        date => date.environment === 'outdoor' || date.environment === 'both'
-      );
+      // Step 3: Filter dates based on what venues are actually available nearby
+      // Only include dates that match available venue categories
+      const availableCategorySet = new Set(uniquePlaces.map(p => p.category));
+      
+      const venueDates = dateSuggestionTemplates.filter(date => {
+        // Include dates that can use actual venues (outdoor, both, or indoor if museums/venues are available)
+        const canUseIndoor = date.environment === 'indoor' && 
+                             (availableCategorySet.has('museum') || availableCategorySet.has('cafe') || availableCategorySet.has('restaurant'));
+        const canUseOutdoor = date.environment === 'outdoor' || date.environment === 'both';
+        
+        if (!canUseIndoor && !canUseOutdoor) {
+          return false;
+        }
+        
+        // Check if this date template requires venues that are actually available
+        const requiredCategories = getDateCategories(date);
+        const primaryVenue = getPrimaryVenueCategory(date);
+        
+        // Must have at least one matching venue category nearby
+        const hasMatchingVenue = requiredCategories.some(cat => availableCategorySet.has(cat)) ||
+                                 (primaryVenue && availableCategorySet.has(primaryVenue));
+        
+        return hasMatchingVenue;
+      });
+      
+      console.log(`📋 Filtered to ${venueDates.length} date templates matching nearby venues (out of ${dateSuggestionTemplates.length} total)`);
 
       // Step 4: Use intelligent date matching service
       const matchCriteria = {
@@ -191,34 +232,127 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       console.log(`✨ Scored ${scoredDates.length} date templates`);
 
-      // Step 5: Match top-scored dates to available venues
+      // Step 5: Match dates to actual available venues, prioritizing what's nearby
       const availableCategories = new Set(uniquePlaces.map(p => p.category));
-      const matchedDateOptions = scoredDates
-        .slice(0, 10) // Get top 10 scored dates for variety
+      
+      // First, filter date templates to only those that have matching venues nearby
+      const datesWithVenues = scoredDates
         .map(scored => {
           const date = scored.template;
           const dateCategories = getDateCategories(date);
           const primaryVenue = getPrimaryVenueCategory(date);
 
-          // Get relevant venues for this date
-          const relevantVenues = uniquePlaces.filter(place =>
-            dateCategories.includes(place.category as PlaceCategory) ||
-            (primaryVenue && place.category === primaryVenue)
-          ).slice(0, 3); // Get top 3 venues per date
+          // Get relevant venues for this date, prioritizing closest and highest-rated ones
+          const relevantVenues = uniquePlaces
+            .filter(place => {
+              // Must match primary venue category or one of the date categories
+              return (primaryVenue && place.category === primaryVenue) ||
+                     dateCategories.includes(place.category as PlaceCategory);
+            })
+            // Sort by distance first, but also consider rating for popular destinations
+            .sort((a, b) => {
+              // Prioritize venues within 5 miles
+              const aIsClose = a.distance <= 5;
+              const bIsClose = b.distance <= 5;
+              
+              if (aIsClose !== bIsClose) {
+                return aIsClose ? -1 : 1;
+              }
+              
+              // Within same distance category, prioritize higher ratings
+              if (a.rating && b.rating && Math.abs(a.rating - b.rating) >= 0.5) {
+                return b.rating - a.rating;
+              }
+              
+              // Otherwise, sort by distance
+              return a.distance - b.distance;
+            })
+            .slice(0, 3); // Get top 3 venues per date
 
           return {
             date,
             venues: relevantVenues,
             matchScore: scored.score,
             matchReasons: scored.matchReasons,
+            hasNearbyVenues: relevantVenues.length > 0,
+            closestVenueDistance: relevantVenues[0]?.distance || Infinity,
+            primaryVenueCategory: primaryVenue,
+            dateStyle: date.dateStyle,
           };
         })
-        .filter(option => option.venues.length > 0)
-        .slice(0, 3); // Final top 3 options
+        // Only include dates that have actual venues nearby
+        .filter(option => option.hasNearbyVenues)
+        // Sort by match score first (highest scores at top)
+        .sort((a, b) => b.matchScore - a.matchScore);
 
-      console.log(`✅ Generated ${matchedDateOptions.length} personalized date options`);
+      // Step 6: Stage 4 - Ranking & Selection with Variety
+      // Ensure variety: no duplicate venue types, balance different date styles, distance diversity
+      const selectedDates: typeof datesWithVenues = [];
+      const usedVenueCategories = new Set<PlaceCategory>();
+      const usedDateStyles = new Set<string>();
 
-      setDateOptions(matchedDateOptions);
+      // Helper function to check if an option adds variety
+      const addsVariety = (option: typeof datesWithVenues[0]): boolean => {
+        const primaryCategory = option.primaryVenueCategory;
+        const hasVenueMatch = primaryCategory && usedVenueCategories.has(primaryCategory);
+        const hasStyleMatch = option.dateStyle.some(style => usedDateStyles.has(style));
+        
+        // Prefer options with new venue categories or new date styles
+        return !hasVenueMatch || !hasStyleMatch;
+      };
+
+      // Select top 3 with variety
+      for (const option of datesWithVenues) {
+        if (selectedDates.length >= 3) break;
+
+        // Always include the first (highest-scored) option
+        if (selectedDates.length === 0) {
+          selectedDates.push(option);
+          if (option.primaryVenueCategory) {
+            usedVenueCategories.add(option.primaryVenueCategory);
+          }
+          option.dateStyle.forEach(style => usedDateStyles.add(style));
+        } else {
+          // For subsequent selections, prioritize variety
+          if (addsVariety(option)) {
+            selectedDates.push(option);
+            if (option.primaryVenueCategory) {
+              usedVenueCategories.add(option.primaryVenueCategory);
+            }
+            option.dateStyle.forEach(style => usedDateStyles.add(style));
+          } else if (selectedDates.length < 3) {
+            // If we can't find variety and still need options, include best remaining
+            // This ensures we always have up to 3 suggestions
+            selectedDates.push(option);
+            if (option.primaryVenueCategory) {
+              usedVenueCategories.add(option.primaryVenueCategory);
+            }
+            option.dateStyle.forEach(style => usedDateStyles.add(style));
+          }
+        }
+      }
+
+      // Final sort: prioritize close venues, then by match score
+      const finalDates = selectedDates
+        .sort((a, b) => {
+          // Prioritize dates with closer venues
+          if (Math.abs(a.closestVenueDistance - b.closestVenueDistance) > 0.5) {
+            return a.closestVenueDistance - b.closestVenueDistance;
+          }
+          // Then by match score
+          return b.matchScore - a.matchScore;
+        });
+
+      console.log(`✅ Generated ${finalDates.length} personalized date options with variety`);
+      console.log(`🎯 Venue types: ${Array.from(usedVenueCategories).join(', ')}`);
+      console.log(`🎨 Date styles: ${Array.from(usedDateStyles).join(', ')}`);
+      
+      // Log what date suggestions we're showing
+      finalDates.forEach((option, index) => {
+        console.log(`📅 Option ${index + 1}: "${option.date.title}" - ${option.venues.length} venue(s), closest: ${option.venues[0]?.distance.toFixed(1)} miles, score: ${option.matchScore.toFixed(1)}`);
+      });
+
+      setDateOptions(finalDates);
       setStep('results');
       setLoadingVenues(false);
     } catch (error) {
