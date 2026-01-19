@@ -7,6 +7,56 @@ const MILES_TO_METERS = 1609.34;
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || '';
 const USE_GOOGLE_API = GOOGLE_API_KEY.length > 0;
 
+// Track if Google Maps script is loaded
+let googleMapsLoaded = false;
+let googleMapsLoadPromise: Promise<void> | null = null;
+
+/**
+ * Dynamically load Google Maps JavaScript library
+ */
+function loadGoogleMapsScript(): Promise<void> {
+  if (googleMapsLoaded) {
+    return Promise.resolve();
+  }
+
+  if (googleMapsLoadPromise) {
+    return googleMapsLoadPromise;
+  }
+
+  googleMapsLoadPromise = new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('Cannot load Google Maps in server environment'));
+      return;
+    }
+
+    // Check if already loaded
+    if (window.google?.maps?.places) {
+      googleMapsLoaded = true;
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=places&callback=initGoogleMaps`;
+    script.async = true;
+    script.defer = true;
+
+    // Set up callback
+    (window as any).initGoogleMaps = () => {
+      googleMapsLoaded = true;
+      resolve();
+    };
+
+    script.onerror = () => {
+      reject(new Error('Failed to load Google Maps script'));
+    };
+
+    document.head.appendChild(script);
+  });
+
+  return googleMapsLoadPromise;
+}
+
 export const googlePlacesService = {
   /**
    * Find places near a location using Google Places API
@@ -38,32 +88,43 @@ export const googlePlacesService = {
     limit: number
   ): Promise<Place[]> {
     try {
+      // Load Google Maps script if not already loaded
+      await loadGoogleMapsScript();
+
       const radiusMeters = Math.min(radiusMiles * MILES_TO_METERS, 50000); // Google max is 50km
       const type = this.categoryToGoogleType(category);
 
       console.log(`🔍 Fetching ${category} venues from Google Places...`);
 
-      const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
-      url.searchParams.append('location', `${location.latitude},${location.longitude}`);
-      url.searchParams.append('radius', radiusMeters.toString());
+      // Create a map element (required for PlacesService, but can be hidden)
+      const mapDiv = document.createElement('div');
+      const map = new google.maps.Map(mapDiv);
+      const service = new google.maps.places.PlacesService(map);
+
+      const request: google.maps.places.PlaceSearchRequest = {
+        location: new google.maps.LatLng(location.latitude, location.longitude),
+        radius: radiusMeters,
+      };
+
+      // Only add type if it's not 'all'
       if (type !== 'all') {
-        url.searchParams.append('type', type);
-      }
-      url.searchParams.append('key', GOOGLE_API_KEY);
-
-      const response = await fetch(url.toString());
-
-      if (!response.ok) {
-        throw new Error(`Google API error: ${response.status}`);
+        request.type = type;
       }
 
-      const data = await response.json();
+      // Wrap the callback-based API in a Promise
+      const results = await new Promise<google.maps.places.PlaceResult[]>((resolve, reject) => {
+        service.nearbySearch(request, (results, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+            resolve(results);
+          } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+            resolve([]);
+          } else {
+            reject(new Error(`Google Places API returned status: ${status}`));
+          }
+        });
+      });
 
-      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        throw new Error(`Google API returned status: ${data.status}`);
-      }
-
-      const places = this.parseGoogleResponse(data, location);
+      const places = this.parseGooglePlacesServiceResponse(results, location);
       console.log(`✅ Found ${places.length} ${category} venues from Google`);
 
       return places.slice(0, limit);
@@ -118,19 +179,26 @@ export const googlePlacesService = {
   },
 
   /**
-   * Parse Google Places API response into our Place format
+   * Parse Google Places Service response into our Place format
    */
-  parseGoogleResponse(data: any, userLocation: LocationCoordinates): Place[] {
-    if (!data.results || data.results.length === 0) {
+  parseGooglePlacesServiceResponse(results: google.maps.places.PlaceResult[], userLocation: LocationCoordinates): Place[] {
+    if (!results || results.length === 0) {
       return [];
     }
 
-    return data.results.map((result: any) => {
+    return results.map((result) => {
+      const lat = result.geometry?.location?.lat();
+      const lng = result.geometry?.location?.lng();
+
+      if (!lat || !lng) {
+        return null;
+      }
+
       const distance = this.calculateDistance(
         userLocation.latitude,
         userLocation.longitude,
-        result.geometry.location.lat,
-        result.geometry.location.lng
+        lat,
+        lng
       );
 
       // Map Google price level (0-4) to our format
@@ -184,25 +252,29 @@ export const googlePlacesService = {
         }
       }
 
+      // Get photo URL if available
+      let photoUrl: string | undefined;
+      if (result.photos && result.photos.length > 0) {
+        photoUrl = result.photos[0].getUrl({ maxWidth: 400 });
+      }
+
       return {
-        id: result.place_id,
-        name: result.name,
+        id: result.place_id || `place-${Math.random()}`,
+        name: result.name || 'Unknown',
         category,
         address: result.vicinity || result.formatted_address || 'Address not available',
         distance: parseFloat(distance.toFixed(2)),
-        latitude: result.geometry.location.lat,
-        longitude: result.geometry.location.lng,
+        latitude: lat,
+        longitude: lng,
         rating: result.rating,
         priceLevel,
         description: cuisineType 
           ? `${cuisineType} cuisine • ${result.types?.filter((t: string) => !t.toLowerCase().includes(cuisineType.toLowerCase()))?.[0] || 'Restaurant'}`
           : result.types?.slice(0, 2).map((t: string) => t.replace(/_/g, ' ')).join(' • ') || 'Place',
         isOpen: result.opening_hours?.open_now,
-        photoUrl: result.photos?.[0]?.photo_reference
-          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${result.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
-          : undefined,
+        photoUrl,
       };
-    }).filter((place: Place) => place.name && place.name !== '');
+    }).filter((place): place is Place => place !== null && place.name !== 'Unknown');
   },
 
   /**
