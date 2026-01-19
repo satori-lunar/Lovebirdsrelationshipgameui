@@ -3858,6 +3858,238 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['touch'],
           whySuggested: 'Random touches throughout the day maintain physical connection and show affection.'
+        },
+        {
+          title: 'Hold hands while walking together',
+          description: `Hold hands while walking together. Hand-holding is a simple gesture that maintains connection and shows affection.`,
+          detailedSteps: [
+            { step: 1, action: 'Reach for their hand while walking', estimatedMinutes: 1 },
+            { step: 2, action: 'Hold hands and walk together', estimatedMinutes: 15 },
+            { step: 3, action: 'Maybe interlace fingers or give their hand a squeeze', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 17,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Hand-holding while walking maintains connection and shows affection.'
+        },
+        {
+          title: 'Give them a foot rub',
+          description: `Offer a foot rub after a long day. Foot rubs relieve tension and show care for their comfort.`,
+          detailedSteps: [
+            { step: 1, action: 'Offer a foot rub', estimatedMinutes: 1 },
+            { step: 2, action: 'Massage their feet for 5-10 minutes', tip: 'Ask about pressure preference', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 15,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Foot rubs relieve tension and show care for their comfort and wellbeing.'
+        },
+        {
+          title: 'Sit close together on the couch',
+          description: `Sit close together while watching TV or just relaxing. Physical proximity creates connection and comfort.`,
+          detailedSteps: [
+            { step: 1, action: 'Sit close together on the couch', estimatedMinutes: 1 },
+            { step: 2, action: 'Maybe put an arm around them or lean against them', estimatedMinutes: 60 },
+            { step: 3, action: 'Enjoy the physical closeness', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 62,
+          effortLevel: 'minimal',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Sitting close together creates connection and comfortable intimacy.'
+        },
+        {
+          title: 'Give them a back scratch',
+          description: `Offer to scratch their back. Back scratches are comforting and show care.`,
+          detailedSteps: [
+            { step: 1, action: 'Offer to scratch their back', estimatedMinutes: 1 },
+            { step: 2, action: 'Scratch their back for a few minutes', tip: 'Ask where they need it most', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Back scratches are comforting and show care for their comfort.'
+        },
+        {
+          title: 'Give them a scalp massage',
+          description: `Massage their scalp while they relax. Scalp massages relieve tension and feel amazing.`,
+          detailedSteps: [
+            { step: 1, action: 'Offer a scalp massage', estimatedMinutes: 1 },
+            { step: 2, action: 'Massage their scalp gently for 5-10 minutes', tip: 'Use your fingertips, not nails', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 13,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Scalp massages relieve tension and create deep relaxation.'
+        },
+        {
+          title: 'Put your arm around them',
+          description: `Put your arm around them while sitting or walking together. This simple gesture shows affection and closeness.`,
+          detailedSteps: [
+            { step: 1, action: 'Put your arm around them', estimatedMinutes: 1 },
+            { step: 2, action: 'Keep it there while you\'re together', estimatedMinutes: 30 },
+            { step: 3, action: 'Maybe give them a gentle squeeze', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 32,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Putting your arm around them shows affection and creates closeness.'
+        },
+        {
+          title: 'Play with their hair',
+          description: `Gently play with or stroke their hair. Hair play is intimate and calming.`,
+          detailedSteps: [
+            { step: 1, action: 'Gently play with or stroke their hair', estimatedMinutes: 1 },
+            { step: 2, action: 'Continue for a few minutes', tip: 'Be gentle and ask if they like it', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Playing with their hair is intimate and calming.'
+        },
+        {
+          title: 'Give them a side hug',
+          description: `Give them a side hug when you see them or say goodbye. Side hugs are warm and friendly.`,
+          detailedSteps: [
+            { step: 1, action: 'Put your arm around them for a side hug', estimatedMinutes: 1 },
+            { step: 2, action: 'Give them a gentle squeeze', estimatedMinutes: 1 },
+            { step: 3, action: 'Maybe hold it for a moment longer than usual', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 3,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Side hugs are warm, friendly, and show affection.'
+        },
+        {
+          title: 'Rest your head on their shoulder',
+          description: `Rest your head on their shoulder while sitting together. This gesture shows trust and closeness.`,
+          detailedSteps: [
+            { step: 1, action: 'Sit next to them', estimatedMinutes: 1 },
+            { step: 2, action: 'Rest your head on their shoulder', estimatedMinutes: 20 },
+            { step: 3, action: 'Maybe they\'ll rest their head on yours too', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 22,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Resting your head on their shoulder shows trust and creates closeness.'
+        },
+        {
+          title: 'Give them a full-body hug',
+          description: `Give them a full, warm hug. Full-body hugs create deep connection and comfort.`,
+          detailedSteps: [
+            { step: 1, action: 'Open your arms for a hug', estimatedMinutes: 1 },
+            { step: 2, action: 'Give them a full, warm hug', tip: 'Hold it for a moment and really connect', estimatedMinutes: 30 },
+            { step: 3, action: 'Maybe give them a squeeze before letting go', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 36,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Full-body hugs create deep connection and comfort.'
+        },
+        {
+          title: 'Massage their hands',
+          description: `Massage their hands. Hand massages relieve tension and show care.`,
+          detailedSteps: [
+            { step: 1, action: 'Offer to massage their hands', estimatedMinutes: 1 },
+            { step: 2, action: 'Massage each hand for a few minutes', tip: 'Focus on palms, fingers, and wrists', estimatedMinutes: 8 }
+          ],
+          timeEstimateMinutes: 10,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Hand massages relieve tension and show care for their comfort.'
+        },
+        {
+          title: 'Give them a bear hug',
+          description: `Give them a big, tight bear hug. Bear hugs are warm and make them feel secure and loved.`,
+          detailedSteps: [
+            { step: 1, action: 'Open your arms wide', estimatedMinutes: 1 },
+            { step: 2, action: 'Give them a big, tight hug', tip: 'Hold it tight and make them feel secure', estimatedMinutes: 10 },
+            { step: 3, action: 'Maybe lift them up if appropriate', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 16,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Bear hugs make them feel secure, loved, and deeply cared for.'
+        },
+        {
+          title: 'Cuddle while watching something',
+          description: `Cuddle together while watching TV or a movie. Cuddling creates comfort and connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Sit or lie close together', estimatedMinutes: 1 },
+            { step: 2, action: 'Cuddle while watching', estimatedMinutes: 60 },
+            { step: 3, action: 'Maybe adjust positions for comfort', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 63,
+          effortLevel: 'minimal',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Cuddling while watching creates comfort and connection together.'
+        },
+        {
+          title: 'Give them a neck massage',
+          description: `Massage their neck and upper shoulders. Neck massages relieve tension and stress.`,
+          detailedSteps: [
+            { step: 1, action: 'Offer to massage their neck', estimatedMinutes: 1 },
+            { step: 2, action: 'Massage their neck and upper shoulders for 5-10 minutes', tip: 'Ask about pressure preference', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 13,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Neck massages relieve tension and stress, showing care for their wellbeing.'
+        },
+        {
+          title: 'Hold hands while in the car',
+          description: `Hold hands while driving or riding in the car together. Car hand-holding maintains connection while on the go.`,
+          detailedSteps: [
+            { step: 1, action: 'Reach for their hand in the car', estimatedMinutes: 1 },
+            { step: 2, action: 'Hold hands while driving or riding', estimatedMinutes: 30 },
+            { step: 3, action: 'Maybe give their hand a gentle squeeze', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 32,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Holding hands in the car maintains connection even while on the go.'
+        },
+        {
+          title: 'Give them a tight squeeze',
+          description: `Give them a tight, secure squeeze when you hug them. Tight squeezes make them feel safe and loved.`,
+          detailedSteps: [
+            { step: 1, action: 'Hug them', estimatedMinutes: 1 },
+            { step: 2, action: 'Give them a tight, secure squeeze', tip: 'Make them feel safe and loved', estimatedMinutes: 10 },
+            { step: 3, action: 'Hold it for a moment before letting go', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 16,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Tight squeezes make them feel safe, secure, and deeply loved.'
+        },
+        {
+          title: 'Snuggle in bed together',
+          description: `Snuggle close together in bed. Bed snuggling creates deep comfort and intimacy.`,
+          detailedSteps: [
+            { step: 1, action: 'Get into bed together', estimatedMinutes: 1 },
+            { step: 2, action: 'Snuggle close together', estimatedMinutes: 30 },
+            { step: 3, action: 'Maybe talk or just enjoy the closeness', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 46,
+          effortLevel: 'minimal',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Snuggling in bed creates deep comfort, intimacy, and connection.'
         }
       ],
       planning_ahead: [
@@ -4112,6 +4344,245 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['quality_time'],
           whySuggested: 'Establishing regular dates creates consistency and something to always look forward to.'
+        },
+        {
+          title: 'Plan a surprise weekend getaway',
+          description: `Plan a surprise weekend getaway. Surprise getaways create excitement and memorable experiences.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a destination you\'d both enjoy', estimatedMinutes: 15 },
+            { step: 2, action: 'Research activities, restaurants, and places to stay', estimatedMinutes: 30 },
+            { step: 3, action: 'Make arrangements and bookings', estimatedMinutes: 20 },
+            { step: 4, action: 'Plan when and how to surprise them', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 75,
+          effortLevel: 'moderate',
+          bestTiming: 'weekend',
+          loveLanguageAlignment: ['quality_time', 'gifts', 'acts'],
+          whySuggested: 'Surprise getaways create excitement and memorable experiences together.'
+        },
+        {
+          title: 'Plan a date around their interests',
+          description: `Plan a date that centers around something they love or are interested in. Planning around their interests shows you listen and care.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about their interests and hobbies', estimatedMinutes: 3 },
+            { step: 2, action: 'Plan a date that incorporates those interests', estimatedMinutes: 15 },
+            { step: 3, action: 'Make any necessary reservations or arrangements', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 28,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time', 'gifts'],
+          whySuggested: 'Planning around their interests shows you listen and care about what matters to them.'
+        },
+        {
+          title: 'Plan a double date with friends',
+          description: `Plan a double date with another couple. Double dates add variety and social connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose another couple you\'d both enjoy spending time with', estimatedMinutes: 5 },
+            { step: 2, action: 'Plan an activity you\'d all enjoy', estimatedMinutes: 15 },
+            { step: 3, action: 'Coordinate schedules and make arrangements', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 30,
+          effortLevel: 'low',
+          bestTiming: 'weekend',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Double dates add variety and social connection to your relationship.'
+        },
+        {
+          title: 'Plan a themed date night',
+          description: `Plan a themed date night around a specific theme or concept. Themed dates add fun and creativity.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a theme you\'d both enjoy', estimatedMinutes: 5 },
+            { step: 2, action: 'Plan activities, food, and atmosphere around the theme', estimatedMinutes: 20 },
+            { step: 3, action: 'Make any necessary arrangements or purchases', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 40,
+          effortLevel: 'moderate',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time', 'acts'],
+          whySuggested: 'Themed dates add fun and creativity to your time together.'
+        },
+        {
+          title: 'Plan a date to try something new together',
+          description: `Plan a date to try something new together that neither of you has done before. Trying new things together creates shared adventure.`,
+          detailedSteps: [
+            { step: 1, action: 'Research new activities or experiences in your area', estimatedMinutes: 20 },
+            { step: 2, action: 'Choose something you\'d both be interested in trying', estimatedMinutes: 5 },
+            { step: 3, action: 'Make any necessary reservations or arrangements', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 40,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Trying new things together creates shared adventure and memories.'
+        },
+        {
+          title: 'Plan a date to revisit a favorite place',
+          description: `Plan a date to revisit a place that\'s special to you both. Revisiting favorite places strengthens connection to shared memories.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about places that are special to you both', estimatedMinutes: 5 },
+            { step: 2, action: 'Choose one to revisit and plan around it', estimatedMinutes: 15 },
+            { step: 3, action: 'Maybe plan something new to do there too', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 30,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Revisiting favorite places strengthens connection to shared memories.'
+        },
+        {
+          title: 'Plan a gift for an upcoming occasion',
+          description: `Plan a gift for an upcoming occasion - birthday, anniversary, holiday, etc. Planning gifts ahead shows thoughtfulness.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about the upcoming occasion and what they might like', estimatedMinutes: 10 },
+            { step: 2, action: 'Research and choose a thoughtful gift', estimatedMinutes: 20 },
+            { step: 3, action: 'Order or purchase it in advance', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 45,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Planning gifts ahead shows thoughtfulness and care for upcoming occasions.'
+        },
+        {
+          title: 'Plan a date to celebrate an accomplishment',
+          description: `Plan a date to celebrate something they accomplished or achieved. Celebrating accomplishments shows support and pride.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about their accomplishment and how to celebrate it', estimatedMinutes: 5 },
+            { step: 2, action: 'Plan a date that honors their achievement', estimatedMinutes: 15 },
+            { step: 3, action: 'Make any necessary arrangements', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 30,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time', 'words'],
+          whySuggested: 'Celebrating accomplishments shows support and pride in their achievements.'
+        },
+        {
+          title: 'Plan a date around a shared hobby',
+          description: `Plan a date that involves a hobby you both enjoy. Sharing hobbies creates connection and mutual enjoyment.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about hobbies you both enjoy', estimatedMinutes: 3 },
+            { step: 2, action: 'Plan a date that involves that hobby', estimatedMinutes: 15 },
+            { step: 3, action: 'Make any necessary arrangements or preparations', estimatedMinutes: 12 }
+          ],
+          timeEstimateMinutes: 30,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Sharing hobbies creates connection and mutual enjoyment together.'
+        },
+        {
+          title: 'Plan a surprise breakfast or brunch date',
+          description: `Plan a surprise breakfast or brunch date. Morning dates are special and start the day right.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a place you\'d both enjoy for breakfast or brunch', estimatedMinutes: 10 },
+            { step: 2, action: 'Make a reservation if needed', estimatedMinutes: 5 },
+            { step: 3, action: 'Surprise them with the plan', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 17,
+          effortLevel: 'low',
+          bestTiming: 'morning',
+          loveLanguageAlignment: ['quality_time', 'gifts'],
+          whySuggested: 'Surprise breakfast dates are special and start the day right.'
+        },
+        {
+          title: 'Plan a date to support their hobby or interest',
+          description: `Plan a date that supports or involves something they love doing. Supporting their interests shows care for what matters to them.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about their hobbies or interests', estimatedMinutes: 3 },
+            { step: 2, action: 'Plan a date that supports or involves that interest', estimatedMinutes: 15 },
+            { step: 3, action: 'Make any necessary arrangements', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 28,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time', 'gifts'],
+          whySuggested: 'Supporting their interests shows care for what matters to them.'
+        },
+        {
+          title: 'Plan a date around a cultural event',
+          description: `Plan a date around a cultural event - concert, museum, theater, festival, etc. Cultural events create shared experiences.`,
+          detailedSteps: [
+            { step: 1, action: 'Research cultural events happening in your area', estimatedMinutes: 15 },
+            { step: 2, action: 'Choose one you\'d both enjoy', estimatedMinutes: 5 },
+            { step: 3, action: 'Get tickets and make any other arrangements', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 35,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time', 'gifts'],
+          whySuggested: 'Cultural events create shared experiences and connection.'
+        },
+        {
+          title: 'Plan a date to do something active together',
+          description: `Plan a date that involves physical activity - hiking, biking, sports, etc. Active dates create energy and shared accomplishment.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about activities you\'d both enjoy', estimatedMinutes: 5 },
+            { step: 2, action: 'Plan an active date around that activity', estimatedMinutes: 15 },
+            { step: 3, action: 'Make any necessary preparations or arrangements', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 30,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Active dates create energy and shared accomplishment together.'
+        },
+        {
+          title: 'Plan a date to have a deep conversation',
+          description: `Plan a date specifically for having a meaningful conversation. Creating space for deep conversation strengthens connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a quiet, comfortable place for conversation', estimatedMinutes: 10 },
+            { step: 2, action: 'Maybe plan some conversation starters or topics', estimatedMinutes: 10 },
+            { step: 3, action: 'Make arrangements and set aside time without distractions', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 25,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time', 'words'],
+          whySuggested: 'Creating space for deep conversation strengthens emotional connection.'
+        },
+        {
+          title: 'Plan a date to try a new restaurant',
+          description: `Plan a date to try a new restaurant you\'ve both wanted to try. Trying new restaurants creates shared discovery.`,
+          detailedSteps: [
+            { step: 1, action: 'Research new restaurants in your area', estimatedMinutes: 15 },
+            { step: 2, action: 'Choose one you\'d both enjoy', estimatedMinutes: 5 },
+            { step: 3, action: 'Make a reservation if needed', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 25,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time', 'gifts'],
+          whySuggested: 'Trying new restaurants creates shared discovery and new experiences.'
+        },
+        {
+          title: 'Plan a date around the seasons',
+          description: `Plan a date that fits the current season - fall leaves, winter activities, spring flowers, summer fun. Seasonal dates celebrate the moment.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about what\'s special about the current season', estimatedMinutes: 3 },
+            { step: 2, action: 'Plan a date that celebrates that season', estimatedMinutes: 15 },
+            { step: 3, action: 'Make any necessary arrangements', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 28,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Seasonal dates celebrate the moment and create timely experiences.'
+        },
+        {
+          title: 'Plan a surprise for when they get home',
+          description: `Plan a surprise for when they get home from work or travel. Surprises at home show you thought of them during the day.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about what would make them happy when they get home', estimatedMinutes: 5 },
+            { step: 2, action: 'Plan the surprise - maybe clean the house, set up something, cook, etc.', estimatedMinutes: 20 },
+            { step: 3, action: 'Execute it before they get home', estimatedMinutes: 30 }
+          ],
+          timeEstimateMinutes: 55,
+          effortLevel: 'moderate',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['acts', 'gifts', 'quality_time'],
+          whySuggested: 'Surprises at home show you thought of them during the day and care about their return.'
         }
       ]
     };
