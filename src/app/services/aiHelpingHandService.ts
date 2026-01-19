@@ -1467,7 +1467,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           whySuggested: 'Small gestures of generosity show you want them to have the best.'
         },
         {
-          title: 'Send them a "hope you're having a good day" check-in',
+          title: 'Send them a "hope you\'re having a good day" check-in',
           description: `Check in during their day to see how they're doing. Regular check-ins show ongoing care.`,
           detailedSteps: [
             { step: 1, action: 'Send a brief message asking how their day is going', estimatedMinutes: 1 },
