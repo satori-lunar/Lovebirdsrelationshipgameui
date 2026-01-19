@@ -272,6 +272,27 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 return isWineBar || isBrewery || placeCategory === 'bar';
               }
               
+              // For cocktail/bar dates - ONLY match bars, NOT cafes
+              if (dateTitle.includes('cocktail') || dateTitle.includes('bar') || 
+                  dateTitle.includes('drinks') || dateTitle.includes('pub') ||
+                  dateDesc.includes('cocktail') || dateDesc.includes('bar') ||
+                  dateDesc.includes('drinks') || dateDesc.includes('pub')) {
+                // REJECT cafes for bar/cocktail dates
+                if (placeCategory === 'cafe') {
+                  return false;
+                }
+                
+                // Check if venue is actually a bar/cocktail bar
+                const isCocktailBar = placeName.includes('cocktail') || placeDesc.includes('cocktail');
+                const isWineBar = placeName.includes('wine') || placeName.includes('winery') ||
+                                 placeDesc.includes('wine') || placeDesc.includes('winery');
+                const isBrewery = placeName.includes('brewery') || placeName.includes('brew') ||
+                                 placeDesc.includes('brewery') || placeDesc.includes('brew');
+                
+                // Match bars, cocktail bars, wine bars, or breweries
+                return placeCategory === 'bar' || isCocktailBar || isWineBar || isBrewery;
+              }
+              
               // For coffee/cafe dates - ONLY match cafes, NOT bars or wine bars
               if (dateTitle.includes('coffee') || dateTitle.includes('cafe') || 
                   dateDesc.includes('coffee') || dateDesc.includes('cafe')) {
@@ -297,7 +318,23 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 return false;
               }
               
-              // Default: match by category
+              // For bar dates (if primaryVenue is 'bar'), REJECT cafes
+              if (primaryVenue === 'bar') {
+                // REJECT cafes - even if Google mis-categorized it
+                if (placeCategory === 'cafe' || placeName.includes('cafe') || placeName.includes('coffee') ||
+                    placeDesc.includes('cafe') || placeDesc.includes('coffee')) {
+                  return false; // Never match cafes for bar dates
+                }
+                return placeCategory === 'bar';
+              }
+              
+              // Default: match by category, but add safety checks
+              // If date needs bars, reject cafes
+              if (dateCategories.includes('bar') && (placeCategory === 'cafe' || 
+                  placeName.includes('cafe') || placeName.includes('coffee'))) {
+                return false;
+              }
+              
               return (primaryVenue && placeCategory === primaryVenue) ||
                      dateCategories.includes(placeCategory as PlaceCategory);
             })
