@@ -3,12 +3,17 @@ import { ChevronLeft, Zap, Check, X, RefreshCw, Calendar, DollarSign, Clock, Map
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
-import { dateSuggestionTemplates } from '../data/dateSuggestionTemplates';
+import { dateSuggestionTemplates, type BudgetLevel } from '../data/dateSuggestionTemplates';
 import { useLocation } from '../hooks/useLocation';
 import { googlePlacesService as placesService } from '../services/googlePlacesService';
-import type { Place, PlaceCategory } from '../services/placesService';
+import type { Place, PlaceCategory } from '../services/nearbyPlacesService';
 import { usePartnerInsights } from '../hooks/usePartnerInsights';
 import { useRelationship } from '../hooks/useRelationship';
+import { useAuth } from '../hooks/useAuth';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
+import { dateMatchingService } from '../services/dateMatchingService';
+import { onboardingService } from '../services/onboardingService';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 interface DateChallengeProps {
@@ -36,6 +41,32 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
   const { userLocation, partnerLocation, getCurrentLocation, shareWithApp } = useLocation();
   const { relationship } = useRelationship();
   const { saveChallengeInsight: saveInsight, isSaving } = usePartnerInsights();
+  const { user } = useAuth();
+  const {
+    partnerOnboarding,
+    partnerLoveLanguages,
+    partnerPreferences,
+    partnerWantsNeeds,
+  } = usePartnerOnboarding();
+
+  // Fetch user's onboarding data
+  const { data: userOnboarding } = useQuery({
+    queryKey: ['userOnboarding', user?.id],
+    queryFn: () => onboardingService.getOnboarding(user!.id),
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Get user's love language from onboarding data
+  const userLoveLanguage = userOnboarding?.love_language_primary || user?.onboarding?.love_language_primary;
+
+  // Extract partner preferences for matching
+  const partnerInterests = partnerWantsNeeds?.favorite_activities || [];
+  const partnerFavoriteFoods = partnerOnboarding?.favorite_activities || []; // Legacy field
+  const partnerFavoriteCuisines = partnerWantsNeeds?.favorite_cuisines || [];
+  const partnerDateStyles = partnerWantsNeeds?.date_style ? [partnerWantsNeeds.date_style] : [];
+  const partnerLoveLanguagePrimary = partnerLoveLanguages?.primary;
+  const partnerLoveLanguageSecondary = partnerLoveLanguages?.secondary;
 
   const MAX_GOING_OUT_RETRIES = 2;
 
@@ -159,13 +190,14 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
         return;
       }
 
-      // Step 2: Fetch a diverse mix of nearby venues
+      // Step 2: Fetch a diverse mix of nearby venues WITH DETAILED INFORMATION
       console.log('🔍 Starting venue search for location:', targetLocation);
       const allCategories: PlaceCategory[] = ['restaurant', 'cafe', 'bar', 'park', 'museum', 'theater', 'activity'];
       const allPlaces: Place[] = [];
 
+      // Fetch places for each category
       for (const category of allCategories) {
-        const places = await placesService.findNearbyPlaces(targetLocation, 15, category, 3);
+        const places = await placesService.findNearbyPlaces(targetLocation, 15, category, 5);
         allPlaces.push(...places);
       }
 
@@ -192,42 +224,400 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
 
       setVenueFetchError(false);
 
-      // Step 3: Analyze what venue types are available
-      const availableCategories = new Set(uniquePlaces.map(place => place.category));
+      // Step 3: Analyze ACTUAL venue types by examining names and descriptions
+      // This helps us match more accurately (e.g., "wine bar" should match wine tasting, not cafe)
+      const analyzeVenueTypes = (place: Place): {
+        primaryCategory: PlaceCategory;
+        isWineBar: boolean;
+        isBrewery: boolean;
+        isCocktailBar: boolean;
+        isRestaurant: boolean;
+        isCafe: boolean;
+        isPark: boolean;
+        priceLevel: BudgetLevel | null;
+      } => {
+        const name = (place.name || '').toLowerCase();
+        const desc = (place.description || '').toLowerCase();
+        const category = place.category as PlaceCategory;
 
-      // Step 4: Filter dates to those that match available venues
-      // IMPORTANT: Only match dates if their PRIMARY venue type is available
-      const goingOutDates = dateSuggestionTemplates.filter(
-        date => date.environment === 'outdoor' || date.environment === 'both'
-      );
+        // Check for specific venue types in name/description - PRIORITY ORDER MATTERS
+        // Wine bars/wineries - MUST check before generic bars or restaurants
+        // Check name and description first (most reliable)
+        const hasWineInName = name.includes('wine') || name.includes('winery') || name.includes('vineyard');
+        const hasWineInDesc = desc.includes('wine') || desc.includes('winery') || desc.includes('vineyard');
+        const isWineBar = hasWineInName || hasWineInDesc || 
+                         (category === 'bar' && (hasWineInName || hasWineInDesc));
+        
+        const isBrewery = name.includes('brewery') || name.includes('brew') || name.includes('beer') ||
+                         desc.includes('brewery') || desc.includes('brew') || desc.includes('beer');
+        
+        const isCocktailBar = name.includes('cocktail') || desc.includes('cocktail');
+        
+        const isRestaurant = (category === 'restaurant') || 
+                            name.includes('restaurant') || name.includes('dining') ||
+                            name.includes('bistro') || name.includes('eatery') ||
+                            name.includes('steakhouse') || name.includes('trattoria');
+        
+        // Cafes - must be explicit cafe/coffee, NOT wine bars or restaurants
+        // Only mark as cafe if it's NOT a wine bar/brewery/cocktail bar
+        const hasCafeInName = name.includes('cafe') || name.includes('coffee');
+        const hasCafeInDesc = desc.includes('cafe') || desc.includes('coffee');
+        const isCafe = !isWineBar && !isBrewery && !isCocktailBar && 
+                      ((category === 'cafe') || 
+                       (hasCafeInName && !hasWineInName && !name.includes('bar') && !name.includes('restaurant')) ||
+                       (hasCafeInDesc && !hasWineInDesc && !desc.includes('bar') && !desc.includes('restaurant')));
+        
+        const isPark = category === 'park' || 
+                      name.includes('park') || name.includes('garden') ||
+                      desc.includes('park');
 
-      const matchingDates = goingOutDates.filter(date => {
-        const primaryVenue = getPrimaryVenueCategory(date);
-        // Date must have its primary venue available
-        if (primaryVenue && availableCategories.has(primaryVenue)) {
-          return true;
+        // Map price level
+        let priceLevel: BudgetLevel | null = null;
+        if (place.priceLevel) {
+          if (place.priceLevel === '$' || place.priceLevel === 'Free') {
+            priceLevel = '$';
+          } else if (place.priceLevel === '$$') {
+            priceLevel = '$$';
+          } else if (place.priceLevel === '$$$' || place.priceLevel === '$$$$') {
+            priceLevel = '$$$';
+          }
         }
-        // If no clear primary venue identified, check if any categories match
-        const dateCategories = getDateCategories(date);
-        return dateCategories.some(cat => availableCategories.has(cat));
+
+        // Determine primary category based on analysis - PRIORITY ORDER MATTERS
+        let primaryCategory: PlaceCategory = category;
+        
+        // Wine bars/wineries get bar category (highest priority)
+        if (isWineBar || isBrewery || isCocktailBar) {
+          primaryCategory = 'bar';
+        } 
+        // Restaurants only if not a bar type
+        else if (isRestaurant && category !== 'bar') {
+          primaryCategory = 'restaurant';
+        } 
+        // Cafes only if not a bar or restaurant
+        else if (isCafe && !isWineBar && !isBrewery && !isCocktailBar && !isRestaurant) {
+          primaryCategory = 'cafe';
+        } 
+        // Parks
+        else if (isPark) {
+          primaryCategory = 'park';
+        }
+
+        return {
+          primaryCategory,
+          isWineBar,
+          isBrewery,
+          isCocktailBar,
+          isRestaurant,
+          isCafe,
+          isPark,
+          priceLevel,
+        };
+      };
+
+      // Analyze all venues with detailed logging
+      console.log('🔍 Analyzing venue types...');
+      const analyzedVenues = uniquePlaces.map(place => {
+        const analysis = analyzeVenueTypes(place);
+        if (analysis.isWineBar || place.name?.toLowerCase().includes('wine')) {
+          console.log(`🍷 Found wine-related venue: "${place.name}" - Category: ${place.category}, isWineBar: ${analysis.isWineBar}`);
+        }
+        if (analysis.isCafe) {
+          console.log(`☕ Found cafe: "${place.name}" - Category: ${place.category}`);
+        }
+        return { place, analysis };
       });
 
-      // Step 5: Pick a random date from matches
-      const datePool = matchingDates.length > 0 ? matchingDates : goingOutDates;
-      const selectedDateIdea = datePool[Math.floor(Math.random() * datePool.length)];
+      // Analyze all venues
+      const analyzedVenues = uniquePlaces.map(place => ({
+        place,
+        analysis: analyzeVenueTypes(place),
+      }));
 
-      // Step 6: Filter venues to those relevant for the selected date
-      const dateCategories = getDateCategories(selectedDateIdea);
-      const primaryVenue = getPrimaryVenueCategory(selectedDateIdea);
+      // Group venues by what they actually are
+      const venuesByType = {
+        wineBars: analyzedVenues.filter(v => v.analysis.isWineBar),
+        breweries: analyzedVenues.filter(v => v.analysis.isBrewery),
+        cocktailBars: analyzedVenues.filter(v => v.analysis.isCocktailBar),
+        bars: analyzedVenues.filter(v => v.analysis.primaryCategory === 'bar' && !v.analysis.isWineBar && !v.analysis.isBrewery),
+        restaurants: analyzedVenues.filter(v => v.analysis.isRestaurant && v.analysis.primaryCategory === 'restaurant'),
+        cafes: analyzedVenues.filter(v => v.analysis.isCafe),
+        parks: analyzedVenues.filter(v => v.analysis.isPark),
+        museums: analyzedVenues.filter(v => v.place.category === 'museum'),
+        theaters: analyzedVenues.filter(v => v.place.category === 'theater'),
+        activities: analyzedVenues.filter(v => v.place.category === 'activity'),
+      };
 
-      // Prioritize primary venue, then add supporting venues
-      const relevantPlaces = uniquePlaces.filter(place => {
-        const cat = place.category as PlaceCategory;
-        // Always include primary venue
-        if (primaryVenue && cat === primaryVenue) return true;
-        // Include other matching categories
-        return dateCategories.includes(cat);
-      }).slice(0, 5);
+      console.log('🏪 Available venue types:', {
+        wineBars: venuesByType.wineBars.length,
+        breweries: venuesByType.breweries.length,
+        cocktailBars: venuesByType.cocktailBars.length,
+        bars: venuesByType.bars.length,
+        restaurants: venuesByType.restaurants.length,
+        cafes: venuesByType.cafes.length,
+        parks: venuesByType.parks.length,
+        museums: venuesByType.museums.length,
+        theaters: venuesByType.theaters.length,
+        activities: venuesByType.activities.length,
+      });
+
+      // Log sample venues for debugging
+      if (venuesByType.wineBars.length > 0) {
+        console.log('🍷 Wine bars found:', venuesByType.wineBars.map(v => v.place.name));
+      }
+      if (venuesByType.cafes.length > 0) {
+        console.log('☕ Cafes found:', venuesByType.cafes.map(v => v.place.name));
+      }
+
+      // Step 4: Match dates based on ACTUAL available venues
+      const matchingDates: Array<{
+        template: typeof dateSuggestionTemplates[0];
+        matchingVenues: typeof analyzedVenues;
+        matchScore: number;
+      }> = [];
+
+      for (const dateTemplate of dateSuggestionTemplates) {
+        const title = (dateTemplate.title || '').toLowerCase();
+        const desc = (dateTemplate.description || '').toLowerCase();
+        let matchingVenues: typeof analyzedVenues = [];
+        let matchScore = 0;
+
+        // Wine tasting / Wine bar dates - must match wine bars or breweries
+        if (title.includes('wine') || title.includes('winery') || title.includes('wine tasting') ||
+            desc.includes('wine') || desc.includes('winery') || desc.includes('wine tasting')) {
+          console.log(`🍷 Wine tasting template found: "${dateTemplate.title}" - Checking for wine bars...`);
+          if (venuesByType.wineBars.length > 0) {
+            matchingVenues = venuesByType.wineBars;
+            matchScore = 100;
+            console.log(`✅ Matched "${dateTemplate.title}" with ${venuesByType.wineBars.length} wine bars`);
+          } else if (venuesByType.breweries.length > 0) {
+            matchingVenues = venuesByType.breweries;
+            matchScore = 80;
+            console.log(`⚠️ Matched "${dateTemplate.title}" with ${venuesByType.breweries.length} breweries (fallback)`);
+          } else {
+            console.log(`❌ Skipping "${dateTemplate.title}" - No wine bars or breweries found`);
+            continue; // Skip if no wine bars or breweries
+          }
+        }
+        // Beer tasting / Brewery dates
+        else if (title.includes('beer tasting') || title.includes('brewery') ||
+                 desc.includes('beer tasting') || desc.includes('brewery')) {
+          if (venuesByType.breweries.length > 0) {
+            matchingVenues = venuesByType.breweries;
+            matchScore = 100;
+          } else if (venuesByType.bars.length > 0) {
+            matchingVenues = venuesByType.bars;
+            matchScore = 70;
+          } else {
+            continue;
+          }
+        }
+        // Cocktail dates
+        else if (title.includes('cocktail') || desc.includes('cocktail')) {
+          if (venuesByType.cocktailBars.length > 0) {
+            matchingVenues = venuesByType.cocktailBars;
+            matchScore = 100;
+          } else if (venuesByType.bars.length > 0) {
+            matchingVenues = venuesByType.bars;
+            matchScore = 80;
+          } else {
+            continue;
+          }
+        }
+        // Coffee / Cafe dates - must match cafes, NOT bars
+        else if (title.includes('coffee') || title.includes('cafe') || title.includes('coffee shop') ||
+                 desc.includes('coffee') || desc.includes('cafe') || desc.includes('coffee shop')) {
+          console.log(`☕ Coffee template found: "${dateTemplate.title}" - Checking for cafes...`);
+          if (venuesByType.cafes.length > 0) {
+            matchingVenues = venuesByType.cafes;
+            matchScore = 100;
+            console.log(`✅ Matched "${dateTemplate.title}" with ${venuesByType.cafes.length} cafes`);
+          } else {
+            console.log(`❌ Skipping "${dateTemplate.title}" - No cafes found`);
+            continue; // Skip if no cafes
+          }
+        }
+        // Restaurant / Dining dates
+        else if (title.includes('restaurant') || title.includes('dinner') || title.includes('brunch') ||
+                 title.includes('lunch') || title.includes('dining') || desc.includes('restaurant') ||
+                 (desc.includes('dinner') && !desc.includes('home'))) {
+          if (venuesByType.restaurants.length > 0) {
+            matchingVenues = venuesByType.restaurants;
+            matchScore = 100;
+          } else {
+            continue;
+          }
+        }
+        // Picnic / Park dates
+        else if (title.includes('picnic') || title.includes('park') || title.includes('hike') ||
+                 desc.includes('picnic') || desc.includes('park')) {
+          if (venuesByType.parks.length > 0) {
+            matchingVenues = venuesByType.parks;
+            matchScore = 100;
+          } else {
+            continue;
+          }
+        }
+        // Museum dates
+        else if (title.includes('museum') || title.includes('gallery') || desc.includes('museum')) {
+          if (venuesByType.museums.length > 0) {
+            matchingVenues = venuesByType.museums;
+            matchScore = 100;
+          } else {
+            continue;
+          }
+        }
+        // Movie / Theater dates
+        else if (title.includes('movie') || title.includes('cinema') || desc.includes('movie')) {
+          if (venuesByType.theaters.length > 0) {
+            matchingVenues = venuesByType.theaters;
+            matchScore = 100;
+          } else {
+            continue;
+          }
+        }
+        // Activity dates
+        else if (title.includes('bowling') || title.includes('arcade') || title.includes('activity') ||
+                 desc.includes('bowling') || desc.includes('arcade')) {
+          if (venuesByType.activities.length > 0) {
+            matchingVenues = venuesByType.activities;
+            matchScore = 100;
+          } else {
+            continue;
+          }
+        }
+        // Generic bar dates (not wine/beer specific)
+        else if (title.includes('bar') || title.includes('drinks') || desc.includes('bar')) {
+          if (venuesByType.bars.length > 0 || venuesByType.wineBars.length > 0) {
+            matchingVenues = [...venuesByType.bars, ...venuesByType.wineBars];
+            matchScore = 90;
+          } else {
+            continue;
+          }
+        }
+
+        // If we found matching venues, add this date template
+        if (matchingVenues.length > 0) {
+          // Check budget compatibility
+          if (dateTemplate.budget) {
+            const venuePrices = matchingVenues.map(v => v.analysis.priceLevel).filter(p => p !== null);
+            if (venuePrices.length > 0) {
+              const avgPrice = venuePrices.reduce((sum, p) => {
+                const val = p === '$' ? 1 : p === '$$' ? 2 : 3;
+                return sum + val;
+              }, 0) / venuePrices.length;
+              const templatePrice = dateTemplate.budget === '$' ? 1 : dateTemplate.budget === '$$' ? 2 : 3;
+              // Allow some flexibility (±1 price level)
+              if (Math.abs(avgPrice - templatePrice) > 1) {
+                matchScore -= 20; // Penalize budget mismatch but don't exclude
+              }
+            }
+          }
+
+          matchingDates.push({
+            template: dateTemplate,
+            matchingVenues,
+            matchScore,
+          });
+        }
+      }
+
+      console.log(`📋 Found ${matchingDates.length} date templates with matching venues`);
+      
+      // Log what templates matched
+      if (matchingDates.length > 0) {
+        console.log('📅 Matched date templates:', matchingDates.map(m => ({
+          title: m.template.title,
+          venues: m.matchingVenues.length,
+          score: m.matchScore
+        })));
+      } else {
+        console.warn('⚠️ WARNING: No date templates matched available venues!');
+        console.log('Available venues:', uniquePlaces.slice(0, 10).map(p => ({
+          name: p.name,
+          category: p.category
+        })));
+      }
+
+      // Step 5: Score dates with onboarding preferences (bonus on top of venue match)
+      const scoredDates = matchingDates.map(({ template, matchingVenues, matchScore }) => {
+        let preferenceScore = 0;
+        const reasons: string[] = [];
+
+        // Love language matches
+        if (userLoveLanguage && template.loveLanguage?.some(ll => ll === userLoveLanguage)) {
+          preferenceScore += 10;
+          reasons.push(`User love language: ${userLoveLanguage}`);
+        }
+        if (partnerLoveLanguagePrimary && template.loveLanguage?.some(ll => ll === partnerLoveLanguagePrimary)) {
+          preferenceScore += 15;
+          reasons.push(`Partner love language: ${partnerLoveLanguagePrimary}`);
+        }
+
+        // Interest matches
+        if (partnerInterests.length > 0) {
+          const titleLower = (template.title || '').toLowerCase();
+          const descLower = (template.description || '').toLowerCase();
+          const matchedInterests = partnerInterests.filter(interest => 
+            titleLower.includes(interest.toLowerCase()) || descLower.includes(interest.toLowerCase())
+          );
+          if (matchedInterests.length > 0) {
+            preferenceScore += matchedInterests.length * 5;
+            reasons.push(`Partner interests: ${matchedInterests.join(', ')}`);
+          }
+        }
+
+        const totalScore = matchScore + preferenceScore;
+        return {
+          template,
+          matchingVenues,
+          score: totalScore,
+          matchScore,
+          preferenceScore,
+          reasons,
+        };
+      }).sort((a, b) => b.score - a.score);
+
+      console.log(`✨ Scored ${scoredDates.length} date templates`);
+
+      // Step 6: Pick from top-scored templates
+      let selectedDateIdea: typeof dateSuggestionTemplates[0];
+      let relevantPlaces: Place[] = [];
+
+      if (scoredDates.length > 0) {
+        // Get top 3 for variety
+        const topTemplates = scoredDates.slice(0, Math.min(3, scoredDates.length));
+        const selected = topTemplates[Math.floor(Math.random() * topTemplates.length)];
+        selectedDateIdea = selected.template;
+        relevantPlaces = selected.matchingVenues
+          .slice(0, 5)
+          .map(v => v.place)
+          .sort((a, b) => a.distance - b.distance); // Closest first
+
+        console.log(`✅ Selected date: "${selectedDateIdea.title}" with ${relevantPlaces.length} venues`);
+        console.log(`   Venue match score: ${selected.matchScore}, Preference score: ${selected.preferenceScore}`);
+        console.log(`   Reasons: ${selected.reasons.join(', ') || 'Venue match'}`);
+      } else {
+        // Fallback: pick a date that matches any available venue category
+        console.warn('⚠️ No perfect matches found, using fallback');
+        const availableCategories = new Set(uniquePlaces.map(p => p.category));
+        const fallbackDates = dateSuggestionTemplates.filter(date => {
+          const primaryVenue = getPrimaryVenueCategory(date);
+          return primaryVenue && availableCategories.has(primaryVenue);
+        });
+
+        if (fallbackDates.length > 0) {
+          selectedDateIdea = fallbackDates[Math.floor(Math.random() * fallbackDates.length)];
+          const primaryVenue = getPrimaryVenueCategory(selectedDateIdea);
+          relevantPlaces = uniquePlaces
+            .filter(p => p.category === primaryVenue)
+            .slice(0, 5);
+        } else {
+          // Last resort: any date
+          selectedDateIdea = dateSuggestionTemplates[Math.floor(Math.random() * dateSuggestionTemplates.length)];
+          relevantPlaces = uniquePlaces.slice(0, 5);
+        }
+      }
 
       // Set the results
       setSelectedDate(selectedDateIdea);
@@ -286,6 +676,18 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
       return 'park';
     }
 
+    // Wine/bar/drinks dates - MUST check before restaurant to avoid misclassification
+    if (title.includes('wine') || title.includes('winery') || title.includes('wine bar') ||
+        title.includes('wine tasting') || title.includes('beer tasting') || title.includes('brewery') ||
+        title.includes('cocktail') || title.includes('bar') || title.includes('pub') || 
+        title.includes('drinks') || title.includes('tasting') ||
+        desc.includes('wine') || desc.includes('winery') || desc.includes('wine bar') ||
+        desc.includes('wine tasting') || desc.includes('beer tasting') || desc.includes('brewery') ||
+        desc.includes('cocktail') || desc.includes('bar') || desc.includes('pub') ||
+        desc.includes('drinks') || desc.includes('tasting')) {
+      return 'bar';
+    }
+
     // Restaurant/dining dates
     if (title.includes('dinner') || title.includes('restaurant') || title.includes('brunch') ||
         title.includes('lunch') || title.includes('dine') || title.includes('meal') ||
@@ -307,11 +709,6 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
       return 'theater';
     }
 
-    // Bar/drinks dates
-    if (title.includes('bar') || title.includes('pub') || title.includes('drinks') ||
-        title.includes('cocktail') || desc.includes('bar') || desc.includes('pub')) {
-      return 'bar';
-    }
 
     // Activity/entertainment dates
     if (title.includes('bowling') || title.includes('arcade') || title.includes('mini golf') ||
@@ -345,6 +742,15 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
     const categories: PlaceCategory[] = [];
 
     // Check for specific keywords in title and description that indicate venue needs
+    // Wine/bar/drinks - MUST check before restaurant to avoid misclassification
+    const needsBar = title.includes('wine') || title.includes('winery') || title.includes('wine bar') ||
+                     title.includes('wine tasting') || title.includes('beer tasting') || title.includes('brewery') ||
+                     title.includes('cocktail') || title.includes('bar') || title.includes('pub') || 
+                     title.includes('drinks') || title.includes('tasting') ||
+                     desc.includes('wine') || desc.includes('winery') || desc.includes('wine bar') ||
+                     desc.includes('wine tasting') || desc.includes('beer tasting') || desc.includes('brewery') ||
+                     desc.includes('cocktail') || desc.includes('bar') || desc.includes('pub') ||
+                     desc.includes('drinks') || desc.includes('tasting');
     const needsRestaurant = title.includes('dinner') || title.includes('restaurant') || title.includes('meal') ||
                            desc.includes('dinner') || desc.includes('restaurant') || desc.includes('eat') || desc.includes('food');
     const needsCafe = title.includes('cafe') || title.includes('coffee') || title.includes('brunch') || title.includes('breakfast') ||
@@ -353,8 +759,6 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                      desc.includes('park') || desc.includes('outdoor') || desc.includes('nature') || desc.includes('walk');
     const needsMuseum = title.includes('museum') || title.includes('gallery') || title.includes('art') || title.includes('cultural') || title.includes('exhibit') ||
                        desc.includes('museum') || desc.includes('gallery') || desc.includes('art') || desc.includes('cultural');
-    const needsBar = title.includes('bar') || title.includes('pub') || title.includes('drinks') || title.includes('cocktail') ||
-                    desc.includes('bar') || desc.includes('drinks');
     const needsActivity = title.includes('bowling') || title.includes('arcade') || title.includes('activity') || title.includes('sport') ||
                          desc.includes('bowling') || desc.includes('arcade') || desc.includes('activity');
     const needsTheater = title.includes('movie') || title.includes('cinema') || title.includes('theater') || title.includes('show') ||

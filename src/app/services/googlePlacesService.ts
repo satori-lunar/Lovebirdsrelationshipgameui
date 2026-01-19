@@ -228,8 +228,25 @@ export const googlePlacesService = {
       const response = await fetch(proxyUrl.toString());
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(`API proxy error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+        // Check if response is JSON before trying to parse
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(`API proxy error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+        } else {
+          // Response is HTML or other non-JSON format (likely a 404 page)
+          const errorText = await response.text().catch(() => 'Unknown error');
+          console.error(`API proxy returned non-JSON response (${response.status}):`, errorText.substring(0, 100));
+          throw new Error(`API proxy error: ${response.status} - Endpoint may not exist`);
+        }
+      }
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('API proxy returned non-JSON response:', errorText.substring(0, 100));
+        throw new Error('API proxy returned invalid response format');
       }
 
       const data = await response.json();

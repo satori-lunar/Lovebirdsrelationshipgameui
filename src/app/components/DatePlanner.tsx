@@ -240,15 +240,66 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       const datesWithVenues = scoredDates
         .map(scored => {
           const date = scored.template;
+          const dateTitle = (date.title || '').toLowerCase();
+          const dateDesc = (date.description || '').toLowerCase();
           const dateCategories = getDateCategories(date);
           const primaryVenue = getPrimaryVenueCategory(date);
 
-          // Get relevant venues for this date, prioritizing closest and highest-rated ones
+          // Get relevant venues for this date, analyzing actual venue names/descriptions
           const relevantVenues = uniquePlaces
             .filter(place => {
-              // Must match primary venue category or one of the date categories
-              return (primaryVenue && place.category === primaryVenue) ||
-                     dateCategories.includes(place.category as PlaceCategory);
+              const placeName = (place.name || '').toLowerCase();
+              const placeDesc = (place.description || '').toLowerCase();
+              const placeCategory = place.category;
+              
+              // For wine tasting dates - ONLY match wine bars/wineries, NOT cafes
+              if (dateTitle.includes('wine') || dateTitle.includes('wine tasting') ||
+                  dateDesc.includes('wine') || dateDesc.includes('wine tasting') ||
+                  dateTitle.includes('winery')) {
+                // Check if venue is actually a wine bar/winery
+                const isWineBar = placeName.includes('wine') || placeName.includes('winery') || 
+                                 placeName.includes('vineyard') || placeDesc.includes('wine') ||
+                                 placeDesc.includes('winery') || placeDesc.includes('vineyard');
+                const isBrewery = placeName.includes('brewery') || placeName.includes('brew') ||
+                                 placeDesc.includes('brewery') || placeDesc.includes('brew');
+                
+                // REJECT cafes for wine tasting dates
+                if (placeCategory === 'cafe' && !isWineBar && !isBrewery) {
+                  return false;
+                }
+                
+                // Only match if it's a wine bar, brewery, or bar category
+                return isWineBar || isBrewery || placeCategory === 'bar';
+              }
+              
+              // For coffee/cafe dates - ONLY match cafes, NOT bars or wine bars
+              if (dateTitle.includes('coffee') || dateTitle.includes('cafe') || 
+                  dateDesc.includes('coffee') || dateDesc.includes('cafe')) {
+                // REJECT bars/wine bars for coffee dates
+                if (placeCategory === 'bar') {
+                  const isWineBar = placeName.includes('wine') || placeName.includes('winery') ||
+                                   placeDesc.includes('wine') || placeDesc.includes('winery');
+                  if (isWineBar) {
+                    return false; // Don't match wine bars for coffee dates
+                  }
+                }
+                // Only match cafes
+                return placeCategory === 'cafe';
+              }
+              
+              // For restaurant dates, prefer restaurants
+              if (primaryVenue === 'restaurant') {
+                // Prefer restaurants, but allow restaurant-bars
+                if (placeCategory === 'restaurant') return true;
+                if (placeCategory === 'bar' && (placeName.includes('restaurant') || placeDesc.includes('restaurant'))) {
+                  return true;
+                }
+                return false;
+              }
+              
+              // Default: match by category
+              return (primaryVenue && placeCategory === primaryVenue) ||
+                     dateCategories.includes(placeCategory as PlaceCategory);
             })
             // Sort by distance first, but also consider rating for popular destinations
             .sort((a, b) => {
@@ -368,6 +419,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
     const desc = dateIdea.description?.toLowerCase() || '';
     const dateType = dateIdea.dateType?.toLowerCase() || '';
 
+    // Beach/outdoor/nature activities
     if (title.includes('beach') || title.includes('sunset stroll') || title.includes('nature') ||
         title.includes('hike') || title.includes('hiking') || title.includes('trail') ||
         title.includes('picnic') || title.includes('park walk') ||
@@ -376,6 +428,17 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       return 'park';
     }
 
+    // Wine/Beer/Cocktail related dates - MUST check BEFORE restaurant to avoid misclassification
+    if (title.includes('wine') || title.includes('winery') || title.includes('wine tasting') ||
+        title.includes('beer tasting') || title.includes('brewery') || title.includes('cocktail') ||
+        title.includes('bar') || title.includes('drinks') || title.includes('tasting') ||
+        desc.includes('wine') || desc.includes('winery') || desc.includes('wine tasting') ||
+        desc.includes('beer tasting') || desc.includes('brewery') || desc.includes('cocktail bar') ||
+        desc.includes('bar') || desc.includes('drinks')) {
+      return 'bar';
+    }
+
+    // Restaurant/dining dates (only if not wine/bar related)
     if (title.includes('dinner') || title.includes('restaurant') || title.includes('brunch') ||
         title.includes('lunch') || title.includes('dine') || title.includes('meal') ||
         desc.includes('restaurant') || (desc.includes('dinner') && !desc.includes('cook at home'))) {
