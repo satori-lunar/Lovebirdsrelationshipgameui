@@ -709,8 +709,10 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       if (allTemplates.length > 0) {
         // Use all templates, sorted by score
         const sorted = allTemplates.sort((a, b) => b.score - a.score);
-        const selectedCount = Math.min(5, Math.max(3, sorted.length));
-        return sorted.slice(0, selectedCount).map(st => st.template)
+        // Always return exactly 3
+        const shuffled = [...sorted].sort(() => Math.random() - 0.5);
+        const selectedCount = Math.min(3, shuffled.length);
+        return shuffled.slice(0, selectedCount).map(st => st.template)
           .map(template => ({
             ...template,
             basedOnFactors: {
@@ -809,11 +811,13 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       selected.push(...shuffledRemaining.slice(0, 3 - selected.length));
     }
     
-    console.log(`✅ Category ${category.name}: Selected ${selected.length} suggestions (titles: ${selected.map(s => s.title).join(', ')})`);
+    // CRITICAL: Always return exactly 3 suggestions - no more, no less
+    // Slice to ensure we never exceed 3, and pad if needed (shouldn't happen but safety)
+    const finalSelected = selected.slice(0, 3);
     
-    // Always return exactly 3 suggestions for consistency and weekly variety
-    // If we have fewer than 3, we've already tried to fill from fallbacks above
-    return selected.slice(0, 3) // Ensure we never return more than 3
+    console.log(`✅ Category ${category.name}: Selected ${finalSelected.length} suggestions (titles: ${finalSelected.map(s => s.title).join(', ')})`);
+    
+    return finalSelected
       .map(template => ({
         ...template,
         basedOnFactors: {
@@ -1079,16 +1083,17 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
    * Get template suggestions for each category (base templates, will be personalized)
    * 
    * Template counts per category (for weekly variety):
-   * - quick_wins: 18 templates (6 weeks of unique combinations showing 3/week)
-   * - thoughtful_messages: 17 templates (5-6 weeks of unique combinations)
-   * - acts_of_service: 19 templates (6 weeks of unique combinations)
-   * - quality_time: 19 templates (6 weeks of unique combinations)
-   * - thoughtful_gifts: 18 templates (6 weeks of unique combinations)
-   * - physical_touch: 18 templates (6 weeks of unique combinations)
-   * - planning_ahead: 19 templates (6 weeks of unique combinations)
+   * Target: 36+ templates per category for 3 months (12 weeks) without repeats
+   * - quick_wins: 36+ templates (12+ weeks of unique combinations showing 3/week)
+   * - thoughtful_messages: 36+ templates (12+ weeks of unique combinations)
+   * - acts_of_service: 36+ templates (12+ weeks of unique combinations)
+   * - quality_time: 36+ templates (12+ weeks of unique combinations)
+   * - thoughtful_gifts: 36+ templates (12+ weeks of unique combinations)
+   * - physical_touch: 36+ templates (12+ weeks of unique combinations)
+   * - planning_ahead: 36+ templates (12+ weeks of unique combinations)
    * 
-   * Total: ~128 templates across all categories
-   * With 3 suggestions per category per week, we can go 5-6 weeks without repeating
+   * Total: 250+ templates across all categories
+   * With 3 suggestions per category per week, we can go 12+ weeks (3 months) without repeating
    * Combined with randomization and weekly variety tracking, this ensures fresh suggestions each week
    */
   private getCategoryTemplates(
@@ -1329,6 +1334,241 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['words', 'quality_time'],
           whySuggested: 'Sharing beautiful moments shows you want to include them in your experiences.'
+        },
+        {
+          title: 'Give them a high-five or playful touch',
+          description: `Offer a high-five or playful touch for something they did well. Celebratory touch builds connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Notice something they accomplished or did well', estimatedMinutes: 1 },
+            { step: 2, action: 'Give them a high-five, fist bump, or playful touch', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch', 'words'],
+          whySuggested: 'Playful physical gestures celebrate wins and show you notice their successes.'
+        },
+        {
+          title: 'Write a quick "I appreciate you" note',
+          description: `Leave a short note expressing appreciation for something specific they do or are. Gratitude strengthens bonds.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of something specific you appreciate about them', estimatedMinutes: 1 },
+            { step: 2, action: 'Write a quick note on paper or sticky note', estimatedMinutes: 2 },
+            { step: 3, action: 'Leave it where they\'ll find it', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 4,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Quick appreciation notes show you notice and value them.'
+        },
+        {
+          title: 'Send a voice note instead of text',
+          description: `Record a quick voice message instead of texting. Hearing your voice feels more personal and intimate.`,
+          detailedSteps: [
+            { step: 1, action: 'Record a 20-30 second voice message', tip: 'Say something genuine from the heart', estimatedMinutes: 1 },
+            { step: 2, action: 'Send it when they\'ll have time to listen', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Voice notes feel more personal and show extra effort.'
+        },
+        {
+          title: 'Bring them a glass of water',
+          description: `Notice if they need water and bring it to them. Small acts of service show you pay attention to their needs.`,
+          detailedSteps: [
+            { step: 1, action: 'Notice if their glass is empty or they seem thirsty', estimatedMinutes: 1 },
+            { step: 2, action: 'Bring them a fresh glass of water', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Small acts of service show you notice and care about their comfort.'
+        },
+        {
+          title: 'Tell them one thing you love about them today',
+          description: `Share something specific you love about them right now. Being present and noticing them daily matters.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of something specific you love about them today', estimatedMinutes: 1 },
+            { step: 2, action: 'Tell them in person or via text', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Daily appreciation shows you notice and love them consistently.'
+        },
+        {
+          title: 'Open the door for them',
+          description: `Hold the door open when going somewhere together. Small gestures of care add up.`,
+          detailedSteps: [
+            { step: 1, action: 'When going through a door together, hold it open', estimatedMinutes: 1 },
+            { step: 2, action: 'Maybe smile or make eye contact as they pass', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Small gestures of courtesy show care and respect.'
+        },
+        {
+          title: 'Send them a song that reminds you of them',
+          description: `Share a song that makes you think of them or your relationship. Music creates emotional connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Find a song that reminds you of them or your relationship', estimatedMinutes: 2 },
+            { step: 2, action: 'Send it with a note about why it reminds you of them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 3,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Sharing music creates emotional connection and shows you think of them.'
+        },
+        {
+          title: 'Squeeze their hand or arm gently',
+          description: `Give their hand or arm a gentle squeeze when you're together. Small touches maintain physical connection.`,
+          detailedSteps: [
+            { step: 1, action: 'When sitting or standing together, give their hand or arm a gentle squeeze', estimatedMinutes: 1 },
+            { step: 2, action: 'Maybe make eye contact and smile', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Small physical gestures maintain connection throughout the day.'
+        },
+        {
+          title: 'Send them a motivational quote or affirmation',
+          description: `Share a quote or affirmation that you think applies to them or your relationship. Positive words inspire.`,
+          detailedSteps: [
+            { step: 1, action: 'Find a quote or affirmation that fits them or your relationship', estimatedMinutes: 2 },
+            { step: 2, action: 'Send it with a note about why it made you think of them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 3,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Positive words and affirmations show support and belief in them.'
+        },
+        {
+          title: 'Offer them the last bite of something',
+          description: `If you're sharing food, offer them the last bite. Small gestures of generosity show care.`,
+          detailedSteps: [
+            { step: 1, action: 'If sharing food, notice when there\'s one bite left', estimatedMinutes: 1 },
+            { step: 2, action: 'Offer it to them with a smile', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts', 'gifts'],
+          whySuggested: 'Small gestures of generosity show you want them to have the best.'
+        },
+        {
+          title: 'Send them a "hope you're having a good day" check-in',
+          description: `Check in during their day to see how they're doing. Regular check-ins show ongoing care.`,
+          detailedSteps: [
+            { step: 1, action: 'Send a brief message asking how their day is going', estimatedMinutes: 1 },
+            { step: 2, action: 'Maybe add that you\'re thinking of them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Regular check-ins show ongoing care and interest in their wellbeing.'
+        },
+        {
+          title: 'Give them a forehead kiss',
+          description: `Give them a gentle kiss on the forehead. This tender gesture shows deep affection and care.`,
+          detailedSteps: [
+            { step: 1, action: 'Give them a gentle kiss on the forehead', estimatedMinutes: 1 },
+            { step: 2, action: 'Maybe say something sweet', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Forehead kisses are tender gestures that show deep affection.'
+        },
+        {
+          title: 'Share a funny memory or inside joke',
+          description: `Bring up a funny memory or inside joke you share. Shared humor strengthens your bond.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a funny memory or inside joke you share', estimatedMinutes: 1 },
+            { step: 2, action: 'Bring it up in conversation or via text', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Shared humor and inside jokes strengthen your unique bond.'
+        },
+        {
+          title: 'Turn off the lights or TV when they leave',
+          description: `Notice if they forgot to turn something off and do it for them. Small acts of service show you notice.`,
+          detailedSteps: [
+            { step: 1, action: 'Notice if they left a light or TV on', estimatedMinutes: 1 },
+            { step: 2, action: 'Turn it off for them without mentioning it', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Small acts of service show you notice and help without being asked.'
+        },
+        {
+          title: 'Send them a screenshot of something funny you saw',
+          description: `Share a screenshot of something funny or interesting you saw online. Sharing moments creates connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Take a screenshot of something funny or interesting', estimatedMinutes: 1 },
+            { step: 2, action: 'Send it with a comment about why you thought of them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Sharing funny moments shows you think of them throughout the day.'
+        },
+        {
+          title: 'Give them a quick back rub or shoulder squeeze',
+          description: `Offer a quick back rub or shoulder squeeze. Physical touch helps relieve stress and shows care.`,
+          detailedSteps: [
+            { step: 1, action: 'Offer a quick back rub or shoulder squeeze', estimatedMinutes: 1 },
+            { step: 2, action: 'Do it for 30-60 seconds', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['touch'],
+          whySuggested: 'Quick physical touch relieves stress and shows you want to help them feel better.'
+        },
+        {
+          title: 'Send them a "you're doing great" message',
+          description: `Let them know you think they're doing great at something. Encouragement builds confidence.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of something they\'re doing well', estimatedMinutes: 1 },
+            { step: 2, action: 'Send a message letting them know you think they\'re doing great', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Encouragement shows you believe in them and notice their efforts.'
+        },
+        {
+          title: 'Pick up something they dropped',
+          description: `Notice if they dropped something and pick it up for them. Small helpful gestures show care.`,
+          detailedSteps: [
+            { step: 1, action: 'Notice if they dropped something', estimatedMinutes: 1 },
+            { step: 2, action: 'Pick it up and hand it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 2,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Small helpful gestures show you pay attention and want to help.'
         }
       ],
       thoughtful_messages: [
@@ -1569,6 +1809,286 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['words'],
           whySuggested: 'Celebrating their wins shows you\'re their biggest cheerleader.'
+        },
+        {
+          title: 'Write a message about a quality you admire',
+          description: `Share something specific about their character or qualities that you admire. Recognition builds confidence.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a quality or trait they have that you admire', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that quality and give a specific example', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to build them up', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Acknowledging their qualities shows you see and value who they are.'
+        },
+        {
+          title: 'Send a message about how you felt when you met',
+          description: `Share how you felt when you first met them or early in your relationship. Sharing origin stories deepens connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Think back to when you first met or early in your relationship', estimatedMinutes: 3 },
+            { step: 2, action: 'Write about how you felt and what stood out to you', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to share your origin story', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 10,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Sharing origin stories deepens connection and reminds you why you fell in love.'
+        },
+        {
+          title: 'Write about a moment they made you laugh',
+          description: `Share a specific moment when they made you laugh. Shared humor strengthens bonds and creates joy.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a moment when they made you laugh', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that moment and why it made you happy', estimatedMinutes: 5 },
+            { step: 3, action: 'Send it to share the joy', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Sharing laughter and humor strengthens your bond and creates joy.'
+        },
+        {
+          title: 'Send a message about how you see your future together',
+          description: `Share your hopes and dreams for your future together. Talking about the future shows commitment and excitement.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about what you look forward to with them', estimatedMinutes: 3 },
+            { step: 2, action: 'Write about your shared dreams or plans', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show you\'re thinking long-term', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 10,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Sharing future dreams shows commitment and excitement about your relationship.'
+        },
+        {
+          title: 'Write about what you admire in their work or hobbies',
+          description: `Acknowledge something specific about their work, hobbies, or interests that you admire. Recognition builds confidence.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about their work or hobbies', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about what you admire about their skills or dedication', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show you notice and appreciate their interests', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Acknowledging their work and interests shows you pay attention to what matters to them.'
+        },
+        {
+          title: 'Send a message about a small thing they do that you love',
+          description: `Point out something small they do regularly that you love. Noticing small details shows you pay attention.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a small habit or thing they do that you love', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that small thing and why it matters to you', estimatedMinutes: 5 },
+            { step: 3, action: 'Send it to show you notice the details', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Noticing small details shows you pay attention and care about them.'
+        },
+        {
+          title: 'Write about how they helped you through something',
+          description: `Share how they helped or supported you through a difficult time. Acknowledging their support shows gratitude.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a time when they helped or supported you', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about how they helped and why it mattered', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show your gratitude', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Acknowledging their support shows gratitude and strengthens your bond.'
+        },
+        {
+          title: 'Send a message about a characteristic that makes them unique',
+          description: `Share something unique about them that you love. Celebrating their uniqueness shows you value who they are.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of something unique about them that you love', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that unique characteristic and why it matters', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to celebrate what makes them special', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Celebrating their uniqueness shows you value who they are as an individual.'
+        },
+        {
+          title: 'Write about a way they\'ve changed your perspective',
+          description: `Share how they helped you see something differently. Acknowledging their influence shows you value their perspective.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a way they changed how you see something', estimatedMinutes: 3 },
+            { step: 2, action: 'Write about that change and why it matters to you', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show their impact on your life', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 10,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Acknowledging how they changed your perspective shows you value their influence.'
+        },
+        {
+          title: 'Send a message about a time they surprised you',
+          description: `Share a moment when they surprised you in a good way. Celebrating surprises shows you notice and appreciate their thoughtfulness.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a time when they surprised you', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that surprise and how it made you feel', estimatedMinutes: 5 },
+            { step: 3, action: 'Send it to show you remember and appreciate it', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Celebrating surprises shows you notice and appreciate their thoughtfulness.'
+        },
+        {
+          title: 'Write about how they handle challenges',
+          description: `Acknowledge how they handle difficult situations or challenges. Recognition of their strength builds confidence.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a challenge they faced and how they handled it', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about their strength and resilience', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show you notice their strength', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Acknowledging their strength in facing challenges builds confidence and shows support.'
+        },
+        {
+          title: 'Send a message about something they taught you about yourself',
+          description: `Share how they helped you learn something about yourself. Acknowledging their role in your growth shows gratitude.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of something you learned about yourself because of them', estimatedMinutes: 3 },
+            { step: 2, action: 'Write about that learning and their role in it', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show your gratitude for their role in your growth', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 10,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Acknowledging their role in your growth shows gratitude and deepens connection.'
+        },
+        {
+          title: 'Write about a moment when you felt proud of them',
+          description: `Share a moment when you felt proud of them. Sharing pride strengthens bonds and shows support.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a moment when you felt proud of them', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that moment and why you felt proud', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to share your pride in them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Sharing pride in them strengthens bonds and shows you\'re their biggest supporter.'
+        },
+        {
+          title: 'Send a message about what you love about their personality',
+          description: `Share something specific about their personality that you love. Personality compliments are deeply meaningful.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a personality trait you love about them', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that trait and give a specific example', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show you love who they are', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Personality compliments are deeply meaningful and show you love who they are.'
+        },
+        {
+          title: 'Write about a way they show you love',
+          description: `Share how they show you love in their own way. Acknowledging their love language shows you notice their efforts.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a way they show you love', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that way and why it matters to you', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show you notice their efforts', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Acknowledging how they show love shows you notice their efforts and appreciate them.'
+        },
+        {
+          title: 'Send a message about a memory from your first date',
+          description: `Share something specific from your first date. Revisiting early memories strengthens your bond.`,
+          detailedSteps: [
+            { step: 1, action: 'Think back to your first date', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about a specific moment or detail that stood out', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to revisit that memory together', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Revisiting early memories strengthens your bond and reminds you of your beginning.'
+        },
+        {
+          title: 'Write about how they make everyday moments special',
+          description: `Share how they make ordinary moments feel special. Noticing their magic in everyday life shows appreciation.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of an ordinary moment they made special', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that moment and how they made it special', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show you notice their magic', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Noticing how they make everyday moments special shows deep appreciation.'
+        },
+        {
+          title: 'Send a message about what you look forward to with them',
+          description: `Share something you're looking forward to doing with them. Anticipation creates excitement and connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of something you\'re looking forward to with them', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about what you\'re excited about and why', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to share your excitement', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words', 'quality_time'],
+          whySuggested: 'Sharing what you look forward to creates excitement and anticipation together.'
+        },
+        {
+          title: 'Write about how they comforted you',
+          description: `Share a time when they comforted you. Acknowledging their support during tough times shows gratitude.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a time when they comforted you', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about how they comforted you and how it helped', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show your gratitude for their comfort', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Acknowledging their comfort shows gratitude for their support during tough times.'
+        },
+        {
+          title: 'Send a message about a way they make you feel safe',
+          description: `Share how they make you feel safe or secure. Feeling safe is fundamental to deep connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a way they make you feel safe or secure', estimatedMinutes: 2 },
+            { step: 2, action: 'Write about that feeling and what they do that creates it', estimatedMinutes: 6 },
+            { step: 3, action: 'Send it to show how much that safety means to you', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 9,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['words'],
+          whySuggested: 'Feeling safe is fundamental to deep connection - acknowledging it strengthens that bond.'
         }
       ],
       acts_of_service: [
@@ -1823,6 +2343,286 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['acts'],
           whySuggested: 'Setting up something they want shows you listen and take initiative.'
+        },
+        {
+          title: 'Organize their closet or a drawer',
+          description: `Tidy up their closet or organize a drawer they use. A clean, organized space reduces stress and shows care.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a closet or drawer to organize', estimatedMinutes: 2 },
+            { step: 2, action: 'Organize it thoughtfully', estimatedMinutes: 25 },
+            { step: 3, action: 'Let them discover the improvement', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 28,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Organizing their space shows care about their comfort and environment.'
+        },
+        {
+          title: 'Put fresh sheets on the bed',
+          description: `Change the bed sheets for them. Fresh sheets are comfortable and show you care about their rest.`,
+          detailedSteps: [
+            { step: 1, action: 'Get fresh sheets', estimatedMinutes: 2 },
+            { step: 2, action: 'Change the bed sheets', estimatedMinutes: 10 },
+            { step: 3, action: 'Maybe add a nice touch like fluffing pillows', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 14,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Fresh sheets show you care about their comfort and rest.'
+        },
+        {
+          title: 'Fill up their car with gas',
+          description: `If you use their car, fill it up with gas. This practical gesture shows care and reduces their mental load.`,
+          detailedSteps: [
+            { step: 1, action: 'Check if their car needs gas', estimatedMinutes: 1 },
+            { step: 2, action: 'Fill it up for them', estimatedMinutes: 10 },
+            { step: 3, action: 'Maybe leave a note or let them discover it', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 12,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Filling up their car shows practical care and reduces their mental load.'
+        },
+        {
+          title: 'Take care of their plants or garden',
+          description: `Water their plants or tend to their garden. Taking care of what they care about shows you notice and value it.`,
+          detailedSteps: [
+            { step: 1, action: 'Check what their plants or garden need', estimatedMinutes: 2 },
+            { step: 2, action: 'Water, prune, or tend to them', estimatedMinutes: 15 },
+            { step: 3, action: 'Maybe send them a photo or let them discover it', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 18,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Taking care of their plants shows you notice and value what matters to them.'
+        },
+        {
+          title: 'Prepare their morning routine items',
+          description: `Set out items they need for their morning routine. Helping them start the day smoothly shows care.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about what they need for their morning routine', estimatedMinutes: 2 },
+            { step: 2, action: 'Set out those items for them', estimatedMinutes: 5 },
+            { step: 3, action: 'Leave them where they\'ll find them in the morning', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'minimal',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Preparing their morning routine helps them start the day smoothly and shows care.'
+        },
+        {
+          title: 'Handle their mail or packages',
+          description: `Sort their mail or bring in their packages. Handling routine tasks shows you want to help.`,
+          detailedSteps: [
+            { step: 1, action: 'Check for mail or packages', estimatedMinutes: 1 },
+            { step: 2, action: 'Sort the mail or bring in packages', estimatedMinutes: 5 },
+            { step: 3, action: 'Leave them organized for when they get home', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Handling routine tasks shows you want to help and reduce their mental load.'
+        },
+        {
+          title: 'Organize the fridge or pantry',
+          description: `Tidy up the fridge or pantry. An organized space makes life easier and shows you care about shared spaces.`,
+          detailedSteps: [
+            { step: 1, action: 'Check what needs organizing in the fridge or pantry', estimatedMinutes: 2 },
+            { step: 2, action: 'Organize it - group similar items, check dates, etc.', estimatedMinutes: 20 },
+            { step: 3, action: 'Maybe throw away expired items', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 27,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Organizing shared spaces shows care about your home together.'
+        },
+        {
+          title: 'Clean the bathroom',
+          description: `Clean the bathroom - sink, mirror, toilet, etc. A clean bathroom is comfortable and shows care.`,
+          detailedSteps: [
+            { step: 1, action: 'Clean the sink and mirror', estimatedMinutes: 5 },
+            { step: 2, action: 'Clean the toilet and floor', estimatedMinutes: 10 },
+            { step: 3, action: 'Restock toilet paper or other essentials', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 17,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'A clean bathroom is comfortable and shows care about shared spaces.'
+        },
+        {
+          title: 'Take out the recycling',
+          description: `Handle the recycling before it builds up. Taking care of routine tasks shows you notice and want to help.`,
+          detailedSteps: [
+            { step: 1, action: 'Check if recycling needs to be taken out', estimatedMinutes: 1 },
+            { step: 2, action: 'Take it out without mentioning it', estimatedMinutes: 5 },
+            { step: 3, action: 'Maybe bring the bins back in', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 8,
+          effortLevel: 'minimal',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Taking care of routine tasks shows you notice and want to help.'
+        },
+        {
+          title: 'Clean their car',
+          description: `Clean their car inside and out. A clean car is comfortable and shows you care about their space.`,
+          detailedSteps: [
+            { step: 1, action: 'Clean the inside - remove trash, vacuum, etc.', estimatedMinutes: 20 },
+            { step: 2, action: 'Clean the outside if needed', estimatedMinutes: 15 },
+            { step: 3, action: 'Maybe add an air freshener', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 37,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Cleaning their car shows care about their space and comfort.'
+        },
+        {
+          title: 'Organize their workspace or desk',
+          description: `Tidy up their workspace or desk. An organized workspace reduces stress and shows you care about their productivity.`,
+          detailedSteps: [
+            { step: 1, action: 'Check what needs organizing on their desk', estimatedMinutes: 2 },
+            { step: 2, action: 'Organize it - group papers, tidy supplies, etc.', estimatedMinutes: 20 },
+            { step: 3, action: 'Maybe add something nice like a plant or photo', estimatedMinutes: 3 }
+          ],
+          timeEstimateMinutes: 25,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'An organized workspace reduces stress and shows care about their productivity.'
+        },
+        {
+          title: 'Make the bed',
+          description: `Make the bed for them. A made bed makes the room feel more put together and shows care.`,
+          detailedSteps: [
+            { step: 1, action: 'Straighten the sheets and blankets', estimatedMinutes: 2 },
+            { step: 2, action: 'Fluff the pillows', estimatedMinutes: 1 },
+            { step: 3, action: 'Maybe add a decorative touch', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 4,
+          effortLevel: 'minimal',
+          bestTiming: 'morning',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'A made bed makes the room feel more put together and shows care.'
+        },
+        {
+          title: 'Handle a return or exchange for them',
+          description: `Take care of a return or exchange they need to do. Handling logistics shows you want to lighten their load.`,
+          detailedSteps: [
+            { step: 1, action: 'Identify what needs to be returned or exchanged', estimatedMinutes: 2 },
+            { step: 2, action: 'Handle the return or exchange', estimatedMinutes: 25 },
+            { step: 3, action: 'Let them know it\'s done', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 28,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Handling returns shows you want to lighten their load and help with logistics.'
+        },
+        {
+          title: 'Organize the garage or storage area',
+          description: `Tidy up the garage or a storage area. Organized storage makes life easier and shows care about shared spaces.`,
+          detailedSteps: [
+            { step: 1, action: 'Check what needs organizing', estimatedMinutes: 3 },
+            { step: 2, action: 'Organize items - group similar things, label boxes, etc.', estimatedMinutes: 40 },
+            { step: 3, action: 'Make sure everything is accessible', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 48,
+          effortLevel: 'moderate',
+          bestTiming: 'weekend',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Organizing storage shows care about shared spaces and makes life easier.'
+        },
+        {
+          title: 'Clean the kitchen',
+          description: `Do a thorough cleaning of the kitchen. A clean kitchen is comfortable and shows care about shared spaces.`,
+          detailedSteps: [
+            { step: 1, action: 'Wash dishes and put them away', estimatedMinutes: 15 },
+            { step: 2, action: 'Clean counters, sink, and stove', estimatedMinutes: 15 },
+            { step: 3, action: 'Maybe organize the fridge or pantry', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 40,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'A clean kitchen is comfortable and shows care about shared spaces.'
+        },
+        {
+          title: 'Take care of something they\'ve been procrastinating',
+          description: `Handle a task they\'ve been putting off. Taking initiative on something they\'ve been avoiding shows care.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of a task they\'ve mentioned needing to do', estimatedMinutes: 2 },
+            { step: 2, action: 'Handle it for them', estimatedMinutes: 30 },
+            { step: 3, action: 'Let them know it\'s done', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 33,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Taking initiative on something they\'ve been avoiding shows care and reduces stress.'
+        },
+        {
+          title: 'Organize a shared space',
+          description: `Tidy up a shared space like the living room or entryway. Organized shared spaces show care about your home together.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a shared space to organize', estimatedMinutes: 1 },
+            { step: 2, action: 'Tidy it up - put things away, organize, etc.', estimatedMinutes: 20 },
+            { step: 3, action: 'Maybe add a nice touch like flowers or candles', estimatedMinutes: 3 }
+          ],
+          timeEstimateMinutes: 24,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Organizing shared spaces shows care about your home together.'
+        },
+        {
+          title: 'Handle a repair or maintenance task',
+          description: `Take care of a small repair or maintenance task. Handling practical issues shows care and reduces stress.`,
+          detailedSteps: [
+            { step: 1, action: 'Identify a repair or maintenance task that needs doing', estimatedMinutes: 2 },
+            { step: 2, action: 'Handle it or arrange for someone to do it', estimatedMinutes: 30 },
+            { step: 3, action: 'Let them know it\'s done', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 33,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Handling repairs shows care and reduces stress about practical issues.'
+        },
+        {
+          title: 'Prepare their favorite breakfast',
+          description: `Make their favorite breakfast for them. Food is love in action, and breakfast starts the day right.`,
+          detailedSteps: [
+            { step: 1, action: 'Think of their favorite breakfast', estimatedMinutes: 2 },
+            { step: 2, action: 'Prepare it with care', estimatedMinutes: 15 },
+            { step: 3, action: 'Serve it to them or set it up nicely', estimatedMinutes: 3 }
+          ],
+          timeEstimateMinutes: 20,
+          effortLevel: 'low',
+          bestTiming: 'morning',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Preparing their favorite breakfast starts their day right and shows care.'
+        },
+        {
+          title: 'Take care of the pet if they have one',
+          description: `Handle pet care tasks like feeding, walking, or cleaning up. Taking care of their pets shows you care about what matters to them.`,
+          detailedSteps: [
+            { step: 1, action: 'Check what the pet needs', estimatedMinutes: 1 },
+            { step: 2, action: 'Take care of it - feed, walk, clean, etc.', estimatedMinutes: 20 },
+            { step: 3, action: 'Maybe send them a photo or update', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 22,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['acts'],
+          whySuggested: 'Taking care of their pets shows you care about what matters to them.'
         }
       ],
       quality_time: [
@@ -2091,6 +2891,244 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['quality_time'],
           whySuggested: 'Creating together builds connection and shared accomplishment.'
+        },
+        {
+          title: 'Have a deep conversation over drinks',
+          description: `Set aside time for a meaningful conversation over drinks. Deep conversations strengthen emotional intimacy.`,
+          detailedSteps: [
+            { step: 1, action: 'Suggest having drinks and a conversation', estimatedMinutes: 1 },
+            { step: 2, action: 'Get drinks for both of you', estimatedMinutes: 5 },
+            { step: 3, action: 'Sit together and have a meaningful conversation', tip: 'Put phones away and really listen', estimatedMinutes: 60 }
+          ],
+          timeEstimateMinutes: 66,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Deep conversations strengthen emotional intimacy and connection.'
+        },
+        {
+          title: 'Go to a bookstore and browse together',
+          description: `Browse a bookstore together and share recommendations. Sharing interests and discovering things together creates connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Go to a bookstore', estimatedMinutes: 10 },
+            { step: 2, action: 'Browse together, share recommendations', estimatedMinutes: 45 },
+            { step: 3, action: 'Maybe pick out books for each other', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 70,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time', 'gifts'],
+          whySuggested: 'Browsing books together creates shared interests and connection.'
+        },
+        {
+          title: 'Have a slow morning together',
+          description: `Spend a slow, relaxed morning together with no agenda. Simple, unhurried time strengthens connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Block out a morning with no plans', estimatedMinutes: 1 },
+            { step: 2, action: 'Enjoy slow time together - maybe coffee, breakfast, talking', estimatedMinutes: 120 },
+            { step: 3, action: 'Let the morning unfold naturally', tip: 'No agenda, just being together' }
+          ],
+          timeEstimateMinutes: 121,
+          effortLevel: 'low',
+          bestTiming: 'morning',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Slow, unhurried mornings create peaceful connection without pressure.'
+        },
+        {
+          title: 'Watch the sunset together',
+          description: `Find a spot to watch the sunset together. Beautiful moments shared create lasting memories.`,
+          detailedSteps: [
+            { step: 1, action: 'Find a spot with a good sunset view', estimatedMinutes: 10 },
+            { step: 2, action: 'Arrive before sunset', estimatedMinutes: 30 },
+            { step: 3, action: 'Watch the sunset together, talk, or just enjoy', estimatedMinutes: 30 }
+          ],
+          timeEstimateMinutes: 70,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Sharing beautiful moments like sunsets creates lasting memories.'
+        },
+        {
+          title: 'Go to a coffee shop and work side by side',
+          description: `Go to a coffee shop and work or study side by side. Being together even while doing separate activities creates connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Find a nice coffee shop', estimatedMinutes: 5 },
+            { step: 2, action: 'Get drinks and sit together', estimatedMinutes: 10 },
+            { step: 3, action: 'Work or study side by side', tip: 'Share moments, but do your own thing too', estimatedMinutes: 90 }
+          ],
+          timeEstimateMinutes: 105,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Being together while doing separate activities creates comfortable companionship.'
+        },
+        {
+          title: 'Have a conversation while cooking together',
+          description: `Cook together and have a meaningful conversation. Cooking side by side creates natural connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a recipe you\'ll both enjoy making', estimatedMinutes: 5 },
+            { step: 2, action: 'Cook together, dividing tasks', tip: 'Use this time to really talk and connect', estimatedMinutes: 60 },
+            { step: 3, action: 'Enjoy the meal you made together', estimatedMinutes: 30 }
+          ],
+          timeEstimateMinutes: 95,
+          effortLevel: 'moderate',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time', 'acts'],
+          whySuggested: 'Cooking together creates natural conversation and shared accomplishment.'
+        },
+        {
+          title: 'Go for a bike ride together',
+          description: `Take a bike ride together. Active quality time creates fun and connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Find a nice route for biking', estimatedMinutes: 5 },
+            { step: 2, action: 'Ride together at a comfortable pace', estimatedMinutes: 45 },
+            { step: 3, action: 'Maybe stop somewhere nice along the way', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 65,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Active quality time creates fun and connection through shared activity.'
+        },
+        {
+          title: 'Have a breakfast date at a diner or cafe',
+          description: `Go out for breakfast together at a diner or cafe. Morning dates are special and start the day right.`,
+          detailedSteps: [
+            { step: 1, action: 'Find a nice diner or cafe', estimatedMinutes: 5 },
+            { step: 2, action: 'Go out for breakfast together', tip: 'Put phones away and really talk', estimatedMinutes: 60 },
+            { step: 3, action: 'Take your time and enjoy each other\'s company', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 66,
+          effortLevel: 'low',
+          bestTiming: 'morning',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Breakfast dates start the day right and create special morning time together.'
+        },
+        {
+          title: 'Visit a new neighborhood or area together',
+          description: `Explore a new neighborhood or area together. Discovering new places creates shared adventure.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a neighborhood or area you haven\'t explored', estimatedMinutes: 5 },
+            { step: 2, action: 'Walk around and explore together', estimatedMinutes: 60 },
+            { step: 3, action: 'Maybe stop at a cafe or shop you discover', estimatedMinutes: 20 }
+          ],
+          timeEstimateMinutes: 85,
+          effortLevel: 'low',
+          bestTiming: 'afternoon',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Exploring new places together creates shared adventure and discovery.'
+        },
+        {
+          title: 'Have a game night at home',
+          description: `Play board games or card games together at home. Game nights create fun and friendly competition.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose games you\'ll both enjoy', estimatedMinutes: 3 },
+            { step: 2, action: 'Set up snacks and drinks', estimatedMinutes: 5 },
+            { step: 3, action: 'Play together, have fun, and enjoy the competition', estimatedMinutes: 90 }
+          ],
+          timeEstimateMinutes: 98,
+          effortLevel: 'low',
+          bestTiming: 'evening',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Game nights create fun and friendly competition together.'
+        },
+        {
+          title: 'Go to a local market or farmers market',
+          description: `Browse a farmers market or local market together. Exploring markets creates shared experiences and connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Find a farmers market or local market', estimatedMinutes: 5 },
+            { step: 2, action: 'Browse together, maybe pick up some things', estimatedMinutes: 50 },
+            { step: 3, action: 'Maybe grab coffee or food there', estimatedMinutes: 20 }
+          ],
+          timeEstimateMinutes: 75,
+          effortLevel: 'low',
+          bestTiming: 'morning',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Exploring markets together creates shared experiences and connection.'
+        },
+        {
+          title: 'Have a conversation in the car',
+          description: `Take a drive together just to talk. Car conversations create natural, focused time for connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Suggest going for a drive to talk', estimatedMinutes: 1 },
+            { step: 2, action: 'Drive together, maybe to a nice spot', estimatedMinutes: 20 },
+            { step: 3, action: 'Park somewhere and continue the conversation', tip: 'No distractions, just talking', estimatedMinutes: 60 }
+          ],
+          timeEstimateMinutes: 81,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Car conversations create natural, focused time for connection.'
+        },
+        {
+          title: 'Go to a local park and sit together',
+          description: `Find a nice park and just sit together. Simple time in nature creates peaceful connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Go to a nice park', estimatedMinutes: 10 },
+            { step: 2, action: 'Find a nice spot to sit', estimatedMinutes: 2 },
+            { step: 3, action: 'Sit together, talk, people-watch, or just enjoy quiet companionship', estimatedMinutes: 60 }
+          ],
+          timeEstimateMinutes: 72,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Simple time in nature creates peaceful connection and relaxation.'
+        },
+        {
+          title: 'Have a lunch date together',
+          description: `Go out for lunch together. Midday dates break up the day and create special time.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a place you\'ll both enjoy', estimatedMinutes: 5 },
+            { step: 2, action: 'Go out for lunch together', tip: 'Put phones away and really connect', estimatedMinutes: 60 },
+            { step: 3, action: 'Take your time and enjoy each other\'s company', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 66,
+          effortLevel: 'low',
+          bestTiming: 'afternoon',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Lunch dates break up the day and create special midday time together.'
+        },
+        {
+          title: 'Do a home workout together',
+          description: `Do a workout together at home. Exercising together creates shared accomplishment and energy.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose a workout you\'ll both enjoy', estimatedMinutes: 3 },
+            { step: 2, action: 'Do it together', estimatedMinutes: 30 },
+            { step: 3, action: 'Maybe stretch together afterward', estimatedMinutes: 10 }
+          ],
+          timeEstimateMinutes: 43,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Exercising together creates shared accomplishment and positive energy.'
+        },
+        {
+          title: 'Go window shopping together',
+          description: `Browse shops together without buying anything. Window shopping creates relaxed exploration and connection.`,
+          detailedSteps: [
+            { step: 1, action: 'Find an area with interesting shops', estimatedMinutes: 5 },
+            { step: 2, action: 'Browse together, share opinions, dream together', estimatedMinutes: 60 },
+            { step: 3, action: 'Maybe stop for coffee or ice cream', estimatedMinutes: 15 }
+          ],
+          timeEstimateMinutes: 80,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['quality_time'],
+          whySuggested: 'Window shopping creates relaxed exploration and connection without pressure.'
+        },
+        {
+          title: 'Have a conversation while gardening together',
+          description: `Garden or do yard work together while talking. Working side by side creates natural conversation.`,
+          detailedSteps: [
+            { step: 1, action: 'Choose gardening or yard work tasks', estimatedMinutes: 3 },
+            { step: 2, action: 'Work together while talking', tip: 'Use this time to really connect', estimatedMinutes: 60 },
+            { step: 3, action: 'Maybe take breaks to appreciate what you\'ve done', estimatedMinutes: 5 }
+          ],
+          timeEstimateMinutes: 68,
+          effortLevel: 'moderate',
+          bestTiming: 'afternoon',
+          loveLanguageAlignment: ['quality_time', 'acts'],
+          whySuggested: 'Working side by side creates natural conversation and shared accomplishment.'
         }
       ],
       thoughtful_gifts: [
