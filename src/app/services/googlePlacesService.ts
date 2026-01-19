@@ -211,6 +211,49 @@ export const googlePlacesService = {
   },
 
   /**
+   * Get detailed information for a specific place
+   * Fetches phone, website, opening hours, and other details via API proxy
+   */
+  async getPlaceDetails(placeId: string): Promise<Partial<Place> | null> {
+    try {
+      if (!USE_GOOGLE_API) {
+        console.warn('⚠️ Google Places API key not configured');
+        return null;
+      }
+
+      // Use our Vercel serverless function proxy to avoid CORS issues
+      const proxyUrl = new URL('/api/places-details', window.location.origin);
+      proxyUrl.searchParams.append('place_id', placeId);
+
+      const response = await fetch(proxyUrl.toString());
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`API proxy error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status !== 'OK' || !data.result) {
+        console.error('Failed to fetch place details:', data.status || 'Unknown error');
+        return null;
+      }
+
+      const result = data.result;
+      return {
+        formattedPhoneNumber: result.formatted_phone_number,
+        phoneNumber: result.international_phone_number || result.formatted_phone_number,
+        website: result.website,
+        openingHours: result.opening_hours?.weekday_text,
+        googleMapsUrl: result.url || result.website,
+      };
+    } catch (error) {
+      console.error('Error fetching place details:', error);
+      return null;
+    }
+  },
+
+  /**
    * Get mock/beta places for testing without API key
    */
   getMockPlaces(location: LocationCoordinates, category: PlaceCategory, limit: number): Place[] {
