@@ -1545,7 +1545,7 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           whySuggested: 'Quick physical touch relieves stress and shows you want to help them feel better.'
         },
         {
-          title: 'Send them a "you're doing great" message',
+          title: 'Send them a "you\'re doing great" message',
           description: `Let them know you think they're doing great at something. Encouragement builds confidence.`,
           detailedSteps: [
             { step: 1, action: 'Think of something they\'re doing well', estimatedMinutes: 1 },
