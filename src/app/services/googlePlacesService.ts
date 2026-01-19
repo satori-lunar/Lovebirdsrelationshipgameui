@@ -252,11 +252,18 @@ export const googlePlacesService = {
         }
       }
 
-      // Get photo URL if available
+      // Get photo URLs (multiple photos)
       let photoUrl: string | undefined;
+      let photos: string[] = [];
       if (result.photos && result.photos.length > 0) {
-        photoUrl = result.photos[0].getUrl({ maxWidth: 400 });
+        photoUrl = result.photos[0].getUrl({ maxWidth: 800 });
+        photos = result.photos.slice(0, 5).map(photo => photo.getUrl({ maxWidth: 800 }));
       }
+
+      // Generate Google Maps URL for directions
+      const googleMapsUrl = result.place_id
+        ? `https://www.google.com/maps/place/?q=place_id:${result.place_id}`
+        : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
       return {
         id: result.place_id || `place-${Math.random()}`,
@@ -268,13 +275,72 @@ export const googlePlacesService = {
         longitude: lng,
         rating: result.rating,
         priceLevel,
-        description: cuisineType 
+        description: cuisineType
           ? `${cuisineType} cuisine • ${result.types?.filter((t: string) => !t.toLowerCase().includes(cuisineType.toLowerCase()))?.[0] || 'Restaurant'}`
           : result.types?.slice(0, 2).map((t: string) => t.replace(/_/g, ' ')).join(' • ') || 'Place',
         isOpen: result.opening_hours?.open_now,
         photoUrl,
+        imageUrl: photoUrl, // Keep for backwards compatibility
+        photos,
+        userRatingsTotal: result.user_ratings_total,
+        businessStatus: result.business_status,
+        googleMapsUrl,
       };
     }).filter((place): place is Place => place !== null && place.name !== 'Unknown');
+  },
+
+  /**
+   * Get detailed information for a specific place
+   * Fetches phone, website, opening hours, and other details
+   */
+  async getPlaceDetails(placeId: string): Promise<Partial<Place> | null> {
+    try {
+      if (!USE_GOOGLE_API) {
+        console.warn('⚠️ Google Places API key not configured');
+        return null;
+      }
+
+      await loadGoogleMapsScript();
+
+      const mapDiv = document.createElement('div');
+      const map = new google.maps.Map(mapDiv);
+      const service = new google.maps.places.PlacesService(map);
+
+      const request: google.maps.places.PlaceDetailsRequest = {
+        placeId: placeId,
+        fields: [
+          'name',
+          'formatted_phone_number',
+          'international_phone_number',
+          'website',
+          'opening_hours',
+          'url', // Google Maps URL
+          'photos',
+          'reviews'
+        ],
+      };
+
+      return new Promise((resolve) => {
+        service.getDetails(request, (place, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+            const details: Partial<Place> = {
+              formattedPhoneNumber: place.formatted_phone_number,
+              phoneNumber: place.international_phone_number || place.formatted_phone_number,
+              website: place.website,
+              openingHours: place.opening_hours?.weekday_text,
+              googleMapsUrl: place.url,
+            };
+            resolve(details);
+          } else {
+            console.error('Failed to fetch place details:', status);
+            resolve(null);
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error fetching place details:', error);
+      return null;
+    }
   },
 
   /**

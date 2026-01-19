@@ -2,6 +2,7 @@ import React from 'react';
 import { MapPin, Navigation, Heart, Star, Clock } from 'lucide-react';
 import { useNearbyPlaces } from '../hooks/useNearbyPlaces';
 import type { Place } from '../services/nearbyPlacesService';
+import { EnhancedVenueCard } from './EnhancedVenueCard';
 
 interface NearbyPlacesProps {
   onBack: () => void;
@@ -120,12 +121,11 @@ export function NearbyPlaces({ onBack }: NearbyPlacesProps) {
 
         {/* Places List */}
         {!isLoadingPlaces && nearbyPlaces.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-5">
             {nearbyPlaces.map((place) => (
-              <PlaceCard
+              <EnhancedVenueCard
                 key={place.id}
                 place={place}
-                formatDistance={formatDistance}
               />
             ))}
           </div>
