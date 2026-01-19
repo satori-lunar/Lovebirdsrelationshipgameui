@@ -328,12 +328,6 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
         return { place, analysis };
       });
 
-      // Analyze all venues
-      const analyzedVenues = uniquePlaces.map(place => ({
-        place,
-        analysis: analyzeVenueTypes(place),
-      }));
-
       // Group venues by what they actually are
       const venuesByType = {
         wineBars: analyzedVenues.filter(v => v.analysis.isWineBar),
