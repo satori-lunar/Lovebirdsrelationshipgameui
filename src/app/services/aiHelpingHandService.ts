@@ -3383,6 +3383,258 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
           bestTiming: 'any',
           loveLanguageAlignment: ['gifts', 'acts'],
           whySuggested: 'Practical gifts that solve problems show you listen and care.'
+        },
+        {
+          title: 'Get them a candle with a scent they love',
+          description: `Pick out a candle with a scent they love or would enjoy. Scented candles create ambiance and show thoughtfulness.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about scents they like or enjoy', estimatedMinutes: 2 },
+            { step: 2, action: 'Find a candle with that scent', estimatedMinutes: 15 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 18,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Scented candles show thoughtfulness and create ambiance they\'ll enjoy.'
+        },
+        {
+          title: 'Get them a book they\'d enjoy',
+          description: `Pick out a book you think they\'d enjoy reading. Books show you know their interests and want to share experiences.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about books or genres they like', estimatedMinutes: 2 },
+            { step: 2, action: 'Find a book you think they\'d enjoy', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them, maybe with a note inside', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 24,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts', 'quality_time'],
+          whySuggested: 'Books show you know their interests and want to share experiences.'
+        },
+        {
+          title: 'Get them a coffee or tea they love',
+          description: `Pick up their favorite coffee or tea. Simple gifts show you notice what they enjoy.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about their favorite coffee or tea', estimatedMinutes: 1 },
+            { step: 2, action: 'Pick it up at a store', estimatedMinutes: 15 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 17,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Simple gifts like favorite drinks show you notice what they enjoy.'
+        },
+        {
+          title: 'Get them something cozy',
+          description: `Pick out something cozy like socks, a blanket, or a sweater. Cozy items show care for their comfort.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about cozy items they might need or enjoy', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something cozy that suits them', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 23,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Cozy items show care for their comfort and wellbeing.'
+        },
+        {
+          title: 'Get them a small item from a trip or place',
+          description: `If you went somewhere, bring back a small item for them. Souvenirs show you think of them when apart.`,
+          detailedSteps: [
+            { step: 1, action: 'While on a trip or at a place, look for something they\'d like', estimatedMinutes: 5 },
+            { step: 2, action: 'Get a small souvenir for them', estimatedMinutes: 10 },
+            { step: 3, action: 'Give it to them when you see them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 16,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Souvenirs show you think of them when you\'re apart and want to share experiences.'
+        },
+        {
+          title: 'Get them a magazine or subscription they\'d enjoy',
+          description: `Pick up a magazine they\'d enjoy or get them a subscription. Magazines show you know their interests.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about magazines or topics they enjoy', estimatedMinutes: 2 },
+            { step: 2, action: 'Find a magazine they\'d like', estimatedMinutes: 15 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 18,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Magazines show you know their interests and want to share them.'
+        },
+        {
+          title: 'Get them a small item for their hobby',
+          description: `Pick out something small related to their hobby. Gifts related to hobbies show you support their interests.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about their hobby and what they might need', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something small related to that hobby', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 23,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Gifts related to hobbies show you support their interests and passions.'
+        },
+        {
+          title: 'Get them a small item that matches their interests',
+          description: `Pick out something small that relates to their interests. Gifts related to interests show you pay attention.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about their interests', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something small that matches', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 23,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Gifts related to interests show you pay attention to what matters to them.'
+        },
+        {
+          title: 'Get them a small item for their workspace',
+          description: `Pick out something small for their workspace or desk. Workspace items show care for their productivity.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about something that would improve their workspace', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something small for their desk or workspace', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 23,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts', 'acts'],
+          whySuggested: 'Workspace items show care for their productivity and comfort.'
+        },
+        {
+          title: 'Get them a small item from their favorite store',
+          description: `Pick out something small from their favorite store. Shopping at their favorite place shows you know their taste.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about their favorite store', estimatedMinutes: 1 },
+            { step: 2, action: 'Go there and find something small they\'d like', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 22,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Shopping at their favorite store shows you know their taste and preferences.'
+        },
+        {
+          title: 'Get them a small item that\'s nostalgic',
+          description: `Pick out something that reminds them of a memory or time you share. Nostalgic gifts show you cherish memories.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about a shared memory or time', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something that relates to that memory', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them and explain the connection', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 24,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts', 'words'],
+          whySuggested: 'Nostalgic gifts show you cherish memories and shared experiences.'
+        },
+        {
+          title: 'Get them a small item that\'s practical',
+          description: `Pick out something practical they need or would use. Practical gifts show you notice their needs.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about practical items they might need', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something practical they\'d use', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 23,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts', 'acts'],
+          whySuggested: 'Practical gifts show you notice their needs and want to help.'
+        },
+        {
+          title: 'Get them a small item that\'s funny',
+          description: `Pick out something funny or silly that fits your inside jokes. Funny gifts show shared humor and joy.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about your inside jokes or funny moments', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something funny that relates', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them and enjoy the laugh together', estimatedMinutes: 2 }
+          ],
+          timeEstimateMinutes: 24,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts', 'quality_time'],
+          whySuggested: 'Funny gifts show shared humor and create joy together.'
+        },
+        {
+          title: 'Get them a small item that\'s thoughtful',
+          description: `Pick out something thoughtful that shows you know them. Thoughtful gifts show deep care and attention.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about what would be meaningful to them', estimatedMinutes: 3 },
+            { step: 2, action: 'Find something thoughtful that shows you know them', estimatedMinutes: 25 },
+            { step: 3, action: 'Give it to them with a note explaining why', estimatedMinutes: 3 }
+          ],
+          timeEstimateMinutes: 31,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts', 'words'],
+          whySuggested: 'Thoughtful gifts show deep care and attention to who they are.'
+        },
+        {
+          title: 'Get them a small item that\'s personalized',
+          description: `Pick out or create something personalized for them. Personalized gifts show extra thought and care.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about how to personalize something', estimatedMinutes: 3 },
+            { step: 2, action: 'Find or create something personalized', estimatedMinutes: 30 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 34,
+          effortLevel: 'moderate',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Personalized gifts show extra thought and care about who they are.'
+        },
+        {
+          title: 'Get them a small item that\'s seasonal',
+          description: `Pick out something seasonal that fits the time of year. Seasonal gifts show you notice and celebrate moments.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about what\'s seasonal right now', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something seasonal they\'d enjoy', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 23,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Seasonal gifts show you notice and celebrate the moment.'
+        },
+        {
+          title: 'Get them a small item that\'s eco-friendly',
+          description: `Pick out something eco-friendly if that matters to them. Eco-friendly gifts show you respect their values.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about eco-friendly items they might appreciate', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something eco-friendly', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 23,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Eco-friendly gifts show you respect their values and care about what matters to them.'
+        },
+        {
+          title: 'Get them a small item that\'s from a local business',
+          description: `Pick out something from a local business they support or would appreciate. Supporting local shows care for their community.`,
+          detailedSteps: [
+            { step: 1, action: 'Think about local businesses they support or would appreciate', estimatedMinutes: 2 },
+            { step: 2, action: 'Find something from a local business', estimatedMinutes: 20 },
+            { step: 3, action: 'Give it to them', estimatedMinutes: 1 }
+          ],
+          timeEstimateMinutes: 23,
+          effortLevel: 'low',
+          bestTiming: 'any',
+          loveLanguageAlignment: ['gifts'],
+          whySuggested: 'Supporting local businesses shows care for their community and values.'
         }
       ],
       physical_touch: [
