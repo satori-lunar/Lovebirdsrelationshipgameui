@@ -156,9 +156,13 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       const searchRadius = 5; // Reduced from 15 to focus on nearby venues
       const maxDistanceMiles = 10; // Maximum distance to consider for date suggestions
 
+      // Fetch venues per category with detailed logging
+      const venuesByCategoryBeforeFilter: Record<string, Place[]> = {};
       for (const category of allCategories) {
-        const places = await placesService.findNearbyPlaces(targetLocation, searchRadius, category, 10);
+        const places = await placesService.findNearbyPlaces(targetLocation, searchRadius, category, 15); // Increased from 10 to 15 for more diversity
         allPlaces.push(...places);
+        venuesByCategoryBeforeFilter[category] = places;
+        console.log(`  📍 Fetched ${places.length} ${category} venues`);
       }
 
       // Filter to only include venues within reasonable distance
@@ -166,7 +170,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         .filter(place => place.distance <= maxDistanceMiles) // Only venues within 10 miles
         .sort((a, b) => a.distance - b.distance); // Sort by distance (closest first)
 
-      console.log(`📍 Found ${uniquePlaces.length} venues within ${maxDistanceMiles} miles`);
+      console.log(`📍 Found ${uniquePlaces.length} unique venues within ${maxDistanceMiles} miles (from ${allPlaces.length} total fetched)`);
       
       // Group venues by category to see what's actually available
       const venuesByCategory = uniquePlaces.reduce((acc, place) => {
@@ -177,15 +181,63 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         return acc;
       }, {} as Record<string, Place[]>);
       
+      // Log detailed venue breakdown
       console.log('🏪 Available venue categories:', Object.keys(venuesByCategory).map(cat => 
         `${cat} (${venuesByCategory[cat]?.length || 0})`
       ).join(', '));
+      
+      // Log sample venues from each category for debugging
+      Object.keys(venuesByCategory).forEach(cat => {
+        const venues = venuesByCategory[cat];
+        const sampleNames = venues.slice(0, 3).map(v => v.name).join(', ');
+        console.log(`  ${cat}: ${sampleNames}${venues.length > 3 ? '...' : ''}`);
+      });
 
       // Step 3: Filter dates based on what venues are actually available nearby
       // Only include dates that match available venue categories
       const availableCategorySet = new Set(uniquePlaces.map(p => p.category));
       
       const venueDates = dateSuggestionTemplates.filter(date => {
+        const title = (date.title || '').toLowerCase();
+        const desc = (date.description || '').toLowerCase();
+        
+        // Exclude dates that require specific venue types we're not fetching
+        // Spa dates need spas (not in our categories)
+        if (title.includes('spa') || desc.includes('spa')) {
+          // Only include if we have spa-related venues (check in venue names)
+          const hasSpaVenue = uniquePlaces.some(p => {
+            const name = (p.name || '').toLowerCase();
+            return name.includes('spa') || name.includes('massage') || name.includes('wellness');
+          });
+          if (!hasSpaVenue) {
+            return false; // Don't include spa dates without spa venues
+          }
+        }
+        
+        // Resort/daycation dates need resorts/hotels
+        if (title.includes('resort') || title.includes('day cation') || 
+            desc.includes('resort') || desc.includes('day cation')) {
+          const hasResortVenue = uniquePlaces.some(p => {
+            const name = (p.name || '').toLowerCase();
+            return name.includes('resort') || name.includes('hotel');
+          });
+          if (!hasResortVenue) {
+            return false; // Don't include resort dates without resort venues
+          }
+        }
+        
+        // Rafting/adventure dates need activity/outdoor venues, not restaurants
+        if (title.includes('rafting') || (title.includes('adventure') && desc.includes('rafting'))) {
+          const hasActivityVenue = uniquePlaces.some(p => {
+            return p.category === 'activity' || 
+                   (p.name || '').toLowerCase().includes('rafting') ||
+                   (p.description || '').toLowerCase().includes('rafting');
+          });
+          if (!hasActivityVenue) {
+            return false; // Don't include rafting dates without activity venues
+          }
+        }
+        
         // Include dates that can use actual venues (outdoor, both, or indoor if museums/venues are available)
         const canUseIndoor = date.environment === 'indoor' && 
                              (availableCategorySet.has('museum') || availableCategorySet.has('cafe') || availableCategorySet.has('restaurant'));
@@ -272,6 +324,27 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 return isWineBar || isBrewery || placeCategory === 'bar';
               }
               
+              // For cocktail/bar dates - ONLY match bars, NOT cafes
+              if (dateTitle.includes('cocktail') || dateTitle.includes('bar') || 
+                  dateTitle.includes('drinks') || dateTitle.includes('pub') ||
+                  dateDesc.includes('cocktail') || dateDesc.includes('bar') ||
+                  dateDesc.includes('drinks') || dateDesc.includes('pub')) {
+                // REJECT cafes for bar/cocktail dates
+                if (placeCategory === 'cafe') {
+                  return false;
+                }
+                
+                // Check if venue is actually a bar/cocktail bar
+                const isCocktailBar = placeName.includes('cocktail') || placeDesc.includes('cocktail');
+                const isWineBar = placeName.includes('wine') || placeName.includes('winery') ||
+                                 placeDesc.includes('wine') || placeDesc.includes('winery');
+                const isBrewery = placeName.includes('brewery') || placeName.includes('brew') ||
+                                 placeDesc.includes('brewery') || placeDesc.includes('brew');
+                
+                // Match bars, cocktail bars, wine bars, or breweries
+                return placeCategory === 'bar' || isCocktailBar || isWineBar || isBrewery;
+              }
+              
               // For coffee/cafe dates - ONLY match cafes, NOT bars or wine bars
               if (dateTitle.includes('coffee') || dateTitle.includes('cafe') || 
                   dateDesc.includes('coffee') || dateDesc.includes('cafe')) {
@@ -287,6 +360,122 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 return placeCategory === 'cafe';
               }
               
+              // For spa/wellness dates - ONLY match spa/massage/wellness venues, NOT cafes/restaurants
+              if (dateTitle.includes('spa') || dateDesc.includes('spa') ||
+                  dateTitle.includes('massage') || dateDesc.includes('massage') ||
+                  dateTitle.includes('wellness') || dateDesc.includes('wellness')) {
+                // Check if venue is actually a spa/wellness venue
+                const isSpaVenue = placeName.includes('spa') || placeName.includes('massage') ||
+                                  placeName.includes('wellness') || placeDesc.includes('spa') ||
+                                  placeDesc.includes('massage') || placeDesc.includes('wellness');
+                
+                // REJECT cafes, restaurants, bars for spa dates
+                if ((placeCategory === 'cafe' || placeCategory === 'restaurant' || placeCategory === 'bar') &&
+                    !isSpaVenue) {
+                  return false;
+                }
+                
+                // Only match if it's actually a spa/wellness venue
+                return isSpaVenue;
+              }
+              
+              // For resort/hotel dates - ONLY match resort/hotel venues, NOT cafes/restaurants
+              if (dateTitle.includes('resort') || dateTitle.includes('day cation') ||
+                  dateDesc.includes('resort') || dateDesc.includes('day cation')) {
+                // Check if venue is actually a resort/hotel
+                const isResortVenue = placeName.includes('resort') || placeName.includes('hotel') ||
+                                     placeDesc.includes('resort') || placeDesc.includes('hotel');
+                
+                // REJECT cafes, restaurants for resort dates
+                if ((placeCategory === 'cafe' || placeCategory === 'restaurant') && !isResortVenue) {
+                  return false;
+                }
+                
+                // Only match if it's actually a resort/hotel
+                return isResortVenue;
+              }
+              
+              // For museum dates - ONLY match museum category venues
+              if (dateTitle.includes('museum') || dateTitle.includes('gallery') ||
+                  dateTitle.includes('exhibit') || dateDesc.includes('museum') ||
+                  dateDesc.includes('gallery') || dateDesc.includes('exhibit')) {
+                // Only match museum category
+                if (placeCategory === 'museum') {
+                  return true;
+                }
+                // REJECT cafes, restaurants, bars for museum dates
+                if (placeCategory === 'cafe' || placeCategory === 'restaurant' || placeCategory === 'bar') {
+                  return false;
+                }
+                // Allow if venue name/description indicates it's a museum/gallery
+                return placeName.includes('museum') || placeName.includes('gallery') ||
+                       placeDesc.includes('museum') || placeDesc.includes('gallery');
+              }
+              
+              // For theater/movie dates - ONLY match theater category venues
+              if (dateTitle.includes('movie') || dateTitle.includes('cinema') ||
+                  dateTitle.includes('theater') || dateTitle.includes('show') ||
+                  dateTitle.includes('concert') || dateDesc.includes('movie') ||
+                  dateDesc.includes('cinema') || dateDesc.includes('theater')) {
+                // Only match theater category
+                if (placeCategory === 'theater') {
+                  return true;
+                }
+                // REJECT cafes, restaurants, bars for theater dates
+                if (placeCategory === 'cafe' || placeCategory === 'restaurant' || placeCategory === 'bar') {
+                  return false;
+                }
+                // Allow if venue name/description indicates it's a theater/cinema
+                return placeName.includes('theater') || placeName.includes('cinema') ||
+                       placeName.includes('movie') || placeDesc.includes('theater') ||
+                       placeDesc.includes('cinema') || placeDesc.includes('movie');
+              }
+              
+              // For park/picnic dates - ONLY match park category venues
+              if (dateTitle.includes('picnic') || dateTitle.includes('park') ||
+                  dateTitle.includes('hike') || dateDesc.includes('picnic') ||
+                  dateDesc.includes('park')) {
+                // Only match park category
+                if (placeCategory === 'park') {
+                  return true;
+                }
+                // REJECT cafes, restaurants, bars for park dates
+                if (placeCategory === 'cafe' || placeCategory === 'restaurant' || placeCategory === 'bar') {
+                  return false;
+                }
+                // Allow if venue name/description indicates it's a park
+                return placeName.includes('park') || placeName.includes('garden') ||
+                       placeDesc.includes('park') || placeDesc.includes('garden');
+              }
+              
+              // For activity dates - ONLY match activity category or activity-related venues
+              if (dateTitle.includes('bowling') || dateTitle.includes('arcade') ||
+                  dateTitle.includes('activity') || dateTitle.includes('rafting') ||
+                  dateTitle.includes('adventure') || dateDesc.includes('bowling') ||
+                  dateDesc.includes('arcade') || dateDesc.includes('activity') ||
+                  dateDesc.includes('rafting') || dateDesc.includes('adventure')) {
+                // Only match activity category
+                if (placeCategory === 'activity') {
+                  return true;
+                }
+                // Check if venue name/description indicates it's an activity venue
+                const isActivityVenue = placeName.includes('bowling') || placeName.includes('arcade') ||
+                                       placeName.includes('rafting') || placeName.includes('adventure') ||
+                                       placeDesc.includes('bowling') || placeDesc.includes('arcade') ||
+                                       placeDesc.includes('rafting') || placeDesc.includes('adventure');
+                
+                if (isActivityVenue) {
+                  return true;
+                }
+                
+                // REJECT cafes, restaurants for activity dates
+                if (placeCategory === 'cafe' || placeCategory === 'restaurant') {
+                  return false;
+                }
+                
+                return false;
+              }
+              
               // For restaurant dates, prefer restaurants
               if (primaryVenue === 'restaurant') {
                 // Prefer restaurants, but allow restaurant-bars
@@ -297,9 +486,104 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 return false;
               }
               
-              // Default: match by category
-              return (primaryVenue && placeCategory === primaryVenue) ||
-                     dateCategories.includes(placeCategory as PlaceCategory);
+              // For bar dates (if primaryVenue is 'bar'), REJECT cafes
+              if (primaryVenue === 'bar') {
+                // REJECT cafes - even if Google mis-categorized it
+                if (placeCategory === 'cafe' || placeName.includes('cafe') || placeName.includes('coffee') ||
+                    placeDesc.includes('cafe') || placeDesc.includes('coffee')) {
+                  return false; // Never match cafes for bar dates
+                }
+                return placeCategory === 'bar';
+              }
+              
+              // Default: match by category, but add comprehensive safety checks
+              // Reject obvious mismatches based on date type keywords
+              
+              // If date needs bars, reject cafes
+              if (dateCategories.includes('bar') && (placeCategory === 'cafe' || 
+                  placeName.includes('cafe') || placeName.includes('coffee'))) {
+                return false;
+              }
+              
+              // Reject cafes for dates that clearly need other venue types
+              if (placeCategory === 'cafe' && (
+                  dateTitle.includes('spa') || dateTitle.includes('massage') ||
+                  dateTitle.includes('resort') || dateTitle.includes('hotel') ||
+                  dateTitle.includes('museum') || dateTitle.includes('theater') ||
+                  dateTitle.includes('park') || dateTitle.includes('activity') ||
+                  dateDesc.includes('spa') || dateDesc.includes('resort') ||
+                  dateDesc.includes('museum') || dateDesc.includes('theater'))) {
+                return false; // Don't match cafes for spa/resort/museum/theater/park/activity dates
+              }
+              
+              // Reject restaurants for dates that need other venue types
+              if (placeCategory === 'restaurant' && (
+                  dateTitle.includes('spa') || dateTitle.includes('museum') ||
+                  dateTitle.includes('theater') || dateTitle.includes('park') ||
+                  dateTitle.includes('activity') || dateTitle.includes('rafting') ||
+                  dateDesc.includes('spa') || dateDesc.includes('museum') ||
+                  dateDesc.includes('theater') || dateDesc.includes('park') ||
+                  dateDesc.includes('activity'))) {
+                // Unless the restaurant is also a spa/museum/etc (check name)
+                const isSpecialRestaurant = placeName.includes('spa') || placeName.includes('museum') ||
+                                           placeName.includes('theater') || placeName.includes('resort');
+                if (!isSpecialRestaurant) {
+                  return false; // Don't match regular restaurants for spa/museum/theater/park/activity dates
+                }
+              }
+              
+              // If primary venue exists, check if it matches
+              if (primaryVenue) {
+                if (placeCategory === primaryVenue) {
+                  return true;
+                }
+                // If primary venue doesn't match category, check venue name/description
+                if (primaryVenue === 'museum' && (placeName.includes('museum') || placeDesc.includes('museum'))) {
+                  return true;
+                }
+                if (primaryVenue === 'theater' && (placeName.includes('theater') || placeName.includes('cinema') ||
+                    placeDesc.includes('theater') || placeDesc.includes('cinema'))) {
+                  return true;
+                }
+                if (primaryVenue === 'park' && (placeName.includes('park') || placeDesc.includes('park'))) {
+                  return true;
+                }
+                if (primaryVenue === 'activity' && (placeCategory === 'activity' ||
+                    placeName.includes('activity') || placeDesc.includes('activity'))) {
+                  return true;
+                }
+              }
+              
+              // Check if venue category matches date categories
+              if (dateCategories.includes(placeCategory as PlaceCategory)) {
+                // Additional validation: check venue name/description for special date types
+                if ((dateTitle.includes('spa') || dateDesc.includes('spa')) &&
+                    !placeName.includes('spa') && !placeDesc.includes('spa') &&
+                    !placeName.includes('massage') && !placeDesc.includes('massage')) {
+                  return false; // Spa dates need spa keywords in venue
+                }
+                if ((dateTitle.includes('museum') || dateDesc.includes('museum')) &&
+                    placeCategory !== 'museum' &&
+                    !placeName.includes('museum') && !placeDesc.includes('museum')) {
+                  return false; // Museum dates need museum venues
+                }
+                if ((dateTitle.includes('theater') || dateTitle.includes('movie') ||
+                     dateDesc.includes('theater') || dateDesc.includes('movie')) &&
+                    placeCategory !== 'theater' &&
+                    !placeName.includes('theater') && !placeName.includes('cinema') &&
+                    !placeDesc.includes('theater') && !placeDesc.includes('cinema')) {
+                  return false; // Theater dates need theater venues
+                }
+                return true;
+              }
+              
+              // Log when dates fall through to default matching without a match
+              if (dateTitle.includes('spa') || dateTitle.includes('resort') ||
+                  dateTitle.includes('museum') || dateTitle.includes('theater')) {
+                console.warn(`⚠️ Date "${date.title}" fell through to default matching without explicit venue match`);
+              }
+              
+              return false; // No match found
             })
             // Sort by distance first, but also consider rating for popular destinations
             .sort((a, b) => {
@@ -316,24 +600,121 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 return b.rating - a.rating;
               }
               
-              // Otherwise, sort by distance
-              return a.distance - b.distance;
-            })
-            .slice(0, 3); // Get top 3 venues per date
+            // Otherwise, sort by distance
+            return a.distance - b.distance;
+          });
+          
+          // Ensure diversity: Get top venues but ensure we have different venue types if possible
+          const selectedVenues: Place[] = [];
+          const usedVenueCategories = new Set<string>();
+          
+          // First pass: Try to get diverse venue categories
+          for (const venue of relevantVenues) {
+            if (selectedVenues.length >= 3) break;
+            
+            if (selectedVenues.length === 0) {
+              // Always include the first (closest/best) venue
+              selectedVenues.push(venue);
+              usedVenueCategories.add(venue.category);
+            } else if (!usedVenueCategories.has(venue.category)) {
+              // Prefer venues from different categories for diversity
+              selectedVenues.push(venue);
+              usedVenueCategories.add(venue.category);
+            } else if (selectedVenues.length < 3) {
+              // If we need more venues and can't get diversity, include best remaining
+              selectedVenues.push(venue);
+            }
+          }
+          
+          // If we don't have 3 venues yet, fill with closest remaining
+          while (selectedVenues.length < 3 && selectedVenues.length < relevantVenues.length) {
+            const remaining = relevantVenues.filter(v => !selectedVenues.includes(v));
+            if (remaining.length > 0) {
+              selectedVenues.push(remaining[0]);
+            } else {
+              break;
+            }
+          }
+          
+          const finalVenues = selectedVenues; // Use diverse venues, not just closest 3
+
+          // Log venue matching for debugging
+          if (finalVenues.length > 0) {
+            console.log(`✅ Matched "${date.title}" with ${finalVenues.length} venues: ${finalVenues.map(v => v.name).join(', ')}`);
+          } else {
+            console.warn(`❌ No venues matched for "${date.title}" (primaryVenue: ${primaryVenue}, dateCategories: ${dateCategories.join(', ')})`);
+          }
 
           return {
             date,
-            venues: relevantVenues,
+            venues: finalVenues,
             matchScore: scored.score,
             matchReasons: scored.matchReasons,
-            hasNearbyVenues: relevantVenues.length > 0,
-            closestVenueDistance: relevantVenues[0]?.distance || Infinity,
+            hasNearbyVenues: finalVenues.length > 0,
+            closestVenueDistance: finalVenues[0]?.distance || Infinity,
             primaryVenueCategory: primaryVenue,
             dateStyle: date.dateStyle,
           };
         })
         // Only include dates that have actual venues nearby
-        .filter(option => option.hasNearbyVenues)
+        .filter(option => {
+          // Must have venues
+          if (!option.hasNearbyVenues) {
+            return false;
+          }
+          
+          // Additional validation: Check if venues actually match the date type
+          const dateTitle = (option.date.title || '').toLowerCase();
+          const dateDesc = (option.date.description || '').toLowerCase();
+          const venues = option.venues;
+          
+          // For spa dates - must have spa-related venues, not cafes/restaurants
+          if (dateTitle.includes('spa') || dateDesc.includes('spa')) {
+            const hasSpaVenue = venues.some(v => {
+              const name = (v.name || '').toLowerCase();
+              const desc = (v.description || '').toLowerCase();
+              return name.includes('spa') || desc.includes('spa') || 
+                     name.includes('massage') || desc.includes('massage') ||
+                     name.includes('wellness') || desc.includes('wellness');
+            });
+            if (!hasSpaVenue) {
+              return false; // Don't match spa dates to cafes/restaurants
+            }
+          }
+          
+          // For resort/daycation dates - must have resort-related venues
+          if (dateTitle.includes('resort') || dateTitle.includes('day cation') || 
+              dateDesc.includes('resort') || dateDesc.includes('day cation')) {
+            const hasResortVenue = venues.some(v => {
+              const name = (v.name || '').toLowerCase();
+              const desc = (v.description || '').toLowerCase();
+              return name.includes('resort') || desc.includes('resort') ||
+                     name.includes('hotel') || desc.includes('hotel');
+            });
+            if (!hasResortVenue) {
+              return false; // Don't match resort dates to cafes/restaurants
+            }
+          }
+          
+          // For rafting/adventure dates - must have activity-related venues, not restaurants
+          if (dateTitle.includes('rafting') || dateTitle.includes('adventure') ||
+              dateDesc.includes('rafting') || dateDesc.includes('rapids')) {
+            const hasActivityVenue = venues.some(v => {
+              const name = (v.name || '').toLowerCase();
+              const desc = (v.description || '').toLowerCase();
+              const category = v.category;
+              return category === 'activity' ||
+                     name.includes('rafting') || desc.includes('rafting') ||
+                     name.includes('adventure') || desc.includes('adventure') ||
+                     name.includes('outdoor') || desc.includes('outdoor');
+            });
+            if (!hasActivityVenue) {
+              return false; // Don't match adventure dates to restaurants/cafes
+            }
+          }
+          
+          return true;
+        })
         // Sort by match score first (highest scores at top)
         .sort((a, b) => b.matchScore - a.matchScore);
 
