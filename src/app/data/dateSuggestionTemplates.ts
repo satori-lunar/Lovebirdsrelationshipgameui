@@ -43,6 +43,10 @@ export interface DateTemplate {
   growthAreas?: string[];
   travelAspirations?: string[];
   insideJokes?: string[];
+  // Metadata for enhanced matching
+  foodTypes?: string[]; // e.g., ['Italian', 'Asian', 'Mexican']
+  activityTypes?: string[]; // e.g., ['outdoor', 'cultural', 'social']
+  interestCategories?: string[]; // e.g., ['art', 'music', 'nature', 'food']
 }
 
 export const dateSuggestionTemplates: DateTemplate[] = [

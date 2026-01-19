@@ -71,7 +71,9 @@ export const googlePlacesService = {
     if (USE_GOOGLE_API) {
       return this.findNearbyPlacesWithGoogle(location, radiusMiles, category, limit);
     } else {
-      console.log('🧪 Using beta venue data (Google API key not configured)');
+      if (import.meta.env.DEV) {
+        console.warn('⚠️ Google Places API key not configured. Using mock data. Add VITE_GOOGLE_PLACES_API_KEY to your .env file for real venues.');
+      }
       return this.getMockPlaces(location, category, limit);
     }
   },
@@ -135,6 +137,7 @@ export const googlePlacesService = {
 
   /**
    * Convert our category types to Google Place types
+   * Enhanced with multiple Google Place types for better matching
    */
   categoryToGoogleType(category: PlaceCategory): string {
     const typeMap: Record<PlaceCategory, string> = {
@@ -145,13 +148,34 @@ export const googlePlacesService = {
       museum: 'museum',
       theater: 'movie_theater',
       cinema: 'movie_theater',
-      activity: 'amusement_park',
+      activity: 'amusement_park', // Can also include: bowling_alley, gym, sports_complex
       shopping: 'shopping_mall',
       entertainment: 'night_club',
       all: 'all',
     };
 
     return typeMap[category] || 'all';
+  },
+
+  /**
+   * Get additional Google Place types for a category (for better venue discovery)
+   */
+  getAdditionalGoogleTypes(category: PlaceCategory): string[] {
+    const additionalTypes: Record<PlaceCategory, string[]> = {
+      restaurant: ['meal_takeaway', 'food', 'meal_delivery'],
+      cafe: ['bakery', 'meal_takeaway'],
+      bar: ['night_club', 'liquor_store'],
+      park: ['campground', 'rv_park'],
+      museum: ['art_gallery', 'library', 'aquarium', 'zoo'],
+      theater: ['movie_rental', 'movie_rental'],
+      cinema: ['movie_rental'],
+      activity: ['bowling_alley', 'gym', 'sports_complex', 'stadium', 'amusement_park', 'aquarium', 'zoo'],
+      shopping: ['clothing_store', 'book_store', 'jewelry_store', 'shoe_store'],
+      entertainment: ['night_club', 'bar', 'casino'],
+      all: [],
+    };
+
+    return additionalTypes[category] || [];
   },
 
   /**
@@ -184,15 +208,48 @@ export const googlePlacesService = {
         priceLevel = levels[result.price_level] || undefined;
       }
 
-      // Determine category from types
+      // Determine category from types - enhanced mapping
       let category = 'other';
       if (result.types) {
-        if (result.types.includes('restaurant')) category = 'restaurant';
-        else if (result.types.includes('cafe')) category = 'cafe';
-        else if (result.types.includes('bar')) category = 'bar';
-        else if (result.types.includes('park')) category = 'park';
-        else if (result.types.includes('museum')) category = 'museum';
-        else if (result.types.includes('movie_theater')) category = 'theater';
+        const types = result.types.map((t: string) => t.toLowerCase());
+        
+        // Priority order matters - more specific first
+        if (types.some(t => ['restaurant', 'meal_takeaway', 'meal_delivery', 'food'].includes(t))) {
+          category = 'restaurant';
+        } else if (types.some(t => ['cafe', 'bakery'].includes(t))) {
+          category = 'cafe';
+        } else if (types.some(t => ['bar', 'night_club', 'liquor_store'].includes(t))) {
+          category = 'bar';
+        } else if (types.some(t => ['park', 'campground', 'rv_park'].includes(t))) {
+          category = 'park';
+        } else if (types.some(t => ['museum', 'art_gallery', 'library', 'aquarium', 'zoo'].includes(t))) {
+          category = 'museum';
+        } else if (types.some(t => ['movie_theater', 'movie_rental'].includes(t))) {
+          category = 'theater';
+        } else if (types.some(t => ['amusement_park', 'bowling_alley', 'gym', 'sports_complex', 'stadium'].includes(t))) {
+          category = 'activity';
+        } else if (types.some(t => ['shopping_mall', 'clothing_store', 'book_store'].includes(t))) {
+          category = 'shopping';
+        }
+      }
+
+      // Extract cuisine type if restaurant (for better food matching)
+      let cuisineType: string | undefined;
+      if (category === 'restaurant' && result.types) {
+        const cuisineTypes = [
+          'italian', 'chinese', 'japanese', 'mexican', 'indian', 'thai',
+          'french', 'american', 'korean', 'vietnamese', 'mediterranean',
+          'greek', 'spanish', 'steakhouse', 'seafood', 'pizza', 'sushi'
+        ];
+        const matchedCuisine = result.types.find((t: string) => {
+          const lowerType = t.toLowerCase();
+          return cuisineTypes.some(cuisine => lowerType.includes(cuisine));
+        });
+        if (matchedCuisine) {
+          // Extract just the cuisine name from the type (e.g., "italian_restaurant" -> "Italian")
+          const cuisineName = matchedCuisine.split('_')[0];
+          cuisineType = cuisineName.charAt(0).toUpperCase() + cuisineName.slice(1);
+        }
       }
 
       // Get photo URL if available
@@ -205,13 +262,15 @@ export const googlePlacesService = {
         id: result.place_id || `place-${Math.random()}`,
         name: result.name || 'Unknown',
         category,
-        address: result.vicinity || 'Address not available',
+        address: result.vicinity || result.formatted_address || 'Address not available',
         distance: parseFloat(distance.toFixed(2)),
         latitude: lat,
         longitude: lng,
         rating: result.rating,
         priceLevel,
-        description: result.types?.slice(0, 2).join(' • '),
+        description: cuisineType 
+          ? `${cuisineType} cuisine • ${result.types?.filter((t: string) => !t.toLowerCase().includes(cuisineType.toLowerCase()))?.[0] || 'Restaurant'}`
+          : result.types?.slice(0, 2).map((t: string) => t.replace(/_/g, ' ')).join(' • ') || 'Place',
         isOpen: result.opening_hours?.open_now,
         photoUrl,
       };

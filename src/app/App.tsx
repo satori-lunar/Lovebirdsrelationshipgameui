@@ -44,6 +44,7 @@ import HelpingHandReminderSetup from './components/HelpingHandReminderSetup';
 import HelpingHandCustomSuggestion from './components/HelpingHandCustomSuggestion';
 import HelpingHandProgress from './components/HelpingHandProgress';
 import HelpingHandHintModal from './components/HelpingHandHintModal';
+import { CalendarPage } from './components/CalendarPage';
 import { useAuth } from './hooks/useAuth';
 import { useRelationship } from './hooks/useRelationship';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -56,7 +57,7 @@ import { api } from './services/api';
 import type { PushNotificationData } from './services/pushNotificationService';
 import type { HelpingHandCategory, HelpingHandSuggestionWithCategory } from './types/helpingHand';
 
-type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan' | 'couples-challenges' | 'gift-suggestions' | 'something-feels-missing' | 'helping-hand-assessment' | 'helping-hand-categories' | 'helping-hand-suggestion-details' | 'helping-hand-reminder-setup' | 'helping-hand-custom-suggestion' | 'helping-hand-progress';
+type AppState = 'entry' | 'feature-slides' | 'sign-up' | 'sign-in' | 'onboarding' | 'profile-onboarding' | 'relationship-mode-setup' | 'solo-mode-setup' | 'partner-insights-form' | 'home' | 'calendar' | 'daily-question' | 'love-language' | 'love-language-quiz' | 'weekly-suggestions' | 'dates' | 'gifts' | 'messages' | 'requests' | 'weekly-wishes' | 'tracker' | 'memories' | 'create-lockscreen-gift' | 'view-lockscreen-gift' | 'settings' | 'dragon' | 'dragon-demo' | 'capacity-checkin' | 'things-to-remember' | 'insights-notes' | 'icebreakers' | 'need-support-plan' | 'couples-challenges' | 'gift-suggestions' | 'something-feels-missing' | 'helping-hand-assessment' | 'helping-hand-categories' | 'helping-hand-suggestion-details' | 'helping-hand-reminder-setup' | 'helping-hand-custom-suggestion' | 'helping-hand-progress';
 
 export default function App() {
   const { user, loading: authLoading } = useAuth();
@@ -362,6 +363,10 @@ export default function App() {
           onBack={handleBack}
           partnerName={userData.partnerName || 'Partner'}
         />
+      )}
+
+      {currentView === 'calendar' && (
+        <CalendarPage onNavigate={handleNavigate} />
       )}
 
       {currentView === 'tracker' && userData && (

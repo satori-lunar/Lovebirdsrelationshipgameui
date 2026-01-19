@@ -8,7 +8,9 @@ import { useLocation } from '../hooks/useLocation';
 import { googlePlacesService as placesService } from '../services/googlePlacesService';
 import type { Place, PlaceCategory } from '../services/nearbyPlacesService';
 import { useAuth } from '../contexts/AuthContext';
-import { usePartner } from '../hooks/usePartner';
+import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
+import { useRelationship } from '../hooks/useRelationship';
+import { dateMatchingService } from '../services/dateMatchingService';
 
 interface DatePlannerProps {
   onBack: () => void;
@@ -23,7 +25,13 @@ type Step = 'budget' | 'duration' | 'venues' | 'location' | 'loading' | 'results
 
 export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
   const { user } = useAuth();
-  const { partnerOnboarding } = usePartner();
+  const { relationship } = useRelationship();
+  const {
+    partnerOnboarding,
+    partnerLoveLanguages,
+    partnerPreferences,
+    partnerWantsNeeds,
+  } = usePartnerOnboarding();
   const { userLocation, partnerLocation, getCurrentLocation, shareWithApp } = useLocation();
 
   const [step, setStep] = useState<Step>('budget');
@@ -43,6 +51,14 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
   // Get user's love language from onboarding data
   const userLoveLanguage = user?.onboarding?.love_language_primary;
+
+  // Extract partner preferences for matching
+  const partnerInterests = partnerWantsNeeds?.favorite_activities || [];
+  const partnerFavoriteFoods = partnerOnboarding?.favorite_activities || []; // Legacy field
+  const partnerFavoriteCuisines = partnerWantsNeeds?.favorite_cuisines || [];
+  const partnerDateStyles = partnerWantsNeeds?.date_style ? [partnerWantsNeeds.date_style] : [];
+  const partnerLoveLanguagePrimary = partnerLoveLanguages?.primary;
+  const partnerLoveLanguageSecondary = partnerLoveLanguages?.secondary;
 
   const budgetOptions = [
     { value: '$' as BudgetLevel, label: 'Budget-Friendly', desc: 'Under $30', icon: DollarSign },
@@ -145,62 +161,42 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       console.log(`📍 Total unique venues found: ${uniquePlaces.length}`);
 
-      // Step 3: Filter dates based on budget, duration, and love language
-      const filteredDates = dateSuggestionTemplates.filter(date => {
-        // Filter by budget
-        if (selectedBudget === '$' && date.budget !== '$') return false;
-        if (selectedBudget === '$$' && (date.budget === '$$$')) return false;
-        // $$$ shows all budgets
+      // Step 3: Filter dates to only outdoor/both (since we're finding venues)
+      const venueDates = dateSuggestionTemplates.filter(
+        date => date.environment === 'outdoor' || date.environment === 'both'
+      );
 
-        // Filter by duration
-        if (selectedDuration) {
-          if (!date.timeRequired) return false; // Skip dates without duration info
-          const timeReq = date.timeRequired.toLowerCase();
-          if (selectedDuration === 'quick') {
-            // 1-3 hours: matches "1-2 hours", "2-3 hours"
-            if (!timeReq.includes('1-2') && !timeReq.includes('2-3')) return false;
-          } else if (selectedDuration === 'half-day') {
-            // 3-5 hours: matches "2-4 hours", "3-4 hours", "3-5 hours"
-            if (!timeReq.includes('2-4') && !timeReq.includes('3-4') && !timeReq.includes('3-5')) return false;
-          } else if (selectedDuration === 'full-day') {
-            // 5+ hours: matches "4-6 hours", "6-8 hours", etc.
-            if (!timeReq.includes('4-6') && !timeReq.includes('6-8') && !timeReq.includes('5-')) return false;
-          }
-        }
+      // Step 4: Use intelligent date matching service
+      const matchCriteria = {
+        budget: selectedBudget || undefined,
+        duration: selectedDuration || undefined,
+        venuePreference: venuePreference || undefined,
+        userLoveLanguage: userLoveLanguage || undefined,
+        partnerLoveLanguage: partnerLoveLanguagePrimary || undefined,
+        partnerLoveLanguageSecondary: partnerLoveLanguageSecondary || undefined,
+        partnerInterests: partnerInterests.length > 0 ? partnerInterests : undefined,
+        partnerFavoriteFoods: partnerFavoriteFoods.length > 0 ? partnerFavoriteFoods : undefined,
+        partnerFavoriteCuisines: partnerFavoriteCuisines.length > 0 ? partnerFavoriteCuisines : undefined,
+        partnerDateStyles: partnerDateStyles.length > 0 ? partnerDateStyles : undefined,
+      };
 
-        // Filter by venue preference
-        if (venuePreference) {
-          const dateCategories = getDateCategories(date);
-          const uniqueCategories = new Set(dateCategories);
+      console.log('🎯 Date matching criteria:', matchCriteria);
 
-          if (venuePreference === 'single') {
-            // Single venue: prefer dates with 1-2 venue types
-            if (uniqueCategories.size > 2) return false;
-          } else if (venuePreference === 'multiple') {
-            // Multiple venues: prefer dates with 2+ venue types
-            if (uniqueCategories.size < 2) return false;
-          }
-        }
+      // Score and rank all date templates
+      const scoredDates = dateMatchingService.scoreDateTemplates(
+        venueDates,
+        matchCriteria,
+        uniquePlaces
+      );
 
-        // Filter by love language if available
-        if (userLoveLanguage && date.loveLanguage && date.loveLanguage.length > 0) {
-          const hasMatchingLoveLanguage = date.loveLanguage.includes(userLoveLanguage as any);
-          if (!hasMatchingLoveLanguage) return false;
-        }
+      console.log(`✨ Scored ${scoredDates.length} date templates`);
 
-        // Only include outdoor/both dates since we're finding venues
-        return date.environment === 'outdoor' || date.environment === 'both';
-      });
-
-      // Step 4: Match dates to available venues and pick top 3
+      // Step 5: Match top-scored dates to available venues
       const availableCategories = new Set(uniquePlaces.map(p => p.category));
-      const matchedDateOptions = filteredDates
-        .filter(date => {
-          const primaryVenue = getPrimaryVenueCategory(date);
-          return primaryVenue && availableCategories.has(primaryVenue);
-        })
-        .slice(0, 10) // Get more than 3 to have variety
-        .map(date => {
+      const matchedDateOptions = scoredDates
+        .slice(0, 10) // Get top 10 scored dates for variety
+        .map(scored => {
+          const date = scored.template;
           const dateCategories = getDateCategories(date);
           const primaryVenue = getPrimaryVenueCategory(date);
 
@@ -212,11 +208,15 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
           return {
             date,
-            venues: relevantVenues
+            venues: relevantVenues,
+            matchScore: scored.score,
+            matchReasons: scored.matchReasons,
           };
         })
         .filter(option => option.venues.length > 0)
-        .slice(0, 3); // Final 3 options
+        .slice(0, 3); // Final top 3 options
+
+      console.log(`✅ Generated ${matchedDateOptions.length} personalized date options`);
 
       setDateOptions(matchedDateOptions);
       setStep('results');
