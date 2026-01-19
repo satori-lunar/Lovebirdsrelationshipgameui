@@ -186,8 +186,21 @@ export default function HelpingHandCustomSuggestion({
       await helpingHandService.createCustomSuggestion(request);
       
       // Invalidate queries to refresh the suggestions list
-      queryClient.invalidateQueries({ queryKey: ['helping-hand-suggestions'] });
-      queryClient.invalidateQueries({ queryKey: ['helping-hand-category-counts'] });
+      // Invalidate all helping-hand-suggestions queries (with any category/user/week combination)
+      queryClient.invalidateQueries({ 
+        queryKey: ['helping-hand-suggestions'],
+        exact: false // Match all queries that start with this key
+      });
+      // Also invalidate category counts
+      queryClient.invalidateQueries({ 
+        queryKey: ['helping-hand-category-counts'],
+        exact: false
+      });
+      // Invalidate selected suggestions too
+      queryClient.invalidateQueries({ 
+        queryKey: ['helping-hand-selected-suggestions'],
+        exact: false
+      });
       
       toast.success('Your custom suggestion has been created!');
       onSave(request);
