@@ -4687,6 +4687,230 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
   }
 
   /**
+   * Generate AI-powered steps for a custom suggestion
+   * This helps users by providing actionable steps based on their title and description
+   */
+  async generateStepsForCustomSuggestion(
+    request: {
+      userId: string;
+      relationshipId: string;
+      categoryId: string;
+      title: string;
+      description: string;
+      timeEstimateMinutes?: number;
+      effortLevel?: string;
+    }
+  ): Promise<Omit<SuggestionStep, 'step'>[]> {
+    console.log('🤖 Generating AI steps for custom suggestion:', request.title);
+
+    try {
+      // Get context for personalization
+      const { data: relationship } = await api.supabase
+        .from('relationships')
+        .select('*')
+        .eq('id', request.relationshipId)
+        .single();
+
+      if (!relationship) {
+        throw new Error('Relationship not found');
+      }
+
+      const partnerId = relationship.partner_a_id === request.userId
+        ? relationship.partner_b_id
+        : relationship.partner_a_id;
+
+      // Get partner onboarding for personalization
+      const { data: partnerOnboarding } = await api.supabase
+        .from('onboarding_responses')
+        .select('*')
+        .eq('user_id', partnerId)
+        .maybeSingle();
+
+      const partnerName = partnerOnboarding?.name || relationship.partner_name || 'your partner';
+      const favoriteActivities = partnerOnboarding?.favorite_activities || [];
+      const loveLanguages = [
+        partnerOnboarding?.love_language_primary,
+        partnerOnboarding?.love_language_secondary,
+        ...(Array.isArray(partnerOnboarding?.love_languages) ? partnerOnboarding.love_languages : [])
+      ].filter(Boolean);
+
+      // Get category info
+      const category = await helpingHandService.getCategoryById(request.categoryId);
+      
+      // Generate steps based on the suggestion
+      // This is a template-based approach (similar to how we generate suggestions)
+      // In a full AI implementation, this would call an AI API
+      
+      const steps: Omit<SuggestionStep, 'step'>[] = [];
+      
+      // Analyze the title and description to generate relevant steps
+      const titleLower = request.title.toLowerCase();
+      const descLower = request.description.toLowerCase();
+      
+      // Generate steps based on common patterns
+      if (titleLower.includes('cook') || titleLower.includes('make') || titleLower.includes('prepare')) {
+        steps.push({
+          action: `Plan what you'll ${titleLower.includes('cook') ? 'cook' : 'make'}`,
+          tip: favoriteActivities.length > 0 
+            ? `Consider ${partnerName}'s favorite foods or cuisines`
+            : 'Think about what they love to eat',
+          estimatedMinutes: 5
+        });
+        steps.push({
+          action: `Gather ingredients and prepare your workspace`,
+          tip: 'Make sure you have everything you need before starting',
+          estimatedMinutes: 10
+        });
+        steps.push({
+          action: `Create it with care and attention to detail`,
+          tip: 'Put love into every step - they\'ll notice the effort',
+          estimatedMinutes: request.timeEstimateMinutes ? Math.max(15, request.timeEstimateMinutes - 15) : 20
+        });
+        if (titleLower.includes('surprise') || descLower.includes('surprise')) {
+          steps.push({
+            action: `Present it to ${partnerName} as a surprise`,
+            tip: 'Timing is everything - choose the right moment',
+            estimatedMinutes: 2
+          });
+        }
+      } else if (titleLower.includes('plan') || titleLower.includes('organize')) {
+        steps.push({
+          action: `Research and decide on the details`,
+          tip: favoriteActivities.length > 0 
+            ? `Consider activities ${partnerName} enjoys: ${favoriteActivities.slice(0, 2).join(', ')}`
+            : 'Think about what would make them happy',
+          estimatedMinutes: 15
+        });
+        steps.push({
+          action: `Make any necessary reservations or arrangements`,
+          tip: 'Book ahead to ensure availability',
+          estimatedMinutes: 10
+        });
+        steps.push({
+          action: `Confirm details and prepare for the experience`,
+          tip: 'Double-check everything is set',
+          estimatedMinutes: 5
+        });
+      } else if (titleLower.includes('message') || titleLower.includes('text') || titleLower.includes('write')) {
+        steps.push({
+          action: `Think about what you want to express`,
+          tip: loveLanguages.includes('words') 
+            ? `${partnerName} values words of affirmation - be specific and heartfelt`
+            : 'Be genuine and specific about your feelings',
+          estimatedMinutes: 3
+        });
+        steps.push({
+          action: `Write your message from the heart`,
+          tip: 'Focus on what makes them special and what you appreciate',
+          estimatedMinutes: 5
+        });
+        steps.push({
+          action: `Review and send when the timing feels right`,
+          tip: 'Choose a moment when they\'ll have time to read and appreciate it',
+          estimatedMinutes: 1
+        });
+      } else if (titleLower.includes('gift') || titleLower.includes('buy') || titleLower.includes('get')) {
+        steps.push({
+          action: `Think about what ${partnerName} would truly appreciate`,
+          tip: favoriteActivities.length > 0 
+            ? `Consider their interests: ${favoriteActivities.slice(0, 2).join(', ')}`
+            : 'What would make them smile?',
+          estimatedMinutes: 5
+        });
+        steps.push({
+          action: `Find or purchase the item`,
+          tip: 'Quality over quantity - something thoughtful matters more',
+          estimatedMinutes: 20
+        });
+        steps.push({
+          action: `Present it with a personal touch`,
+          tip: 'Add a note or wrap it nicely to show extra care',
+          estimatedMinutes: 5
+        });
+      } else if (titleLower.includes('date') || titleLower.includes('together') || titleLower.includes('activity')) {
+        steps.push({
+          action: `Choose an activity you'll both enjoy`,
+          tip: favoriteActivities.length > 0 
+            ? `Consider: ${favoriteActivities.slice(0, 2).join(' or ')}`
+            : 'Think about what creates connection',
+          estimatedMinutes: 10
+        });
+        steps.push({
+          action: `Plan the details and make arrangements`,
+          tip: 'Consider timing, location, and any special touches',
+          estimatedMinutes: 15
+        });
+        steps.push({
+          action: `Enjoy the time together and be present`,
+          tip: 'Put phones away and focus on each other',
+          estimatedMinutes: request.timeEstimateMinutes || 60
+        });
+      } else if (titleLower.includes('clean') || titleLower.includes('organize') || titleLower.includes('tidy')) {
+        steps.push({
+          action: `Identify what needs to be done`,
+          tip: 'Focus on areas that would make the biggest difference',
+          estimatedMinutes: 2
+        });
+        steps.push({
+          action: `Gather supplies and get started`,
+          tip: 'Work systematically to be efficient',
+          estimatedMinutes: request.timeEstimateMinutes ? Math.max(10, request.timeEstimateMinutes - 10) : 20
+        });
+        steps.push({
+          action: `Finish up and let them discover the improvement`,
+          tip: 'No need to announce it - the surprise makes it more meaningful',
+          estimatedMinutes: 3
+        });
+      } else {
+        // Generic steps for any other suggestion
+        steps.push({
+          action: `Plan and prepare what you'll need`,
+          tip: 'Think through the details to make it special',
+          estimatedMinutes: 5
+        });
+        steps.push({
+          action: `Take action on your idea`,
+          tip: favoriteActivities.length > 0 
+            ? `Consider incorporating ${partnerName}'s preferences`
+            : 'Put thought and care into it',
+          estimatedMinutes: request.timeEstimateMinutes ? Math.max(10, Math.floor(request.timeEstimateMinutes * 0.6)) : 15
+        });
+        steps.push({
+          action: `Present or share it with ${partnerName}`,
+          tip: 'Timing and presentation matter - choose the right moment',
+          estimatedMinutes: 2
+        });
+      }
+
+      // Limit to 3-5 steps
+      const finalSteps = steps.slice(0, 5);
+      
+      console.log(`✅ Generated ${finalSteps.length} AI steps for custom suggestion`);
+      return finalSteps;
+    } catch (error) {
+      console.error('❌ Failed to generate AI steps:', error);
+      // Return generic fallback steps
+      return [
+        {
+          action: 'Plan and prepare',
+          tip: 'Think through what you need to make this special',
+          estimatedMinutes: 5
+        },
+        {
+          action: 'Take action',
+          tip: 'Put thought and care into executing your idea',
+          estimatedMinutes: request.timeEstimateMinutes ? Math.max(10, Math.floor(request.timeEstimateMinutes * 0.7)) : 15
+        },
+        {
+          action: 'Share it with your partner',
+          tip: 'Present it in a way that shows you care',
+          estimatedMinutes: 2
+        }
+      ];
+    }
+  }
+
+  /**
    * Utility: Get effort score
    */
   private getEffortScore(effort: string): number {

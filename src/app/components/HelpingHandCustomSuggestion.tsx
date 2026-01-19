@@ -11,6 +11,7 @@ import { Slider } from './ui/slider';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
 import { helpingHandService } from '../services/helpingHandService';
+import { aiHelpingHandService } from '../services/aiHelpingHandService';
 import { toast } from 'sonner';
 import {
   HelpingHandCustomSuggestionProps,
@@ -61,6 +62,8 @@ export default function HelpingHandCustomSuggestion({
   const [effortLevel, setEffortLevel] = useState<EffortLevel>('low');
   const [bestTiming, setBestTiming] = useState<BestTiming>('any');
   const [selectedLoveLanguages, setSelectedLoveLanguages] = useState<LoveLanguage[]>([]);
+  const [isGeneratingSteps, setIsGeneratingSteps] = useState(false);
+  const [aiGeneratedSteps, setAiGeneratedSteps] = useState<Omit<SuggestionStep, 'step'>[] | null>(null);
 
   const handleAddStep = () => {
     setSteps([...steps, { action: '', tip: '' }]);
@@ -82,6 +85,57 @@ export default function HelpingHandCustomSuggestion({
         ? prev.filter(l => l !== lang)
         : [...prev, lang]
     );
+  };
+
+  const handleGenerateAISteps = async () => {
+    if (!title.trim() || !description.trim()) {
+      toast.error('Please enter a title and description first');
+      return;
+    }
+
+    if (!user || !relationship) {
+      toast.error('Please sign in to continue');
+      return;
+    }
+
+    try {
+      setIsGeneratingSteps(true);
+      const generatedSteps = await aiHelpingHandService.generateStepsForCustomSuggestion({
+        userId: user.id,
+        relationshipId: relationship.id,
+        categoryId: category.id,
+        title: title.trim(),
+        description: description.trim(),
+        timeEstimateMinutes: timeEstimate,
+        effortLevel
+      });
+      
+      setAiGeneratedSteps(generatedSteps);
+      toast.success(`Generated ${generatedSteps.length} AI-powered steps!`);
+    } catch (error) {
+      console.error('Failed to generate AI steps:', error);
+      toast.error('Failed to generate steps. Please try again.');
+    } finally {
+      setIsGeneratingSteps(false);
+    }
+  };
+
+  const handleAcceptAISteps = () => {
+    if (aiGeneratedSteps) {
+      setSteps(aiGeneratedSteps);
+      setAiGeneratedSteps(null);
+      toast.success('AI steps added! You can modify them as needed.');
+    }
+  };
+
+  const handleAcceptAIStep = (index: number) => {
+    if (aiGeneratedSteps && aiGeneratedSteps[index]) {
+      const newSteps = [...steps, aiGeneratedSteps[index]];
+      setSteps(newSteps);
+      const remaining = aiGeneratedSteps.filter((_, i) => i !== index);
+      setAiGeneratedSteps(remaining.length > 0 ? remaining : null);
+      toast.success('Step added!');
+    }
   };
 
   const handleSubmit = async () => {
@@ -229,16 +283,89 @@ export default function HelpingHandCustomSuggestion({
             <Label className="text-base font-semibold text-text-warm">
               Steps (Optional)
             </Label>
-            <Button
-              onClick={handleAddStep}
-              variant="outline"
-              size="sm"
-              className="text-warm-pink border-warm-pink hover:bg-warm-pink/10"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Add Step
-            </Button>
+            <div className="flex gap-2">
+              {title.trim() && description.trim() && (
+                <Button
+                  onClick={handleGenerateAISteps}
+                  variant="outline"
+                  size="sm"
+                  disabled={isGeneratingSteps}
+                  className="text-soft-purple border-soft-purple hover:bg-soft-purple/10"
+                >
+                  {isGeneratingSteps ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-1" />
+                      AI Generate Steps
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button
+                onClick={handleAddStep}
+                variant="outline"
+                size="sm"
+                className="text-warm-pink border-warm-pink hover:bg-warm-pink/10"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Step
+              </Button>
+            </div>
           </div>
+
+          {/* AI Generated Steps Preview */}
+          {aiGeneratedSteps && aiGeneratedSteps.length > 0 && (
+            <Card className="mb-4 border-soft-purple/30 bg-gradient-to-r from-soft-purple/5 to-warm-pink/5">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-soft-purple" />
+                    <h4 className="font-semibold text-text-warm">AI-Generated Steps</h4>
+                  </div>
+                  <Button
+                    onClick={handleAcceptAISteps}
+                    variant="outline"
+                    size="sm"
+                    className="text-soft-purple border-soft-purple hover:bg-soft-purple/10"
+                  >
+                    Accept All
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {aiGeneratedSteps.map((step, index) => (
+                    <div key={index} className="flex items-start gap-2 p-2 bg-white rounded border border-soft-purple/20">
+                      <div className="shrink-0 w-6 h-6 rounded-full bg-soft-purple/10 flex items-center justify-center text-xs font-semibold text-soft-purple">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-text-warm">{step.action}</p>
+                        {step.tip && (
+                          <p className="text-xs text-text-warm-light mt-1">💡 {step.tip}</p>
+                        )}
+                        {step.estimatedMinutes && (
+                          <p className="text-xs text-text-warm-light mt-1">
+                            ⏱️ ~{step.estimatedMinutes} min
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => handleAcceptAIStep(index)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-soft-purple hover:text-soft-purple hover:bg-soft-purple/10"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {steps.length > 0 ? (
             <div className="space-y-3">
