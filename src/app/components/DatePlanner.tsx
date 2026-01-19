@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useRelationship } from '../hooks/useRelationship';
 import { dateMatchingService } from '../services/dateMatchingService';
+import { EnhancedVenueCard } from './EnhancedVenueCard';
 
 interface DatePlannerProps {
   onBack: () => void;
@@ -1252,36 +1253,13 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                   </div>
                 </div>
 
-                {/* Venue Info */}
+                {/* Enhanced Venue Card */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <MapPin className="w-5 h-5 text-purple-600" />
-                    Venue Information
+                    Featured Venue
                   </h3>
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    <div>
-                      <p className="text-xs text-gray-600 font-medium">Address</p>
-                      <p className="text-sm text-gray-900">{selectedOption.venue.address}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-600 font-medium">Category</p>
-                      <p className="text-sm text-gray-900 capitalize">{selectedOption.venue.category}</p>
-                    </div>
-                    {selectedOption.venue.description && (
-                      <div>
-                        <p className="text-xs text-gray-600 font-medium">Details</p>
-                        <p className="text-sm text-gray-900">{selectedOption.venue.description}</p>
-                      </div>
-                    )}
-                    {selectedOption.venue.isOpen !== undefined && (
-                      <div>
-                        <p className="text-xs text-gray-600 font-medium">Status</p>
-                        <p className={`text-sm font-medium ${selectedOption.venue.isOpen ? 'text-green-600' : 'text-red-600'}`}>
-                          {selectedOption.venue.isOpen ? '✓ Currently Open' : '✗ Currently Closed'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  <EnhancedVenueCard place={selectedOption.venue} />
                 </div>
 
                 {/* Summary */}

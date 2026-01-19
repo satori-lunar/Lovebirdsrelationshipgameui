@@ -13,6 +13,16 @@ export interface Place {
   description?: string;
   imageUrl?: string;
   isOpen?: boolean;
+  // Enhanced Google Places fields
+  photoUrl?: string;
+  photos?: string[]; // Multiple photos
+  phoneNumber?: string;
+  formattedPhoneNumber?: string;
+  website?: string;
+  openingHours?: string[];
+  userRatingsTotal?: number; // Review count
+  googleMapsUrl?: string; // URL for Google Maps directions
+  businessStatus?: string; // OPERATIONAL, CLOSED_TEMPORARILY, CLOSED_PERMANENTLY
 }
 
 export type PlaceCategory =
