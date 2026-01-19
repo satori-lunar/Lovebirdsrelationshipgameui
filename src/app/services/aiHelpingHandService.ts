@@ -49,19 +49,31 @@ class AIHelpingHandService {
     // Check if suggestions already exist for THIS SPECIFIC WEEK
     // Each week (Monday-Sunday) has its own set of suggestions
     // This prevents regenerating within the same week, but allows new suggestions each week
+    // BUT: If user wants to regenerate or if suggestions seem incomplete, generate new ones
     if (!request.regenerate) {
       const existingSuggestions = await helpingHandService.getSuggestions({
         userId: request.userId,
         weekStartDate: request.weekStartDate
       });
 
+      // Only reuse if we have a good number of suggestions across categories
       if (existingSuggestions.total > 0) {
-        console.log(`ℹ️ Using existing suggestions for week ${request.weekStartDate}`);
-        return {
-          suggestions: existingSuggestions.suggestions || [],
-          categoryCounts: await this.getCategoryCounts(existingSuggestions.suggestions || []),
-          generatedAt: new Date().toISOString()
-        };
+        const categoryCounts = await this.getCategoryCounts(existingSuggestions.suggestions || []);
+        const categoriesWithSuggestions = Object.keys(categoryCounts).length;
+        const allCategories = await helpingHandService.getCategories();
+        
+        // If we have suggestions for most categories, reuse them
+        // Otherwise, regenerate to fill in missing categories
+        if (categoriesWithSuggestions >= allCategories.length * 0.7) {
+          console.log(`ℹ️ Using existing suggestions for week ${request.weekStartDate} (${categoriesWithSuggestions} categories)`);
+          return {
+            suggestions: existingSuggestions.suggestions || [],
+            categoryCounts: categoryCounts,
+            generatedAt: new Date().toISOString()
+          };
+        } else {
+          console.log(`🔄 Regenerating suggestions - only ${categoriesWithSuggestions}/${allCategories.length} categories have suggestions`);
+        }
       }
     }
 
@@ -569,7 +581,8 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
     const wasUsed = previousSuggestions.some(s => s.title?.toLowerCase() === templateTitle);
     if (!wasUsed) return 10;
     // Reduce score if used recently, but don't eliminate completely
-    return 3;
+    // Give it a lower score but still allow it through
+    return 2;
   }
 
   /**
@@ -705,22 +718,43 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
       }
     }
 
-    // Sort by score (highest first), then add some randomization for weekly variety
+    // Sort by score (highest first), but add significant randomization for weekly variety
+    // Group templates by score ranges and randomize within each range
     const sorted = relevantTemplates.sort((a, b) => {
-      // Primary sort by score
-      if (Math.abs(a.score - b.score) > 10) {
+      // Group into score tiers (0-20, 21-40, 41-60, 61-80, 81-100)
+      const tierA = Math.floor(a.score / 20);
+      const tierB = Math.floor(b.score / 20);
+      
+      // If in different tiers, sort by tier
+      if (tierA !== tierB) {
+        return tierB - tierA;
+      }
+      
+      // Within the same tier, add heavy randomization for variety
+      // Only use score as tiebreaker if scores are very different (>15 points)
+      if (Math.abs(a.score - b.score) > 15) {
         return b.score - a.score;
       }
-      // For templates with similar scores, add randomization
+      
+      // Heavy randomization for weekly variety
       return Math.random() - 0.5;
     });
 
-    // Select top 3-5 templates, but ensure we always have at least some suggestions
+    // Select top 3-5 templates with heavy randomization for weekly variety
     let selected: Partial<HelpingHandSuggestion>[] = [];
     
     if (sorted.length > 0) {
-      const selectedCount = Math.min(5, Math.max(3, sorted.length));
-      selected = sorted.slice(0, selectedCount).map(st => st.template);
+      // For weekly variety: take a larger pool and randomly select from it
+      // Take top 10-15 templates (or all if less) and randomly pick 3-5
+      const poolSize = Math.min(15, Math.max(10, sorted.length));
+      const candidatePool = sorted.slice(0, poolSize);
+      
+      // Shuffle the candidate pool for maximum variety
+      const shuffled = [...candidatePool].sort(() => Math.random() - 0.5);
+      
+      // Select 3-5 random templates from the pool
+      const selectedCount = Math.min(5, Math.max(3, shuffled.length));
+      selected = shuffled.slice(0, selectedCount).map(st => st.template);
       
       // If we somehow still don't have enough, fill with any remaining templates
       if (selected.length < 3 && sorted.length > selected.length) {
@@ -732,16 +766,20 @@ Return valid JSON array of suggestions. Make them specific, personal, and achiev
     // Final safety check: if we still don't have enough, use any feasible templates
     if (selected.length < 3 && feasibleTemplates.length > 0) {
       const remaining = feasibleTemplates.filter(t => !selected.some(s => s.title === t.title));
-      selected.push(...remaining.slice(0, 3 - selected.length));
+      // Shuffle remaining for variety
+      const shuffledRemaining = [...remaining].sort(() => Math.random() - 0.5);
+      selected.push(...shuffledRemaining.slice(0, 3 - selected.length));
     }
     
     // If we still don't have enough, use any personalized templates
     if (selected.length < 3 && personalizedTemplates.length > 0) {
       const remaining = personalizedTemplates.filter(t => !selected.some(s => s.title === t.title));
-      selected.push(...remaining.slice(0, 3 - selected.length));
+      // Shuffle remaining for variety
+      const shuffledRemaining = [...remaining].sort(() => Math.random() - 0.5);
+      selected.push(...shuffledRemaining.slice(0, 3 - selected.length));
     }
     
-    console.log(`✅ Category ${category.name}: Selected ${selected.length} suggestions`);
+    console.log(`✅ Category ${category.name}: Selected ${selected.length} suggestions (titles: ${selected.map(s => s.title).join(', ')})`);
     
     return selected
       .map(template => ({
