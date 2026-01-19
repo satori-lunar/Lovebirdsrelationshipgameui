@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Slider } from './ui/slider';
 import { useAuth } from '../hooks/useAuth';
 import { useRelationship } from '../hooks/useRelationship';
+import { useQueryClient } from '@tanstack/react-query';
 import { helpingHandService } from '../services/helpingHandService';
 import { aiHelpingHandService } from '../services/aiHelpingHandService';
 import { toast } from 'sonner';
@@ -52,6 +53,7 @@ export default function HelpingHandCustomSuggestion({
 }: HelpingHandCustomSuggestionProps) {
   const { user } = useAuth();
   const { relationship } = useRelationship();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
@@ -182,6 +184,11 @@ export default function HelpingHandCustomSuggestion({
       };
 
       await helpingHandService.createCustomSuggestion(request);
+      
+      // Invalidate queries to refresh the suggestions list
+      queryClient.invalidateQueries({ queryKey: ['helping-hand-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['helping-hand-category-counts'] });
+      
       toast.success('Your custom suggestion has been created!');
       onSave(request);
     } catch (error) {
