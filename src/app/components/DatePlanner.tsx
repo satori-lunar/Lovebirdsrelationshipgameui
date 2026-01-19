@@ -192,32 +192,89 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       console.log(`✨ Scored ${scoredDates.length} date templates`);
 
-      // Step 5: Match top-scored dates to available venues
+      // Step 5: Match top-scored dates to available venues with DIVERSITY enforcement
       const availableCategories = new Set(uniquePlaces.map(p => p.category));
-      const matchedDateOptions = scoredDates
-        .slice(0, 10) // Get top 10 scored dates for variety
-        .map(scored => {
-          const date = scored.template;
-          const dateCategories = getDateCategories(date);
-          const primaryVenue = getPrimaryVenueCategory(date);
+      const usedVenueIds = new Set<string>(); // Track used venues to ensure diversity
+      const matchedDateOptions: Array<{
+        date: typeof dateSuggestionTemplates[0];
+        venues: Place[];
+        matchScore: number;
+        matchReasons: string[];
+      }> = [];
 
-          // Get relevant venues for this date
-          const relevantVenues = uniquePlaces.filter(place =>
-            dateCategories.includes(place.category as PlaceCategory) ||
-            (primaryVenue && place.category === primaryVenue)
-          ).slice(0, 3); // Get top 3 venues per date
+      // Process top 10 scored dates for variety
+      for (const scored of scoredDates.slice(0, 10)) {
+        if (matchedDateOptions.length >= 3) break; // Stop once we have 3 diverse options
 
-          return {
+        const date = scored.template;
+        const dateCategories = getDateCategories(date);
+        const primaryVenue = getPrimaryVenueCategory(date);
+
+        // Get relevant venues for this date, EXCLUDING already used venues
+        const relevantVenues = uniquePlaces
+          .filter(place => {
+            // Skip if venue already used
+            if (usedVenueIds.has(place.id)) return false;
+
+            // Match by category
+            return dateCategories.includes(place.category as PlaceCategory) ||
+                   (primaryVenue && place.category === primaryVenue);
+          })
+          .slice(0, 3); // Get top 3 UNUSED venues per date
+
+        // Only add this date option if it has unique venues
+        if (relevantVenues.length > 0) {
+          // Mark these venues as used
+          relevantVenues.forEach(venue => usedVenueIds.add(venue.id));
+
+          matchedDateOptions.push({
             date,
             venues: relevantVenues,
             matchScore: scored.score,
             matchReasons: scored.matchReasons,
-          };
-        })
-        .filter(option => option.venues.length > 0)
-        .slice(0, 3); // Final top 3 options
+          });
+        }
+      }
+
+      // Fallback: If we couldn't get 3 diverse options, allow some venue reuse
+      if (matchedDateOptions.length < 3 && scoredDates.length > matchedDateOptions.length) {
+        console.log(`⚠️ Only found ${matchedDateOptions.length} dates with unique venues. Adding more with venue reuse allowed...`);
+
+        for (const scored of scoredDates.slice(0, 15)) {
+          if (matchedDateOptions.length >= 3) break;
+
+          // Skip if already added
+          if (matchedDateOptions.some(opt => opt.date.title === scored.template.title)) continue;
+
+          const date = scored.template;
+          const dateCategories = getDateCategories(date);
+          const primaryVenue = getPrimaryVenueCategory(date);
+
+          // Get relevant venues (allowing reuse this time)
+          const relevantVenues = uniquePlaces
+            .filter(place =>
+              dateCategories.includes(place.category as PlaceCategory) ||
+              (primaryVenue && place.category === primaryVenue)
+            )
+            .slice(0, 3);
+
+          if (relevantVenues.length > 0) {
+            matchedDateOptions.push({
+              date,
+              venues: relevantVenues,
+              matchScore: scored.score,
+              matchReasons: scored.matchReasons,
+            });
+          }
+        }
+      }
 
       console.log(`✅ Generated ${matchedDateOptions.length} personalized date options`);
+      if (import.meta.env.DEV) {
+        matchedDateOptions.forEach((option, idx) => {
+          console.log(`  Date ${idx + 1}: ${option.date.title} - ${option.venues.length} venues (${option.venues.map(v => v.name).join(', ')})`);
+        });
+      }
 
       setDateOptions(matchedDateOptions);
       setStep('results');
