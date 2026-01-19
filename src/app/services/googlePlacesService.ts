@@ -3,59 +3,10 @@ import type { Place, PlaceCategory } from './nearbyPlacesService';
 
 const MILES_TO_METERS = 1609.34;
 
-// Check if Google Places API key is configured
-const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || '';
-const USE_GOOGLE_API = GOOGLE_API_KEY.length > 0;
-
-// Track if Google Maps script is loaded
-let googleMapsLoaded = false;
-let googleMapsLoadPromise: Promise<void> | null = null;
-
-/**
- * Dynamically load Google Maps JavaScript library
- */
-function loadGoogleMapsScript(): Promise<void> {
-  if (googleMapsLoaded) {
-    return Promise.resolve();
-  }
-
-  if (googleMapsLoadPromise) {
-    return googleMapsLoadPromise;
-  }
-
-  googleMapsLoadPromise = new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      reject(new Error('Cannot load Google Maps in server environment'));
-      return;
-    }
-
-    // Check if already loaded
-    if (window.google?.maps?.places) {
-      googleMapsLoaded = true;
-      resolve();
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=places&callback=initGoogleMaps`;
-    script.async = true;
-    script.defer = true;
-
-    // Set up callback
-    (window as any).initGoogleMaps = () => {
-      googleMapsLoaded = true;
-      resolve();
-    };
-
-    script.onerror = () => {
-      reject(new Error('Failed to load Google Maps script'));
-    };
-
-    document.head.appendChild(script);
-  });
-
-  return googleMapsLoadPromise;
-}
+// Check if we should use Google Places API
+// The API key is now stored server-side in the Vercel API proxy
+// We'll attempt to use the proxy (which will check for the key server-side)
+const USE_GOOGLE_API = true; // Always try to use API proxy (falls back to mock on error)
 
 export const googlePlacesService = {
   /**
@@ -80,6 +31,7 @@ export const googlePlacesService = {
 
   /**
    * Find places using Google Places API Nearby Search
+   * Uses our Vercel serverless function proxy to avoid CORS issues
    */
   async findNearbyPlacesWithGoogle(
     location: LocationCoordinates,
@@ -88,43 +40,34 @@ export const googlePlacesService = {
     limit: number
   ): Promise<Place[]> {
     try {
-      // Load Google Maps script if not already loaded
-      await loadGoogleMapsScript();
-
       const radiusMeters = Math.min(radiusMiles * MILES_TO_METERS, 50000); // Google max is 50km
       const type = this.categoryToGoogleType(category);
 
-      console.log(`🔍 Fetching ${category} venues from Google Places...`);
+      console.log(`🔍 Fetching ${category} venues from Google Places via API proxy...`);
 
-      // Create a map element (required for PlacesService, but can be hidden)
-      const mapDiv = document.createElement('div');
-      const map = new google.maps.Map(mapDiv);
-      const service = new google.maps.places.PlacesService(map);
-
-      const request: google.maps.places.PlaceSearchRequest = {
-        location: new google.maps.LatLng(location.latitude, location.longitude),
-        radius: radiusMeters,
-      };
-
-      // Only add type if it's not 'all'
+      // Use our Vercel serverless function proxy to avoid CORS issues
+      const proxyUrl = new URL('/api/places', window.location.origin);
+      proxyUrl.searchParams.append('latitude', location.latitude.toString());
+      proxyUrl.searchParams.append('longitude', location.longitude.toString());
+      proxyUrl.searchParams.append('radius', (radiusMeters / 1609.34).toString()); // Convert to miles for proxy
       if (type !== 'all') {
-        request.type = type;
+        proxyUrl.searchParams.append('type', type);
       }
 
-      // Wrap the callback-based API in a Promise
-      const results = await new Promise<google.maps.places.PlaceResult[]>((resolve, reject) => {
-        service.nearbySearch(request, (results, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-            resolve(results);
-          } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-            resolve([]);
-          } else {
-            reject(new Error(`Google Places API returned status: ${status}`));
-          }
-        });
-      });
+      const response = await fetch(proxyUrl.toString());
 
-      const places = this.parseGooglePlacesServiceResponse(results, location);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`API proxy error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+        throw new Error(`Google API returned status: ${data.status}${data.error_message ? `: ${data.error_message}` : ''}`);
+      }
+
+      const places = this.parseGoogleResponse(data, location);
       console.log(`✅ Found ${places.length} ${category} venues from Google`);
 
       return places.slice(0, limit);
@@ -179,26 +122,19 @@ export const googlePlacesService = {
   },
 
   /**
-   * Parse Google Places Service response into our Place format
+   * Parse Google Places API response into our Place format
    */
-  parseGooglePlacesServiceResponse(results: google.maps.places.PlaceResult[], userLocation: LocationCoordinates): Place[] {
-    if (!results || results.length === 0) {
+  parseGoogleResponse(data: any, userLocation: LocationCoordinates): Place[] {
+    if (!data.results || data.results.length === 0) {
       return [];
     }
 
-    return results.map((result) => {
-      const lat = result.geometry?.location?.lat();
-      const lng = result.geometry?.location?.lng();
-
-      if (!lat || !lng) {
-        return null;
-      }
-
+    return data.results.map((result: any) => {
       const distance = this.calculateDistance(
         userLocation.latitude,
         userLocation.longitude,
-        lat,
-        lng
+        result.geometry.location.lat,
+        result.geometry.location.lng
       );
 
       // Map Google price level (0-4) to our format
@@ -252,46 +188,31 @@ export const googlePlacesService = {
         }
       }
 
-      // Get photo URLs (multiple photos)
-      let photoUrl: string | undefined;
-      let photos: string[] = [];
-      if (result.photos && result.photos.length > 0) {
-        photoUrl = result.photos[0].getUrl({ maxWidth: 800 });
-        photos = result.photos.slice(0, 5).map(photo => photo.getUrl({ maxWidth: 800 }));
-      }
-
-      // Generate Google Maps URL for directions
-      const googleMapsUrl = result.place_id
-        ? `https://www.google.com/maps/place/?q=place_id:${result.place_id}`
-        : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-
       return {
-        id: result.place_id || `place-${Math.random()}`,
-        name: result.name || 'Unknown',
+        id: result.place_id,
+        name: result.name,
         category,
         address: result.vicinity || result.formatted_address || 'Address not available',
         distance: parseFloat(distance.toFixed(2)),
-        latitude: lat,
-        longitude: lng,
+        latitude: result.geometry.location.lat,
+        longitude: result.geometry.location.lng,
         rating: result.rating,
         priceLevel,
-        description: cuisineType
+        description: cuisineType 
           ? `${cuisineType} cuisine • ${result.types?.filter((t: string) => !t.toLowerCase().includes(cuisineType.toLowerCase()))?.[0] || 'Restaurant'}`
           : result.types?.slice(0, 2).map((t: string) => t.replace(/_/g, ' ')).join(' • ') || 'Place',
         isOpen: result.opening_hours?.open_now,
-        photoUrl,
-        imageUrl: photoUrl, // Keep for backwards compatibility
-        photos,
-        userRatingsTotal: result.user_ratings_total,
-        businessStatus: result.business_status,
-        googleMapsUrl,
+        // Photo URLs go through our proxy to avoid CORS and keep API key secure
+        photoUrl: result.photos?.[0]?.photo_reference
+          ? `/api/places-photo?photo_reference=${result.photos[0].photo_reference}&maxwidth=400`
+          : undefined,
       };
-    }).filter((place): place is Place => place !== null && place.name !== 'Unknown');
+    }).filter((place: Place) => place.name && place.name !== '');
   },
 
   /**
    * Get detailed information for a specific place
-   * Fetches phone, website, opening hours, and other details
+   * Fetches phone, website, opening hours, and other details via API proxy
    */
   async getPlaceDetails(placeId: string): Promise<Partial<Place> | null> {
     try {
@@ -300,43 +221,32 @@ export const googlePlacesService = {
         return null;
       }
 
-      await loadGoogleMapsScript();
+      // Use our Vercel serverless function proxy to avoid CORS issues
+      const proxyUrl = new URL('/api/places-details', window.location.origin);
+      proxyUrl.searchParams.append('place_id', placeId);
 
-      const mapDiv = document.createElement('div');
-      const map = new google.maps.Map(mapDiv);
-      const service = new google.maps.places.PlacesService(map);
+      const response = await fetch(proxyUrl.toString());
 
-      const request: google.maps.places.PlaceDetailsRequest = {
-        placeId: placeId,
-        fields: [
-          'name',
-          'formatted_phone_number',
-          'international_phone_number',
-          'website',
-          'opening_hours',
-          'url', // Google Maps URL
-          'photos',
-          'reviews'
-        ],
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`API proxy error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+
+      if (data.status !== 'OK' || !data.result) {
+        console.error('Failed to fetch place details:', data.status || 'Unknown error');
+        return null;
+      }
+
+      const result = data.result;
+      return {
+        formattedPhoneNumber: result.formatted_phone_number,
+        phoneNumber: result.international_phone_number || result.formatted_phone_number,
+        website: result.website,
+        openingHours: result.opening_hours?.weekday_text,
+        googleMapsUrl: result.url || result.website,
       };
-
-      return new Promise((resolve) => {
-        service.getDetails(request, (place, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-            const details: Partial<Place> = {
-              formattedPhoneNumber: place.formatted_phone_number,
-              phoneNumber: place.international_phone_number || place.formatted_phone_number,
-              website: place.website,
-              openingHours: place.opening_hours?.weekday_text,
-              googleMapsUrl: place.url,
-            };
-            resolve(details);
-          } else {
-            console.error('Failed to fetch place details:', status);
-            resolve(null);
-          }
-        });
-      });
     } catch (error) {
       console.error('Error fetching place details:', error);
       return null;

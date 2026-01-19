@@ -5,7 +5,9 @@
 
 🧪 **Beta Mode:** Right now, the app shows realistic mock venue data for testing.
 
-🚀 **Production Ready:** Just add your API key and you'll get real venues with:
+🔒 **Security:** API calls are now proxied through Vercel serverless functions (`/api/places`), which solves CORS issues and keeps your API key secure on the server.
+
+🚀 **Production Ready:** Just add your API key to Vercel environment variables and you'll get real venues with:
 - Real business names, addresses, and locations
 - Google ratings and reviews
 - Opening hours
@@ -34,42 +36,55 @@
 ### 4. Secure Your API Key (Important!)
 1. Click on your API key to edit it
 2. Under **Application restrictions**:
-   - Choose **HTTP referrers (web sites)**
-   - Add your domains:
-     ```
-     http://localhost:*
-     https://yourdomain.com/*
-     ```
+   - **Option 1 (Recommended for production):** Choose **IP addresses (web servers, cron jobs, etc.)**
+     - Add Vercel's IP ranges (optional, or leave unrestricted for serverless functions)
+   - **Option 2 (Easier for testing):** Choose **None** (for development/testing)
+   - **Note:** Since API calls are now server-side, HTTP referrer restrictions won't work
 3. Under **API restrictions**:
    - Choose **Restrict key**
-   - Select only **Places API (New)**
+   - Select only **Places API (New)** and **Places API** (for photo access)
 4. Click **Save**
 
-### 5. Add to Your Project
-1. Create a `.env` file in the project root (or copy from `.env.example` if it exists):
+### 5. Add API Key to Vercel Environment Variables
+
+**Important:** The API key is now stored server-side in Vercel environment variables to avoid CORS issues and keep it secure.
+
+#### For Production (Vercel):
+
+1. Go to your [Vercel Dashboard](https://vercel.com/dashboard)
+2. Select your project
+3. Go to **Settings** → **Environment Variables**
+4. Add a new variable:
+   - **Name:** `GOOGLE_PLACES_API_KEY`
+   - **Value:** Your Google Places API key (e.g., `AIzaSy...your_key_here`)
+   - **Environments:** ✅ Production ✅ Preview ✅ Development
+5. Click **Save**
+6. **Redeploy** your application for changes to take effect
+
+#### For Local Development:
+
+1. Create a `.env.local` file in the project root:
    ```bash
    # On Windows PowerShell
-   New-Item .env
+   New-Item .env.local
    
    # On Mac/Linux
-   touch .env
+   touch .env.local
    ```
 
-2. Add your API key to `.env`:
+2. Add your API key to `.env.local`:
    ```
-   VITE_GOOGLE_PLACES_API_KEY=AIzaSy...your_key_here
+   GOOGLE_PLACES_API_KEY=AIzaSy...your_key_here
    ```
-   
-   **Note:** Make sure `.env` is in your `.gitignore` file to keep your API key secure!
 
 3. Restart your dev server:
    ```bash
    npm run dev
    ```
 
-4. The app will automatically detect the API key and use real Google Places data. If the key is missing, you'll see a warning in the console and the app will use mock data instead.
+**Note:** The API key is now used by serverless functions (`/api/places` and `/api/places-photo`) which proxy requests to Google Places API. This solves CORS issues and keeps your API key secure.
 
-That's it! The app will automatically start using real Google Places data.
+That's it! The app will automatically use real Google Places data via the API proxy.
 
 ---
 
@@ -118,14 +133,22 @@ You'll see real venues from Google Maps:
 
 ### "No venues found"
 - Check that Places API (New) is enabled
-- Verify API key is in `.env` file
-- Make sure you restarted the dev server
-- Check browser console for error messages
+- Verify API key is set in Vercel environment variables (`GOOGLE_PLACES_API_KEY`)
+- For local development, check `.env.local` file
+- Make sure you redeployed after adding the environment variable
+- Check browser console and Vercel function logs for error messages
 
-### "API key not valid"
+### "CORS error" or "Failed to fetch"
+- This should be fixed with the API proxy! If you still see this:
+  - Ensure you've deployed the latest code with the `/api/places` endpoint
+  - Check that `vercel.json` properly routes API calls
+  - Verify the API proxy is accessible at `/api/places`
+
+### "API key not valid" or "500 error from /api/places"
 - Ensure you're using **Places API (New)**, not the old "Places API"
-- Check API restrictions allow your domain
-- Verify the key is correctly copied to `.env`
+- Check API restrictions allow server-side usage (or remove restrictions for testing)
+- Verify the key is correctly set in Vercel environment variables
+- Check Vercel function logs for detailed error messages
 
 ### "Quota exceeded"
 - Check your Google Cloud billing dashboard
