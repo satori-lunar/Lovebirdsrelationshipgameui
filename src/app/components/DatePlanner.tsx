@@ -186,6 +186,46 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       const availableCategorySet = new Set(uniquePlaces.map(p => p.category));
       
       const venueDates = dateSuggestionTemplates.filter(date => {
+        const title = (date.title || '').toLowerCase();
+        const desc = (date.description || '').toLowerCase();
+        
+        // Exclude dates that require specific venue types we're not fetching
+        // Spa dates need spas (not in our categories)
+        if (title.includes('spa') || desc.includes('spa')) {
+          // Only include if we have spa-related venues (check in venue names)
+          const hasSpaVenue = uniquePlaces.some(p => {
+            const name = (p.name || '').toLowerCase();
+            return name.includes('spa') || name.includes('massage') || name.includes('wellness');
+          });
+          if (!hasSpaVenue) {
+            return false; // Don't include spa dates without spa venues
+          }
+        }
+        
+        // Resort/daycation dates need resorts/hotels
+        if (title.includes('resort') || title.includes('day cation') || 
+            desc.includes('resort') || desc.includes('day cation')) {
+          const hasResortVenue = uniquePlaces.some(p => {
+            const name = (p.name || '').toLowerCase();
+            return name.includes('resort') || name.includes('hotel');
+          });
+          if (!hasResortVenue) {
+            return false; // Don't include resort dates without resort venues
+          }
+        }
+        
+        // Rafting/adventure dates need activity/outdoor venues, not restaurants
+        if (title.includes('rafting') || (title.includes('adventure') && desc.includes('rafting'))) {
+          const hasActivityVenue = uniquePlaces.some(p => {
+            return p.category === 'activity' || 
+                   (p.name || '').toLowerCase().includes('rafting') ||
+                   (p.description || '').toLowerCase().includes('rafting');
+          });
+          if (!hasActivityVenue) {
+            return false; // Don't include rafting dates without activity venues
+          }
+        }
+        
         // Include dates that can use actual venues (outdoor, both, or indoor if museums/venues are available)
         const canUseIndoor = date.environment === 'indoor' && 
                              (availableCategorySet.has('museum') || availableCategorySet.has('cafe') || availableCategorySet.has('restaurant'));
@@ -370,7 +410,64 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           };
         })
         // Only include dates that have actual venues nearby
-        .filter(option => option.hasNearbyVenues)
+        .filter(option => {
+          // Must have venues
+          if (!option.hasNearbyVenues) {
+            return false;
+          }
+          
+          // Additional validation: Check if venues actually match the date type
+          const dateTitle = (option.date.title || '').toLowerCase();
+          const dateDesc = (option.date.description || '').toLowerCase();
+          const venues = option.venues;
+          
+          // For spa dates - must have spa-related venues, not cafes/restaurants
+          if (dateTitle.includes('spa') || dateDesc.includes('spa')) {
+            const hasSpaVenue = venues.some(v => {
+              const name = (v.name || '').toLowerCase();
+              const desc = (v.description || '').toLowerCase();
+              return name.includes('spa') || desc.includes('spa') || 
+                     name.includes('massage') || desc.includes('massage') ||
+                     name.includes('wellness') || desc.includes('wellness');
+            });
+            if (!hasSpaVenue) {
+              return false; // Don't match spa dates to cafes/restaurants
+            }
+          }
+          
+          // For resort/daycation dates - must have resort-related venues
+          if (dateTitle.includes('resort') || dateTitle.includes('day cation') || 
+              dateDesc.includes('resort') || dateDesc.includes('day cation')) {
+            const hasResortVenue = venues.some(v => {
+              const name = (v.name || '').toLowerCase();
+              const desc = (v.description || '').toLowerCase();
+              return name.includes('resort') || desc.includes('resort') ||
+                     name.includes('hotel') || desc.includes('hotel');
+            });
+            if (!hasResortVenue) {
+              return false; // Don't match resort dates to cafes/restaurants
+            }
+          }
+          
+          // For rafting/adventure dates - must have activity-related venues, not restaurants
+          if (dateTitle.includes('rafting') || dateTitle.includes('adventure') ||
+              dateDesc.includes('rafting') || dateDesc.includes('rapids')) {
+            const hasActivityVenue = venues.some(v => {
+              const name = (v.name || '').toLowerCase();
+              const desc = (v.description || '').toLowerCase();
+              const category = v.category;
+              return category === 'activity' ||
+                     name.includes('rafting') || desc.includes('rafting') ||
+                     name.includes('adventure') || desc.includes('adventure') ||
+                     name.includes('outdoor') || desc.includes('outdoor');
+            });
+            if (!hasActivityVenue) {
+              return false; // Don't match adventure dates to restaurants/cafes
+            }
+          }
+          
+          return true;
+        })
         // Sort by match score first (highest scores at top)
         .sort((a, b) => b.matchScore - a.matchScore);
 
