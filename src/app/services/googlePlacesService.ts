@@ -3,9 +3,10 @@ import type { Place, PlaceCategory } from './nearbyPlacesService';
 
 const MILES_TO_METERS = 1609.34;
 
-// Check if Google Places API key is configured
-const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || '';
-const USE_GOOGLE_API = GOOGLE_API_KEY.length > 0;
+// Check if we should use Google Places API
+// The API key is now stored server-side in the Vercel API proxy
+// We'll attempt to use the proxy (which will check for the key server-side)
+const USE_GOOGLE_API = true; // Always try to use API proxy (falls back to mock on error)
 
 export const googlePlacesService = {
   /**
@@ -30,6 +31,7 @@ export const googlePlacesService = {
 
   /**
    * Find places using Google Places API Nearby Search
+   * Uses our Vercel serverless function proxy to avoid CORS issues
    */
   async findNearbyPlacesWithGoogle(
     location: LocationCoordinates,
@@ -41,26 +43,28 @@ export const googlePlacesService = {
       const radiusMeters = Math.min(radiusMiles * MILES_TO_METERS, 50000); // Google max is 50km
       const type = this.categoryToGoogleType(category);
 
-      console.log(`🔍 Fetching ${category} venues from Google Places...`);
+      console.log(`🔍 Fetching ${category} venues from Google Places via API proxy...`);
 
-      const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
-      url.searchParams.append('location', `${location.latitude},${location.longitude}`);
-      url.searchParams.append('radius', radiusMeters.toString());
+      // Use our Vercel serverless function proxy to avoid CORS issues
+      const proxyUrl = new URL('/api/places', window.location.origin);
+      proxyUrl.searchParams.append('latitude', location.latitude.toString());
+      proxyUrl.searchParams.append('longitude', location.longitude.toString());
+      proxyUrl.searchParams.append('radius', (radiusMeters / 1609.34).toString()); // Convert to miles for proxy
       if (type !== 'all') {
-        url.searchParams.append('type', type);
+        proxyUrl.searchParams.append('type', type);
       }
-      url.searchParams.append('key', GOOGLE_API_KEY);
 
-      const response = await fetch(url.toString());
+      const response = await fetch(proxyUrl.toString());
 
       if (!response.ok) {
-        throw new Error(`Google API error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`API proxy error: ${response.status} - ${errorData.error || 'Unknown error'}`);
       }
 
       const data = await response.json();
 
       if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        throw new Error(`Google API returned status: ${data.status}`);
+        throw new Error(`Google API returned status: ${data.status}${data.error_message ? `: ${data.error_message}` : ''}`);
       }
 
       const places = this.parseGoogleResponse(data, location);
@@ -198,8 +202,9 @@ export const googlePlacesService = {
           ? `${cuisineType} cuisine • ${result.types?.filter((t: string) => !t.toLowerCase().includes(cuisineType.toLowerCase()))?.[0] || 'Restaurant'}`
           : result.types?.slice(0, 2).map((t: string) => t.replace(/_/g, ' ')).join(' • ') || 'Place',
         isOpen: result.opening_hours?.open_now,
+        // Photo URLs go through our proxy to avoid CORS and keep API key secure
         photoUrl: result.photos?.[0]?.photo_reference
-          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${result.photos[0].photo_reference}&key=${GOOGLE_API_KEY}`
+          ? `/api/places-photo?photo_reference=${result.photos[0].photo_reference}&maxwidth=400`
           : undefined,
       };
     }).filter((place: Place) => place.name && place.name !== '');
