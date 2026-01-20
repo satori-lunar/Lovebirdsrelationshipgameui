@@ -1039,6 +1039,33 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         // Sort by match score first (highest scores at top)
         .sort((a, b) => b.matchScore - a.matchScore);
 
+      console.log(`📊 Top 10 scored dates BEFORE variety selection:`);
+      datesWithVenues.slice(0, 10).forEach((option, i) => {
+        console.log(`  ${i + 1}. "${option.date.title}" - Score: ${option.matchScore.toFixed(1)}, Budget: ${option.date.budget}, Duration: ${option.date.timeRequired}, Venues: ${option.venues.length}`);
+      });
+
+      // IMPORTANT: Add some randomization to top-scoring dates to prevent same suggestions
+      // Group dates by score buckets (within 15 points = similar quality)
+      const topTier = datesWithVenues.filter(d => d.matchScore >= (datesWithVenues[0]?.matchScore || 0) - 15);
+      const midTier = datesWithVenues.filter(d => d.matchScore < (datesWithVenues[0]?.matchScore || 0) - 15 && d.matchScore >= (datesWithVenues[0]?.matchScore || 0) - 30);
+
+      // Shuffle within each tier to add variety across sessions
+      const shuffleArray = <T,>(array: T[]): T[] => {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+      };
+
+      const shuffledTop = shuffleArray(topTier);
+      const shuffledMid = shuffleArray(midTier);
+      const remainingDates = datesWithVenues.filter(d => !topTier.includes(d) && !midTier.includes(d));
+
+      // Recombine: shuffled top tier, shuffled mid tier, then rest
+      const diverseDatesPool = [...shuffledTop, ...shuffledMid, ...remainingDates];
+
       // Step 6: Stage 4 - Ranking & Selection with Variety
       // Ensure variety: no duplicate venue types, balance different date styles, distance diversity
       // ENHANCED: Also track individual venue IDs to prevent same venue across multiple dates
@@ -1062,8 +1089,8 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         return !hasVenueIdOverlap && (!hasVenueMatch || !hasStyleMatch);
       };
 
-      // Select top 3 with variety and unique venues
-      for (const option of datesWithVenues) {
+      // Select top 3 with variety and unique venues from the diverse pool
+      for (const option of diverseDatesPool) {
         if (selectedDates.length >= 3) break;
 
         // Always include the first (highest-scored) option
@@ -1102,22 +1129,21 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         }
       }
 
-      // Final sort: STRONGLY prioritize close venues (under 1 mile), then by match score
+      // Final sort: Prioritize match score (includes user preferences), with distance as tiebreaker
+      // DO NOT let distance override user's budget/duration/venue preferences!
       const finalDates = selectedDates
         .sort((a, b) => {
-          const aIsVeryClose = a.closestVenueDistance <= 1.0; // Within 1 mile
-          const bIsVeryClose = b.closestVenueDistance <= 1.0;
+          // Primary: Sort by match score (includes budget, duration, venue preference)
+          // This ensures user preferences are respected
+          const scoreDiff = b.matchScore - a.matchScore;
 
-          // Strongly prefer venues under 1 mile
-          if (aIsVeryClose && !bIsVeryClose) return -1;
-          if (!aIsVeryClose && bIsVeryClose) return 1;
-
-          // If both are close or both are far, sort by distance
-          if (Math.abs(a.closestVenueDistance - b.closestVenueDistance) > 0.3) {
-            return a.closestVenueDistance - b.closestVenueDistance;
+          // Only use distance as tiebreaker if scores are very close (within 10 points)
+          if (Math.abs(scoreDiff) > 10) {
+            return scoreDiff; // Clear winner based on preferences
           }
-          // Then by match score
-          return b.matchScore - a.matchScore;
+
+          // Tiebreaker: Prefer closer venues if scores are similar
+          return a.closestVenueDistance - b.closestVenueDistance;
         });
 
       console.log(`✅ Generated ${finalDates.length} personalized date options with venue diversity`);
