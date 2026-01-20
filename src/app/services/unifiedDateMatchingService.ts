@@ -424,14 +424,16 @@ export function getTopDates(
     'cafe': 'simple_coffee_date',
     'restaurant': 'simple_dinner_date',
     'bar': 'simple_drinks_at_bar',
-    'park': 'simple_park_walk', // Will create if doesn't exist
-    'museum': 'simple_museum_visit', // Will create if doesn't exist
-    'theater': 'simple_movie_date', // Will create if doesn't exist
-    'activity': 'simple_activity_date',
+    'park': 'simple_walk_in_park',  // FIXED: was 'simple_park_walk'
+    'museum': 'simple_museum_visit',
+    'theater': 'simple_movie_date',
+    'activity': 'simple_activity_date', // May not exist, will skip
   };
 
   const results: ScoredDateTemplate[] = [];
   const usedVenueIds = new Set<string>();
+
+  console.log(`🎲 Creating dates for ${venuesByCategory.size} venue categories...`);
 
   // For each category with venues, create ONE date
   for (const [category, categoryVenues] of venuesByCategory.entries()) {
@@ -441,7 +443,10 @@ export function getTopDates(
     const templateId = categoryToTemplate[category];
     const template = templates.find(t => t.id === templateId);
 
-    if (!template) continue; // Skip if template doesn't exist
+    if (!template) {
+      console.log(`⚠️ No template found for category '${category}' (looking for '${templateId}')`);
+      continue; // Skip if template doesn't exist
+    }
 
     // Find first unused venue in this category
     const venue = categoryVenues.find(v => !usedVenueIds.has(v.placeId));
@@ -453,6 +458,8 @@ export function getTopDates(
     const scoreBreakdown = calculateScore(template, [venue], preferences, usedVenueIds);
     const totalScore = Object.values(scoreBreakdown).reduce((sum, val) => sum + val, 0);
 
+    console.log(`  ✓ ${category}: "${template.title}" at "${venue.name}" - Score: ${totalScore.toFixed(1)}`);
+
     results.push({
       template,
       score: totalScore,
@@ -462,7 +469,10 @@ export function getTopDates(
   }
 
   // Sort by score and return top N
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+  const sorted = results.sort((a, b) => b.score - a.score);
+  console.log(`📊 Returning top ${limit} dates out of ${sorted.length} options`);
+
+  return sorted.slice(0, limit);
 }
 
 // ============================================================================
