@@ -166,10 +166,19 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       // Step 3: Filter and deduplicate
       const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values())
-        .filter(place => place.distance <= maxDistanceMiles)
+        .filter(place => place && place.distance <= maxDistanceMiles)
         .sort((a, b) => a.distance - b.distance);
 
       console.log(`✅ TOTAL: ${uniquePlaces.length} unique venues fetched within ${maxDistanceMiles} miles`);
+
+      if (uniquePlaces.length === 0) {
+        console.warn('⚠️ No venues found in the area');
+        setFetchingVenues(false);
+        setStep('results');
+        setDateOptions([]);
+        return;
+      }
+
       console.log(`📊 Breakdown by distance:`);
       console.log(`   - Within 0.5 mi: ${uniquePlaces.filter(p => p.distance <= 0.5).length}`);
       console.log(`   - Within 1 mi: ${uniquePlaces.filter(p => p.distance <= 1).length}`);
@@ -177,12 +186,14 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       console.log(`   - Within 5 mi: ${uniquePlaces.filter(p => p.distance <= 5).length}`);
 
       // Store venues for later use
-      setAllNearbyVenues(uniquePlaces);
+      setAllNearbyVenues([...uniquePlaces]); // Create new array to avoid reference issues
       setFetchingVenues(false);
 
       // Now generate date options using the pre-fetched venues
       setStep('loading');
-      await generateDateOptions(uniquePlaces);
+
+      // Pass a clean copy of the array
+      await generateDateOptions([...uniquePlaces]);
 
     } catch (error) {
       console.error('❌ Error fetching venues:', error);
@@ -197,30 +208,52 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
     try {
       console.log('🎯 Generating date options from pre-fetched venues...');
 
+      // Validate input
+      if (!Array.isArray(preFetchedVenues)) {
+        console.error('❌ preFetchedVenues is not an array:', typeof preFetchedVenues);
+        setStep('results');
+        setLoadingVenues(false);
+        setDateOptions([]);
+        return;
+      }
+
       // Use the venues that were already fetched
-      const uniquePlaces = preFetchedVenues;
+      const uniquePlaces = preFetchedVenues.filter(v => v && v.id && v.category);
 
       console.log(`📊 Using ${uniquePlaces.length} pre-fetched venues`);
 
+      if (uniquePlaces.length === 0) {
+        console.warn('⚠️ No valid venues to generate dates from');
+        setStep('results');
+        setLoadingVenues(false);
+        setDateOptions([]);
+        return;
+      }
+
       // Group venues by category to see what's actually available
-      const venuesByCategory = uniquePlaces.reduce((acc, place) => {
-        if (!acc[place.category]) {
-          acc[place.category] = [];
+      const venuesByCategory: Record<string, Place[]> = {};
+      uniquePlaces.forEach(place => {
+        if (place && place.category) {
+          if (!venuesByCategory[place.category]) {
+            venuesByCategory[place.category] = [];
+          }
+          venuesByCategory[place.category].push(place);
         }
-        acc[place.category].push(place);
-        return acc;
-      }, {} as Record<string, Place[]>);
+      });
 
       // Log detailed venue breakdown
-      console.log('🏪 Available venue categories:', Object.keys(venuesByCategory).map(cat => 
+      const categoryNames = Object.keys(venuesByCategory);
+      console.log('🏪 Available venue categories:', categoryNames.map(cat =>
         `${cat} (${venuesByCategory[cat]?.length || 0})`
       ).join(', '));
-      
+
       // Log sample venues from each category for debugging
-      Object.keys(venuesByCategory).forEach(cat => {
+      categoryNames.forEach(cat => {
         const venues = venuesByCategory[cat];
-        const sampleNames = venues.slice(0, 3).map(v => v.name).join(', ');
-        console.log(`  ${cat}: ${sampleNames}${venues.length > 3 ? '...' : ''}`);
+        if (venues && Array.isArray(venues) && venues.length > 0) {
+          const sampleNames = venues.slice(0, 3).map(v => v?.name || 'Unknown').join(', ');
+          console.log(`  ${cat}: ${sampleNames}${venues.length > 3 ? '...' : ''}`);
+        }
       });
 
       // Step 3: Filter dates based on what venues are actually available nearby
