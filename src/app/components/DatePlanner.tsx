@@ -311,7 +311,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         dateSuggestionTemplates,
         uniquePlaces,
         userPreferences,
-        10 // Get top 10 candidates
+        3 // Get top 3 unique dates (one per venue category)
       );
 
       console.log(`✅ Unified matching returned ${scoredDates.length} date suggestions`);

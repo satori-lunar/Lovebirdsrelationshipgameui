@@ -32,6 +32,7 @@ export interface ScoredDateTemplate {
     budgetMatch: number;
     durationMatch: number;
     venuePreferenceMatch: number;
+    simpleTemplate: number;
     venueAvailable: number;
     loveLanguageMatch: number;
     interestMatch: number;
@@ -48,6 +49,7 @@ const SCORING_WEIGHTS = {
   BUDGET_MATCH: 40,        // User preference - HIGHEST
   DURATION_MATCH: 40,      // User preference - HIGHEST
   VENUE_PREF_MATCH: 30,    // User preference - HIGH
+  SIMPLE_TEMPLATE: 25,     // Simple dates over specialized - HIGH
   VENUE_AVAILABLE: 20,     // Venue match - MEDIUM
   LOVE_LANGUAGE: 15,       // Personalization - MEDIUM
   INTEREST_MATCH: 10,      // Personalization - LOW
@@ -128,6 +130,7 @@ function calculateScore(
     budgetMatch: scoreBudgetMatch(template, preferences.budget),
     durationMatch: scoreDurationMatch(template, preferences.duration),
     venuePreferenceMatch: scoreVenuePreferenceMatch(template, preferences.venuePreference),
+    simpleTemplate: scoreSimpleTemplate(template),
     venueAvailable: scoreVenueAvailability(template, venues, usedVenueIds),
     loveLanguageMatch: scoreLoveLanguageMatch(template, preferences.loveLanguages || []),
     interestMatch: scoreInterestMatch(template, preferences.interests || []),
@@ -203,6 +206,18 @@ function scoreVenuePreferenceMatch(template: DateTemplate, userPref: string): nu
   // Partial match: if user wants multiple and template has 1, give some points
   if (userPref === 'multiple' && templateVenueCount === 1) {
     return SCORING_WEIGHTS.VENUE_PREF_MATCH * 0.3;
+  }
+
+  return 0;
+}
+
+function scoreSimpleTemplate(template: DateTemplate): number {
+  // Prioritize simple, basic date templates over specialized ones
+  // Simple templates have IDs like "simple_coffee_date", "simple_dinner_date"
+  const isSimple = template.id.startsWith('simple_');
+
+  if (isSimple) {
+    return SCORING_WEIGHTS.SIMPLE_TEMPLATE;
   }
 
   return 0;
@@ -383,10 +398,30 @@ export function getTopDates(
   templates: DateTemplate[],
   venues: Place[],
   preferences: UserPreferences,
-  limit: number = 10
+  limit: number = 3  // Changed default to 3
 ): ScoredDateTemplate[] {
   const allMatches = matchDatesWithPreferences(templates, venues, preferences);
-  return allMatches.slice(0, limit);
+
+  // CRITICAL: Deduplicate by venue category - only take the BEST date per category
+  const categoryMap = new Map<PlaceCategory, ScoredDateTemplate>();
+
+  for (const match of allMatches) {
+    if (match.matchedVenues.length === 0) continue;
+
+    const primaryCategory = match.matchedVenues[0].category;
+    const existing = categoryMap.get(primaryCategory);
+
+    // Keep the higher-scored date for this category
+    if (!existing || match.score > existing.score) {
+      categoryMap.set(primaryCategory, match);
+    }
+  }
+
+  // Convert back to array and sort by score
+  const uniqueDates = Array.from(categoryMap.values())
+    .sort((a, b) => b.score - a.score);
+
+  return uniqueDates.slice(0, limit);
 }
 
 // ============================================================================
@@ -404,6 +439,7 @@ Breakdown:
   Budget Match:          ${scoreBreakdown.budgetMatch.toFixed(1)} / ${SCORING_WEIGHTS.BUDGET_MATCH}
   Duration Match:        ${scoreBreakdown.durationMatch.toFixed(1)} / ${SCORING_WEIGHTS.DURATION_MATCH}
   Venue Pref Match:      ${scoreBreakdown.venuePreferenceMatch.toFixed(1)} / ${SCORING_WEIGHTS.VENUE_PREF_MATCH}
+  Simple Template:       ${scoreBreakdown.simpleTemplate.toFixed(1)} / ${SCORING_WEIGHTS.SIMPLE_TEMPLATE}
   Venue Available:       ${scoreBreakdown.venueAvailable.toFixed(1)} / ${SCORING_WEIGHTS.VENUE_AVAILABLE}
   Love Language Match:   ${scoreBreakdown.loveLanguageMatch.toFixed(1)} / ${SCORING_WEIGHTS.LOVE_LANGUAGE}
   Interest Match:        ${scoreBreakdown.interestMatch.toFixed(1)} / ${SCORING_WEIGHTS.INTEREST_MATCH}
