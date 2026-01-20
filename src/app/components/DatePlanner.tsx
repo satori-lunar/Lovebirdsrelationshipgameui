@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star, Clock, Layers } from 'lucide-react';
+import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star, Clock, Layers, Map } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,6 +12,7 @@ import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useRelationship } from '../hooks/useRelationship';
 import { dateMatchingService } from '../services/dateMatchingService';
 import { EnhancedVenueCard } from './EnhancedVenueCard';
+import { VenuesMap } from './VenuesMap';
 
 interface DatePlannerProps {
   onBack: () => void;
@@ -54,6 +55,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
   const [allNearbyVenues, setAllNearbyVenues] = useState<Place[]>([]);
   const [targetLocation, setTargetLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [fetchingVenues, setFetchingVenues] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   // Get user's love language from onboarding data
   const userLoveLanguage = user?.onboarding?.love_language_primary;
@@ -1537,10 +1539,22 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 <Sparkles className="w-8 h-8 text-white" />
               </motion.div>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">Your Perfect Dates</h2>
-              <p className="text-sm text-gray-600 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 max-w-md mx-auto mb-4">
                 {userLoveLanguage && `✨ Curated for your ${userLoveLanguage} love language. `}
                 Tap any date to explore the full experience!
               </p>
+
+              {/* Map Button */}
+              {allNearbyVenues.length > 0 && targetLocation && (
+                <Button
+                  onClick={() => setShowMap(true)}
+                  variant="outline"
+                  className="mx-auto"
+                >
+                  <Map className="w-4 h-4 mr-2" />
+                  View All {allNearbyVenues.length} Venues on Map
+                </Button>
+              )}
             </div>
 
             {dateOptions.map((option, index) => {
@@ -1938,6 +1952,15 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Venues Map Modal */}
+      {showMap && allNearbyVenues.length > 0 && targetLocation && (
+        <VenuesMap
+          venues={allNearbyVenues}
+          centerLocation={targetLocation}
+          onClose={() => setShowMap(false)}
+        />
+      )}
     </div>
   );
 }
