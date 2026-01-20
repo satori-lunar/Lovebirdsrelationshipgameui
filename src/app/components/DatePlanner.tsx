@@ -1506,8 +1506,17 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             >
               <Sparkles className="w-12 h-12 text-white" />
             </motion.div>
-            <h2 className="text-2xl font-bold mb-2">Finding Perfect Dates...</h2>
-            <p className="text-gray-600">Looking for venues near you</p>
+            <h2 className="text-2xl font-bold mb-2">Creating Your Perfect Dates...</h2>
+            <div className="space-y-2 text-gray-600">
+              <p>📊 Analyzing {allNearbyVenues.length} venues in your area</p>
+              <p>🎯 Matching to your preferences:</p>
+              <ul className="text-sm space-y-1">
+                <li>• Budget: {selectedBudget}</li>
+                <li>• Duration: {selectedDuration === 'quick' ? '1-3 hours' : selectedDuration === 'half-day' ? '3-5 hours' : '5+ hours'}</li>
+                <li>• Venues: {venuePreference === 'single' ? 'Single location' : 'Multiple locations'}</li>
+              </ul>
+              <p className="text-xs text-gray-500 mt-4">This may take up to 10 seconds for best results...</p>
+            </div>
           </Card>
         )}
 
