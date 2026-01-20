@@ -398,30 +398,71 @@ export function getTopDates(
   templates: DateTemplate[],
   venues: Place[],
   preferences: UserPreferences,
-  limit: number = 3  // Changed default to 3
+  limit: number = 3
 ): ScoredDateTemplate[] {
-  const allMatches = matchDatesWithPreferences(templates, venues, preferences);
+  // Group venues by category
+  const venuesByCategory = new Map<PlaceCategory, Place[]>();
 
-  // CRITICAL: Deduplicate by venue category - only take the BEST date per category
-  const categoryMap = new Map<PlaceCategory, ScoredDateTemplate>();
+  for (const venue of venues) {
+    if (!venuesByCategory.has(venue.category)) {
+      venuesByCategory.set(venue.category, []);
+    }
+    venuesByCategory.get(venue.category)!.push(venue);
+  }
 
-  for (const match of allMatches) {
-    if (match.matchedVenues.length === 0) continue;
-
-    const primaryCategory = match.matchedVenues[0].category;
-    const existing = categoryMap.get(primaryCategory);
-
-    // Keep the higher-scored date for this category
-    if (!existing || match.score > existing.score) {
-      categoryMap.set(primaryCategory, match);
+  // Shuffle venues within each category for variety
+  for (const [category, categoryVenues] of venuesByCategory.entries()) {
+    // Fisher-Yates shuffle
+    for (let i = categoryVenues.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [categoryVenues[i], categoryVenues[j]] = [categoryVenues[j], categoryVenues[i]];
     }
   }
 
-  // Convert back to array and sort by score
-  const uniqueDates = Array.from(categoryMap.values())
-    .sort((a, b) => b.score - a.score);
+  // Simple mapping: category → simple template ID
+  const categoryToTemplate: Record<PlaceCategory, string> = {
+    'cafe': 'simple_coffee_date',
+    'restaurant': 'simple_dinner_date',
+    'bar': 'simple_drinks_at_bar',
+    'park': 'simple_park_walk', // Will create if doesn't exist
+    'museum': 'simple_museum_visit', // Will create if doesn't exist
+    'theater': 'simple_movie_date', // Will create if doesn't exist
+    'activity': 'simple_activity_date',
+  };
 
-  return uniqueDates.slice(0, limit);
+  const results: ScoredDateTemplate[] = [];
+  const usedVenueIds = new Set<string>();
+
+  // For each category with venues, create ONE date
+  for (const [category, categoryVenues] of venuesByCategory.entries()) {
+    if (categoryVenues.length === 0) continue;
+
+    // Get the simple template for this category
+    const templateId = categoryToTemplate[category];
+    const template = templates.find(t => t.id === templateId);
+
+    if (!template) continue; // Skip if template doesn't exist
+
+    // Find first unused venue in this category
+    const venue = categoryVenues.find(v => !usedVenueIds.has(v.placeId));
+    if (!venue) continue;
+
+    usedVenueIds.add(venue.placeId);
+
+    // Score based on user preferences
+    const scoreBreakdown = calculateScore(template, [venue], preferences, usedVenueIds);
+    const totalScore = Object.values(scoreBreakdown).reduce((sum, val) => sum + val, 0);
+
+    results.push({
+      template,
+      score: totalScore,
+      matchedVenues: [venue],
+      scoreBreakdown,
+    });
+  }
+
+  // Sort by score and return top N
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 // ============================================================================
