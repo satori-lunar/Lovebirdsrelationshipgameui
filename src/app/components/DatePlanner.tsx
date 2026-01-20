@@ -302,7 +302,9 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           'hot air balloon', 'helicopter tour', 'boat tour', 'kayaking', 'rafting',
           'escape room', 'laser tag', 'go-kart', 'rock climbing', 'zip line',
           'trivia night', 'karaoke', 'open mic', 'comedy show', 'improv show',
-          'wine and cheese pairing', 'sake tasting', 'brewery tour', 'distillery tour'
+          'wine and cheese pairing', 'sake tasting', 'brewery tour', 'distillery tour',
+          'mini golf', 'miniature golf', 'putt putt', 'bowling', 'arcade',
+          'ice cream', 'gelato', 'frozen yogurt'
         ];
 
         for (const specialized of specializedTemplates) {
