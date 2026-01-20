@@ -259,9 +259,14 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
                             name.includes('steakhouse') || name.includes('trattoria');
         
         // Cafes - must be explicit cafe/coffee, NOT wine bars or restaurants
-        // Only mark as cafe if it's NOT a wine bar/brewery/cocktail bar
-        const hasCafeInName = name.includes('cafe') || name.includes('coffee');
-        const hasCafeInDesc = desc.includes('cafe') || desc.includes('coffee');
+        // Check for both English and Spanish keywords - "café" means coffee shop in Spanish
+        // "Olor a café" means "smell of coffee" - this is a coffee shop name
+        const hasCafeInName = name.includes('cafe') || name.includes('coffee') || 
+                             name.includes('café') || name.includes('olor a café') ||
+                             name.includes('cafeteria');
+        const hasCafeInDesc = desc.includes('cafe') || desc.includes('coffee') || 
+                             desc.includes('café') || desc.includes('olor a café') ||
+                             desc.includes('cafeteria');
         const isCafe = !isWineBar && !isBrewery && !isCocktailBar && 
                       ((category === 'cafe') || 
                        (hasCafeInName && !hasWineInName && !name.includes('bar') && !name.includes('restaurant')) ||
@@ -334,7 +339,9 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
         breweries: analyzedVenues.filter(v => v.analysis.isBrewery),
         cocktailBars: analyzedVenues.filter(v => v.analysis.isCocktailBar),
         bars: analyzedVenues.filter(v => v.analysis.primaryCategory === 'bar' && !v.analysis.isWineBar && !v.analysis.isBrewery),
-        restaurants: analyzedVenues.filter(v => v.analysis.isRestaurant && v.analysis.primaryCategory === 'restaurant'),
+        restaurants: analyzedVenues.filter(v => v.analysis.isRestaurant && 
+                                                 v.analysis.primaryCategory === 'restaurant' && 
+                                                 !v.analysis.isCafe), // Exclude cafes even if categorized as restaurants
         cafes: analyzedVenues.filter(v => v.analysis.isCafe),
         parks: analyzedVenues.filter(v => v.analysis.isPark),
         museums: analyzedVenues.filter(v => v.place.category === 'museum'),
@@ -431,14 +438,18 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
             continue; // Skip if no cafes
           }
         }
-        // Restaurant / Dining dates
+        // Restaurant / Dining dates - EXPLICITLY exclude cafes
         else if (title.includes('restaurant') || title.includes('dinner') || title.includes('brunch') ||
                  title.includes('lunch') || title.includes('dining') || desc.includes('restaurant') ||
                  (desc.includes('dinner') && !desc.includes('home'))) {
-          if (venuesByType.restaurants.length > 0) {
-            matchingVenues = venuesByType.restaurants;
+          // Only match restaurants, explicitly exclude cafes
+          const restaurantsOnly = venuesByType.restaurants.filter(v => !v.analysis.isCafe);
+          if (restaurantsOnly.length > 0) {
+            matchingVenues = restaurantsOnly;
             matchScore = 100;
+            console.log(`✅ Matched "${dateTemplate.title}" with ${restaurantsOnly.length} restaurants (cafes excluded)`);
           } else {
+            console.log(`❌ Skipping "${dateTemplate.title}" - No restaurants found (cafes excluded)`);
             continue;
           }
         }

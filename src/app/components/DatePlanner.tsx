@@ -298,11 +298,44 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           const primaryVenue = getPrimaryVenueCategory(date);
 
           // Get relevant venues for this date, analyzing actual venue names/descriptions
+          // Helper function to detect if a venue is actually a cafe/coffee shop (English or Spanish)
+          const isActuallyACafe = (name: string, desc: string, category: string): boolean => {
+            const normalizedName = name.toLowerCase();
+            const normalizedDesc = desc.toLowerCase();
+            // Check English keywords
+            if (category === 'cafe') return true;
+            if (normalizedName.includes('cafe') || normalizedName.includes('coffee') || 
+                normalizedName.includes('coffee shop') || normalizedName.includes('café') ||
+                normalizedName.includes('cafeteria')) return true;
+            if (normalizedDesc.includes('cafe') || normalizedDesc.includes('coffee') || 
+                normalizedDesc.includes('coffee shop') || normalizedDesc.includes('café') ||
+                normalizedDesc.includes('cafeteria')) return true;
+            // Check Spanish keywords - "café" means coffee shop in Spanish
+            // "Olor a café" means "smell of coffee" - this is a coffee shop name
+            if (normalizedName.includes('café') || normalizedName.includes('olor a café')) return true;
+            if (normalizedDesc.includes('café') || normalizedDesc.includes('olor a café')) return true;
+            // Check for common cafe indicators
+            if ((normalizedName.includes('bar') && normalizedName.includes('cafe')) || 
+                (normalizedDesc.includes('bar') && normalizedDesc.includes('cafe'))) return false; // Cafe-bar might be OK
+            return false;
+          };
+
           const relevantVenues = uniquePlaces
             .filter(place => {
               const placeName = (place.name || '').toLowerCase();
               const placeDesc = (place.description || '').toLowerCase();
               const placeCategory = place.category;
+              
+              // Check if this venue is actually a cafe (regardless of category)
+              const isACafe = isActuallyACafe(placeName, placeDesc, placeCategory);
+              
+              // For dinner/restaurant dates - EXPLICITLY REJECT cafes (including Spanish cafes)
+              // This catches cases where "Olor a café" is mis-categorized as a restaurant
+              if ((dateTitle.includes('dinner') || dateDesc.includes('dinner') ||
+                   dateTitle.includes('restaurant') || dateDesc.includes('restaurant') ||
+                   primaryVenue === 'restaurant') && isACafe) {
+                return false; // Never match cafes for dinner dates
+              }
               
               // For wine tasting dates - ONLY match wine bars/wineries, NOT cafes
               if (dateTitle.includes('wine') || dateTitle.includes('wine tasting') ||
@@ -476,8 +509,13 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 return false;
               }
               
-              // For restaurant dates, prefer restaurants
+              // For restaurant dates, prefer restaurants BUT REJECT cafes/coffee shops
               if (primaryVenue === 'restaurant') {
+                // REJECT cafes - even if Google mis-categorized them as restaurants
+                // This includes Spanish cafes like "Olor a café" (smell of coffee)
+                if (isACafe) {
+                  return false; // Never match cafes for dinner/restaurant dates
+                }
                 // Prefer restaurants, but allow restaurant-bars
                 if (placeCategory === 'restaurant') return true;
                 if (placeCategory === 'bar' && (placeName.includes('restaurant') || placeDesc.includes('restaurant'))) {
@@ -488,9 +526,8 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               
               // For bar dates (if primaryVenue is 'bar'), REJECT cafes
               if (primaryVenue === 'bar') {
-                // REJECT cafes - even if Google mis-categorized it
-                if (placeCategory === 'cafe' || placeName.includes('cafe') || placeName.includes('coffee') ||
-                    placeDesc.includes('cafe') || placeDesc.includes('coffee')) {
+                // REJECT cafes - even if Google mis-categorized it (including Spanish cafes)
+                if (isACafe) {
                   return false; // Never match cafes for bar dates
                 }
                 return placeCategory === 'bar';
@@ -499,24 +536,24 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               // Default: match by category, but add comprehensive safety checks
               // Reject obvious mismatches based on date type keywords
               
-              // If date needs bars, reject cafes
-              if (dateCategories.includes('bar') && (placeCategory === 'cafe' || 
-                  placeName.includes('cafe') || placeName.includes('coffee'))) {
+              // If date needs bars, reject cafes (including Spanish cafes)
+              if (dateCategories.includes('bar') && isACafe) {
                 return false;
               }
               
               // Reject cafes for dates that clearly need other venue types
-              if (placeCategory === 'cafe' && (
+              if (isACafe && (
                   dateTitle.includes('spa') || dateTitle.includes('massage') ||
                   dateTitle.includes('resort') || dateTitle.includes('hotel') ||
                   dateTitle.includes('museum') || dateTitle.includes('theater') ||
                   dateTitle.includes('park') || dateTitle.includes('activity') ||
+                  dateTitle.includes('dinner') || dateDesc.includes('dinner') ||
                   dateDesc.includes('spa') || dateDesc.includes('resort') ||
                   dateDesc.includes('museum') || dateDesc.includes('theater'))) {
-                return false; // Don't match cafes for spa/resort/museum/theater/park/activity dates
+                return false; // Don't match cafes for spa/resort/museum/theater/park/activity/dinner dates
               }
               
-              // Reject restaurants for dates that need other venue types
+              // Reject restaurants for dates that need other venue types (and reject cafes mis-categorized as restaurants)
               if (placeCategory === 'restaurant' && (
                   dateTitle.includes('spa') || dateTitle.includes('museum') ||
                   dateTitle.includes('theater') || dateTitle.includes('park') ||
@@ -524,6 +561,10 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                   dateDesc.includes('spa') || dateDesc.includes('museum') ||
                   dateDesc.includes('theater') || dateDesc.includes('park') ||
                   dateDesc.includes('activity'))) {
+                // Also reject cafes that were mis-categorized as restaurants
+                if (isACafe) {
+                  return false; // Don't match cafes (even if categorized as restaurant) for spa/museum/theater/park/activity dates
+                }
                 // Unless the restaurant is also a spa/museum/etc (check name)
                 const isSpecialRestaurant = placeName.includes('spa') || placeName.includes('museum') ||
                                            placeName.includes('theater') || placeName.includes('resort');
