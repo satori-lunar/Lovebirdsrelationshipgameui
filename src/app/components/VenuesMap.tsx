@@ -47,13 +47,28 @@ export function VenuesMap({ venues, centerLocation, onClose }: VenuesMapProps) {
       return () => clearInterval(checkLoaded);
     }
 
-    // Load the script
+    // Get API key
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+    if (!apiKey) {
+      console.error('❌ VITE_GOOGLE_MAPS_API_KEY not found in environment variables');
+      setError('Google Maps API key not configured');
+      return;
+    }
+
+    // Load the script with proper parameters
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async`;
     script.async = true;
     script.defer = true;
-    script.onload = () => setIsLoaded(true);
-    script.onerror = () => setError('Failed to load Google Maps');
+    script.onload = () => {
+      console.log('✅ Google Maps loaded successfully');
+      setIsLoaded(true);
+    };
+    script.onerror = () => {
+      console.error('❌ Failed to load Google Maps script');
+      setError('Failed to load Google Maps');
+    };
     document.head.appendChild(script);
 
     return () => {
@@ -133,16 +148,23 @@ export function VenuesMap({ venues, centerLocation, onClose }: VenuesMapProps) {
         title: venue.name,
       });
 
+      const ratingStr = venue.rating !== undefined && venue.rating !== null
+        ? `⭐ ${venue.rating.toFixed(1)} rating`
+        : '⭐ No rating';
+      const distanceStr = venue.distance !== undefined && venue.distance !== null
+        ? `📍 ${venue.distance.toFixed(1)} miles away`
+        : '📍 Distance unknown';
+
       const content = `
         <div style="padding: 12px; max-width: 250px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${venue.name}</h3>
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">${venue.name || 'Unknown Venue'}</h3>
           <div style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: #666;">
             <div style="display: flex; align-items: center; gap: 6px;">
               <span style="width: 12px; height: 12px; border-radius: 50%; background: ${categoryColors[venue.category] || '#888'}; display: inline-block;"></span>
-              <span>${venue.category}</span>
+              <span>${venue.category || 'unknown'}</span>
             </div>
-            <div>⭐ ${venue.rating.toFixed(1)} rating</div>
-            <div>📍 ${venue.distance.toFixed(1)} miles away</div>
+            <div>${ratingStr}</div>
+            <div>${distanceStr}</div>
             ${venue.address ? `<div style="font-size: 12px; color: #999; margin-top: 4px;">${venue.address}</div>` : ''}
           </div>
         </div>
