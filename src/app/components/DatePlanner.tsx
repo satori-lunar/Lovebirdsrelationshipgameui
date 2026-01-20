@@ -1115,12 +1115,20 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       };
 
       // Select top 3 with variety and unique venues from the diverse pool
+      console.log(`🎲 Selecting 3 dates from ${diverseDatesPool.length} candidates with venue variety enforcement...`);
+
       for (const option of diverseDatesPool) {
         if (selectedDates.length >= 3) break;
+
+        // Check for venue reuse
+        const venueNames = option.venues.map(v => v.name).join(', ');
+        const overlappingVenues = option.venues.filter(v => usedVenueIds.has(v.id));
+        const hasVenueOverlap = overlappingVenues.length > 0;
 
         // Always include the first (highest-scored) option
         if (selectedDates.length === 0) {
           selectedDates.push(option);
+          console.log(`  ✅ Date #1: "${option.date.title}" at ${venueNames}`);
           if (option.primaryVenueCategory) {
             usedVenueCategories.add(option.primaryVenueCategory);
           }
@@ -1131,6 +1139,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           // For subsequent selections, prioritize variety
           if (addsVariety(option)) {
             selectedDates.push(option);
+            console.log(`  ✅ Date #${selectedDates.length}: "${option.date.title}" at ${venueNames} (adds variety)`);
             if (option.primaryVenueCategory) {
               usedVenueCategories.add(option.primaryVenueCategory);
             }
@@ -1138,18 +1147,20 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             // Mark venues as used
             option.venues.forEach(venue => usedVenueIds.add(venue.id));
           } else if (selectedDates.length < 3) {
-            // Check if we can still add this without venue overlap
-            const hasVenueOverlap = option.venues.some(venue => usedVenueIds.has(venue.id));
             if (!hasVenueOverlap) {
               // If no venue overlap, include it even without style/category variety
               selectedDates.push(option);
+              console.log(`  ✅ Date #${selectedDates.length}: "${option.date.title}" at ${venueNames} (no venue overlap)`);
               if (option.primaryVenueCategory) {
                 usedVenueCategories.add(option.primaryVenueCategory);
               }
               option.dateStyle.forEach(style => usedDateStyles.add(style));
               option.venues.forEach(venue => usedVenueIds.add(venue.id));
+            } else {
+              // Skip due to venue reuse
+              const reusedVenues = overlappingVenues.map(v => v.name).join(', ');
+              console.log(`  ⏭️  SKIPPED: "${option.date.title}" - reuses venues: ${reusedVenues}`);
             }
-            // If there's venue overlap and we need options, we're stuck - skip this one
           }
         }
       }
