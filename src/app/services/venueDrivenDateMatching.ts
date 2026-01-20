@@ -70,6 +70,40 @@ export function isAtHomeActivity(template: DateTemplate): boolean {
 }
 
 /**
+ * Check if a date requires specialized venues not available in Google Places
+ * These dates need specific venue types that either don't exist in the Places API
+ * or are too specialized to reliably match
+ */
+export function requiresUnavailableVenueType(template: DateTemplate): boolean {
+  const title = (template.title || '').toLowerCase();
+  const desc = (template.description || '').toLowerCase();
+
+  const unavailableVenueKeywords = [
+    'thrift store', 'thrift shop', 'secondhand',
+    'yoga studio', 'yoga class', 'yoga practice',
+    'food bank', 'volunteer', 'community service', 'charity',
+    'animal shelter', 'habitat for humanity',
+    'dance class', 'dance studio', 'dance lesson',
+    'art class', 'painting class', 'pottery class',
+    'cooking class', 'culinary class', 'chef class',
+    'language class', 'language exchange',
+    'book club', 'reading group',
+    'meditation center', 'meditation class',
+    'martial arts', 'karate', 'jiu-jitsu', 'boxing gym',
+    'rock climbing gym', 'climbing wall',
+    'escape room', 'arcade', 'bowling alley',
+    'mini golf', 'golf course', 'driving range',
+    'laser tag', 'paintball',
+    'ice skating rink', 'roller skating',
+    'trampoline park', 'bounce house'
+  ];
+
+  return unavailableVenueKeywords.some(keyword =>
+    title.includes(keyword) || desc.includes(keyword)
+  );
+}
+
+/**
  * Check if a date template is a basic/common date
  */
 export function isBasicDate(template: DateTemplate): boolean {
@@ -211,7 +245,15 @@ export function venueActuallyMatchesDate(
     }
   }
 
-  // Default: use category matching
+  // For non-basic dates without explicit matching rules, reject by default
+  // This prevents specialized dates (thrift stores, yoga studios, food banks, etc.)
+  // from matching to generic restaurants/cafes/bars
+  if (!isBasicDate(template)) {
+    console.log(`❌ No explicit venue matching rule for specialized date: "${template.title}"`);
+    return false;
+  }
+
+  // Default: use category matching for basic dates
   const requiredCategories = template.requiredVenues || [];
   if (requiredCategories.length > 0) {
     return requiredCategories.includes(venueCategory);
@@ -280,10 +322,15 @@ export function matchDatesToVenues(
     matchScore: number;
   }> = [];
 
-  // FILTER OUT at-home activities that don't need venues
-  const venueRequiringDates = templates.filter(t => !isAtHomeActivity(t));
+  // FILTER OUT at-home activities and dates requiring unavailable venue types
+  const atHomeDates = templates.filter(t => isAtHomeActivity(t));
+  const unavailableVenueDates = templates.filter(t => !isAtHomeActivity(t) && requiresUnavailableVenueType(t));
+  const venueRequiringDates = templates.filter(t =>
+    !isAtHomeActivity(t) && !requiresUnavailableVenueType(t)
+  );
 
-  console.log(`🏠 Filtered out ${templates.length - venueRequiringDates.length} at-home activities`);
+  console.log(`🏠 Filtered out ${atHomeDates.length} at-home activities`);
+  console.log(`🏪 Filtered out ${unavailableVenueDates.length} dates requiring unavailable venue types (thrift stores, yoga studios, food banks, etc.)`);
 
   // Separate basic and specialized dates
   const basicDates = venueRequiringDates.filter(t => isBasicDate(t));
@@ -334,6 +381,7 @@ export function matchDatesToVenues(
 
 export const venueDrivenDateMatching = {
   isAtHomeActivity,
+  requiresUnavailableVenueType,
   isBasicDate,
   venueActuallyMatchesDate,
   matchDatesToVenues,
