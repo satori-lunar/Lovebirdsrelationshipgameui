@@ -159,15 +159,37 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       for (const category of allCategories) {
         console.log(`  🔎 Fetching ${category} venues...`);
-        const places = await placesService.findNearbyPlaces(location, searchRadius, category, 20);
-        allPlaces.push(...places);
-        console.log(`  ✓ Found ${places.length} ${category} venues`);
+        try {
+          const places = await placesService.findNearbyPlaces(location, searchRadius, category, 20);
+          if (Array.isArray(places)) {
+            allPlaces.push(...places);
+            console.log(`  ✓ Found ${places.length} ${category} venues`);
+          } else {
+            console.warn(`  ⚠️ Invalid response for ${category} venues`);
+          }
+        } catch (err) {
+          console.error(`  ❌ Error fetching ${category} venues:`, err);
+        }
       }
 
-      // Step 3: Filter and deduplicate
-      const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values())
-        .filter(place => place && place.distance <= maxDistanceMiles)
-        .sort((a, b) => a.distance - b.distance);
+      console.log(`📦 Total places fetched (with duplicates): ${allPlaces.length}`);
+
+      // Step 3: Filter and deduplicate using a safer method
+      // Avoid using new Map() which might cause constructor issues in minified code
+      const seenIds = new Set<string>();
+      const uniquePlaces: Place[] = [];
+
+      for (const place of allPlaces) {
+        if (place && place.id && !seenIds.has(place.id)) {
+          if (place.distance && place.distance <= maxDistanceMiles) {
+            seenIds.add(place.id);
+            uniquePlaces.push(place);
+          }
+        }
+      }
+
+      // Sort by distance
+      uniquePlaces.sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
       console.log(`✅ TOTAL: ${uniquePlaces.length} unique venues fetched within ${maxDistanceMiles} miles`);
 
@@ -196,7 +218,14 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       await generateDateOptions([...uniquePlaces]);
 
     } catch (error) {
-      console.error('❌ Error fetching venues:', error);
+      console.error('❌ Error in handleLocationSelect:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      }
       setFetchingVenues(false);
       setStep('location'); // Go back to location selection
     }
