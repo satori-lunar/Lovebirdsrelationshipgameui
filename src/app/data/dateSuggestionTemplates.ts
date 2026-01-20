@@ -758,6 +758,9 @@ export const dateSuggestionTemplates: DateTemplate[] = [
     optionalData: ['favorite_breakfast', 'local_markets'],
     personalizationTier: 2,
     avoidIf: [],
+    // Only match actual farmers markets, not convenience stores
+    interestTags: ['farmers market', 'fresh produce', 'cooking'],
+    activityTags: ['shopping', 'cooking', 'brunch'],
   },
 
   {

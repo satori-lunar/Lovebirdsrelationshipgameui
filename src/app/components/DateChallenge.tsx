@@ -438,6 +438,54 @@ export function DateChallenge({ onBack, partnerName }: DateChallengeProps) {
             continue; // Skip if no cafes
           }
         }
+        // Farmers Market dates - ONLY match actual farmers markets, NOT convenience stores
+        else if (title.includes('farmers market') || title.includes('farmer\'s market') ||
+                 desc.includes('farmers market') || desc.includes('farmer\'s market')) {
+          // Filter for actual farmers markets only
+          const farmersMarkets = analyzedVenues.filter(v => {
+            const name = (v.place.name || '').toLowerCase();
+            const desc = (v.place.description || '').toLowerCase();
+            // REJECT convenience stores
+            if (name.includes('convenience') || (name.includes('store') && 
+                (name.includes('gas') || name.includes('mini') || name.includes('corner') ||
+                 name.includes('oasis') || name.includes('7-eleven') || name.includes('7/11')))) {
+              return false;
+            }
+            // Only match actual farmers markets
+            return name.includes('farmers market') || name.includes('farmer\'s market') ||
+                   name.includes('farmers\' market') || desc.includes('farmers market') ||
+                   (name.includes('market') && (name.includes('farm') || desc.includes('produce') || desc.includes('fresh')));
+          });
+          if (farmersMarkets.length > 0) {
+            matchingVenues = farmersMarkets;
+            matchScore = 100;
+            console.log(`✅ Matched "${dateTemplate.title}" with ${farmersMarkets.length} farmers markets`);
+          } else {
+            console.log(`❌ Skipping "${dateTemplate.title}" - No farmers markets found`);
+            continue;
+          }
+        }
+        // Poetry Reading dates - ONLY match venues that actually host poetry/open mic
+        else if (title.includes('poetry') || title.includes('poetry reading') ||
+                 desc.includes('poetry') || desc.includes('open mic') || desc.includes('open-mic')) {
+          // Filter for venues that actually host poetry
+          const poetryVenues = analyzedVenues.filter(v => {
+            const name = (v.place.name || '').toLowerCase();
+            const desc = (v.place.description || '').toLowerCase();
+            // Must mention poetry/open mic
+            return name.includes('poetry') || name.includes('open mic') || name.includes('open-mic') ||
+                   desc.includes('poetry') || desc.includes('open mic') || desc.includes('spoken word') ||
+                   desc.includes('poetry reading') || desc.includes('slam poetry');
+          });
+          if (poetryVenues.length > 0) {
+            matchingVenues = poetryVenues;
+            matchScore = 100;
+            console.log(`✅ Matched "${dateTemplate.title}" with ${poetryVenues.length} poetry venues`);
+          } else {
+            console.log(`❌ Skipping "${dateTemplate.title}" - No poetry venues found`);
+            continue;
+          }
+        }
         // Restaurant / Dining dates - EXPLICITLY exclude cafes
         else if (title.includes('restaurant') || title.includes('dinner') || title.includes('brunch') ||
                  title.includes('lunch') || title.includes('dining') || desc.includes('restaurant') ||

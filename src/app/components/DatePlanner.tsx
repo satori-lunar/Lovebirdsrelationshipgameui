@@ -13,6 +13,8 @@ import { useRelationship } from '../hooks/useRelationship';
 import { dateMatchingService } from '../services/dateMatchingService';
 import { EnhancedVenueCard } from './EnhancedVenueCard';
 import { VenuesMap } from './VenuesMap';
+import { categorizeVenues, groupVenuesByType, CategorizedVenue } from '../services/venueCategorizationService';
+import { matchDatesToVenues } from '../services/venueDrivenDateMatching';
 
 interface DatePlannerProps {
   onBack: () => void;
@@ -259,6 +261,14 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         return;
       }
 
+      // Categorize venues with icons, titles, and detailed types
+      const categorizedVenues = categorizeVenues(uniquePlaces);
+      const venuesByType = groupVenuesByType(categorizedVenues);
+      
+      console.log('📋 Venues grouped by type:', Object.keys(venuesByType).map(type => 
+        `${type} (${venuesByType[type]?.length || 0})`
+      ).join(', '));
+
       // Group venues by category to see what's actually available
       const venuesByCategory: Record<string, Place[]> = {};
       uniquePlaces.forEach(place => {
@@ -352,7 +362,12 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       
       console.log(`📋 Filtered to ${venueDates.length} date templates matching nearby venues (out of ${dateSuggestionTemplates.length} total)`);
 
-      // Step 4: Use intelligent date matching service
+      // Step 4: Use venue-driven matching - prioritize basic dates, only include specialized if venues match
+      console.log('🎯 Using venue-driven date matching (prioritizing basic dates)...');
+      
+      const venueMatchedDates = matchDatesToVenues(venueDates, uniquePlaces);
+
+      // Step 5: Apply preference-based scoring to the venue-matched dates
       const matchCriteria = {
         budget: selectedBudget || undefined,
         duration: selectedDuration || undefined,
@@ -366,52 +381,72 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         partnerDateStyles: partnerDateStyles.length > 0 ? partnerDateStyles : undefined,
       };
 
-      console.log('🎯 Date matching criteria:', matchCriteria);
+      // Score the venue-matched dates with preferences (bonus on top of venue match score)
+      const scoredDates = venueMatchedDates.map(({ template, matchingVenues, isBasic, matchScore }) => {
+        const preferenceScore = dateMatchingService.scoreTemplate(
+          template,
+          matchCriteria,
+          uniquePlaces,
+          {
+            hasVenues: matchingVenues.length > 0,
+            matchingVenues,
+            averageDistance: matchingVenues.reduce((sum, v) => sum + (v.distance || 0), 0) / matchingVenues.length || 0,
+            averageRating: matchingVenues.reduce((sum, v) => sum + (v.rating || 0), 0) / matchingVenues.length || 0,
+            closeVenuesCount: matchingVenues.filter(v => (v.distance || 0) <= 3).length,
+          }
+        );
 
-      // Score and rank all date templates
-      const scoredDates = dateMatchingService.scoreDateTemplates(
-        venueDates,
-        matchCriteria,
-        uniquePlaces
-      );
+        // Combine venue match score (prioritizes basic dates) with preference score
+        const totalScore = matchScore + (preferenceScore.score * 0.3); // Preference is bonus, not primary
 
-      console.log(`✨ Scored ${scoredDates.length} date templates`);
+        return {
+          template,
+          score: totalScore,
+          matchReasons: preferenceScore.reasons,
+          matchingVenues, // Keep the matched venues
+        };
+      }).sort((a, b) => b.score - a.score);
 
-      // Step 5: Match dates to actual available venues, prioritizing what's nearby
-      const availableCategories = new Set(uniquePlaces.map(p => p.category));
-      
-      // First, filter date templates to only those that have matching venues nearby
+      console.log(`✨ Scored ${scoredDates.length} date templates (${scoredDates.filter(d => venueMatchedDates.find(vm => vm.template.id === d.template.id)?.isBasic).length} basic, ${scoredDates.filter(d => !venueMatchedDates.find(vm => vm.template.id === d.template.id)?.isBasic).length} specialized)`);
+
+      // Step 6: Use the venue-matched dates directly (venues already matched by venueDrivenDateMatching)
       const datesWithVenues = scoredDates
+        .filter(scored => scored.matchingVenues && scored.matchingVenues.length > 0)
         .map(scored => {
           const date = scored.template;
-          const dateTitle = (date.title || '').toLowerCase();
-          const dateDesc = (date.description || '').toLowerCase();
-          const dateCategories = getDateCategories(date);
-          const primaryVenue = getPrimaryVenueCategory(date);
-
-          // Get relevant venues for this date, analyzing actual venue names/descriptions
-          // Helper function to detect if a venue is actually a cafe/coffee shop (English or Spanish)
-          const isActuallyACafe = (name: string, desc: string, category: string): boolean => {
-            const normalizedName = name.toLowerCase();
-            const normalizedDesc = desc.toLowerCase();
-            // Check English keywords
-            if (category === 'cafe') return true;
-            if (normalizedName.includes('cafe') || normalizedName.includes('coffee') || 
-                normalizedName.includes('coffee shop') || normalizedName.includes('café') ||
-                normalizedName.includes('cafeteria')) return true;
-            if (normalizedDesc.includes('cafe') || normalizedDesc.includes('coffee') || 
-                normalizedDesc.includes('coffee shop') || normalizedDesc.includes('café') ||
-                normalizedDesc.includes('cafeteria')) return true;
-            // Check Spanish keywords - "café" means coffee shop in Spanish
-            // "Olor a café" means "smell of coffee" - this is a coffee shop name
-            if (normalizedName.includes('café') || normalizedName.includes('olor a café')) return true;
-            if (normalizedDesc.includes('café') || normalizedDesc.includes('olor a café')) return true;
-            // Check for common cafe indicators
-            if ((normalizedName.includes('bar') && normalizedName.includes('cafe')) || 
-                (normalizedDesc.includes('bar') && normalizedDesc.includes('cafe'))) return false; // Cafe-bar might be OK
-            return false;
-          };
-
+          // Venues are already matched by venueDrivenDateMatching, just use them
+          const relevantVenues = scored.matchingVenues || [];
+          
+          // Sort venues by distance (closest first)
+          const sortedVenues = [...relevantVenues].sort((a, b) => (a.distance || 0) - (b.distance || 0));
+          
+          // Select top 3 venues (closest, diverse categories if possible)
+          const selectedVenues: Place[] = [];
+          const usedCategories = new Set<string>();
+          
+          // First pass: get one venue from each category
+          for (const venue of sortedVenues) {
+            if (selectedVenues.length >= 3) break;
+            if (!usedCategories.has(venue.category)) {
+              selectedVenues.push(venue);
+              usedCategories.add(venue.category);
+            }
+          }
+          
+          // Second pass: fill remaining slots with closest venues
+          for (const venue of sortedVenues) {
+            if (selectedVenues.length >= 3) break;
+            if (!selectedVenues.includes(venue)) {
+              selectedVenues.push(venue);
+            }
+          }
+          
+          // OLD VENUE MATCHING LOGIC REMOVED - now using venueDrivenDateMatching results
+          // All the complex filtering below was replaced by venueDrivenDateMatching service
+          const finalVenues = selectedVenues.length > 0 ? selectedVenues : sortedVenues.slice(0, 3);
+          
+          // Remove the old filter logic - it's all handled by venueDrivenDateMatching now
+          /* REMOVED: Old venue matching filter logic - replaced by venueDrivenDateMatching
           const relevantVenues = uniquePlaces
             .filter(place => {
               const placeName = (place.name || '').toLowerCase();
@@ -514,6 +549,48 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               }
 
               // ===== END SPECIALIZED CHECKS =====
+
+              // Farmers Market dates - ONLY match actual farmers markets, NOT convenience stores
+              if (dateTitle.includes('farmers market') || dateTitle.includes('farmer\'s market') ||
+                  dateDesc.includes('farmers market') || dateDesc.includes('farmer\'s market')) {
+                // REJECT convenience stores, gas stations, mini markets
+                if (placeName.includes('convenience') || placeName.includes('store') && 
+                    (placeName.includes('gas') || placeName.includes('mini') || placeName.includes('corner') ||
+                     placeName.includes('oasis') || placeName.includes('7-eleven') || placeName.includes('7/11'))) {
+                  return false; // Never match convenience stores for farmers market dates
+                }
+                // Only match if it's actually a farmers market
+                const isFarmersMarket = placeName.includes('farmers market') || placeName.includes('farmer\'s market') ||
+                                       placeName.includes('farmers\' market') || placeDesc.includes('farmers market') ||
+                                       (placeName.includes('market') && (placeName.includes('farm') || 
+                                        placeDesc.includes('produce') || placeDesc.includes('fresh')));
+                if (!isFarmersMarket) {
+                  return false; // Reject if not an actual farmers market
+                }
+                return true;
+              }
+
+              // Poetry Reading dates - ONLY match venues that actually host poetry/open mic
+              if (dateTitle.includes('poetry') || dateTitle.includes('poetry reading') ||
+                  dateDesc.includes('poetry') || dateDesc.includes('open mic') || dateDesc.includes('open-mic')) {
+                // REJECT regular bars that don't host poetry
+                if (placeCategory === 'bar' || placeCategory === 'cafe') {
+                  const hasPoetry = placeName.includes('poetry') || placeName.includes('open mic') ||
+                                   placeName.includes('open-mic') || placeDesc.includes('poetry') ||
+                                   placeDesc.includes('open mic') || placeDesc.includes('spoken word') ||
+                                   placeDesc.includes('poetry reading') || placeDesc.includes('slam poetry');
+                  if (!hasPoetry) {
+                    return false; // Reject bars/cafes that don't host poetry
+                  }
+                }
+                // Only match if venue mentions poetry/open mic
+                const isPoetryVenue = placeName.includes('poetry') || placeName.includes('open mic') ||
+                                     placeName.includes('open-mic') || placeDesc.includes('poetry') ||
+                                     placeDesc.includes('open mic') || placeDesc.includes('spoken word') ||
+                                     placeDesc.includes('poetry reading') || placeDesc.includes('slam poetry');
+                return isPoetryVenue;
+              }
+
               // For wine tasting dates - ONLY match wine bars/wineries, NOT cafes
               if (dateTitle.includes('wine') || dateTitle.includes('wine tasting') ||
                   dateDesc.includes('wine') || dateDesc.includes('wine tasting') ||
@@ -803,64 +880,14 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               
               return false; // No match found
             })
-            // Sort by distance first, but also consider rating for popular destinations
-            .sort((a, b) => {
-              // Prioritize venues within 5 miles
-              const aIsClose = a.distance <= 5;
-              const bIsClose = b.distance <= 5;
-              
-              if (aIsClose !== bIsClose) {
-                return aIsClose ? -1 : 1;
-              }
-              
-              // Within same distance category, prioritize higher ratings
-              if (a.rating && b.rating && Math.abs(a.rating - b.rating) >= 0.5) {
-                return b.rating - a.rating;
-              }
-              
-            // Otherwise, sort by distance
-            return a.distance - b.distance;
-          });
+          */
           
-          // Ensure diversity: Get top venues but ensure we have different venue types if possible
-          const selectedVenues: Place[] = [];
-          const usedVenueCategories = new Set<string>();
-          
-          // First pass: Try to get diverse venue categories
-          for (const venue of relevantVenues) {
-            if (selectedVenues.length >= 3) break;
-            
-            if (selectedVenues.length === 0) {
-              // Always include the first (closest/best) venue
-              selectedVenues.push(venue);
-              usedVenueCategories.add(venue.category);
-            } else if (!usedVenueCategories.has(venue.category)) {
-              // Prefer venues from different categories for diversity
-              selectedVenues.push(venue);
-              usedVenueCategories.add(venue.category);
-            } else if (selectedVenues.length < 3) {
-              // If we need more venues and can't get diversity, include best remaining
-              selectedVenues.push(venue);
-            }
-          }
-          
-          // If we don't have 3 venues yet, fill with closest remaining
-          while (selectedVenues.length < 3 && selectedVenues.length < relevantVenues.length) {
-            const remaining = relevantVenues.filter(v => !selectedVenues.includes(v));
-            if (remaining.length > 0) {
-              selectedVenues.push(remaining[0]);
-            } else {
-              break;
-            }
-          }
-          
-          const finalVenues = selectedVenues; // Use diverse venues, not just closest 3
-
+          // finalVenues is already declared above, just use it here
           // Log venue matching for debugging
           if (finalVenues.length > 0) {
             console.log(`✅ Matched "${date.title}" with ${finalVenues.length} venues: ${finalVenues.map(v => v.name).join(', ')}`);
           } else {
-            console.warn(`❌ No venues matched for "${date.title}" (primaryVenue: ${primaryVenue}, dateCategories: ${dateCategories.join(', ')})`);
+            console.warn(`❌ No venues matched for "${date.title}"`);
           }
 
           return {
@@ -870,7 +897,6 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             matchReasons: scored.matchReasons,
             hasNearbyVenues: finalVenues.length > 0,
             closestVenueDistance: finalVenues[0]?.distance || Infinity,
-            primaryVenueCategory: primaryVenue,
             dateStyle: date.dateStyle,
           };
         })
