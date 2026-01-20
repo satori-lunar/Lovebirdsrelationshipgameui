@@ -34,6 +34,42 @@ const BASIC_DATE_TEMPLATE_IDS = [
 ];
 
 /**
+ * Check if a date is an at-home activity that doesn't need venues
+ */
+export function isAtHomeActivity(template: DateTemplate): boolean {
+  const title = (template.title || '').toLowerCase();
+  const desc = (template.description || '').toLowerCase();
+
+  // At-home keywords
+  const atHomeKeywords = [
+    'at home', 'at-home', 'home', 'living room', 'bedroom', 'kitchen',
+    'indoor picnic', 'movie night at home', 'game night at home',
+    'cook together', 'cooking together', 'bake together', 'baking together',
+    'build a fort', 'blanket fort', 'pillow fort',
+    'backyard', 'cuddle', 'massage exchange', 'home workout',
+    'stargazing from home', 'home concert', 'playlist', 'vision board',
+    'love letter', 'memory jar', 'photo album', 'scrapbook',
+    'future planning', 'relationship', 'dance party at home',
+    'paint night at home', 'diy project', 'craft together',
+    'meditation at home', 'yoga at home', 'online course'
+  ];
+
+  // Check if it explicitly mentions venues
+  const mentionsVenue = title.includes('restaurant') || title.includes('cafe') ||
+                        title.includes('bar') || title.includes('park') ||
+                        title.includes('museum') || title.includes('theater') ||
+                        desc.includes('visit') || desc.includes('go to');
+
+  // If it mentions going somewhere, it's not at-home
+  if (mentionsVenue) return false;
+
+  // Check for at-home keywords
+  return atHomeKeywords.some(keyword =>
+    title.includes(keyword) || desc.includes(keyword)
+  );
+}
+
+/**
  * Check if a date template is a basic/common date
  */
 export function isBasicDate(template: DateTemplate): boolean {
@@ -101,7 +137,11 @@ export function venueActuallyMatchesDate(
       title.includes('farmer\'s market') || desc.includes('farmer\'s market')) {
     // Must be a farmers market, reject convenience stores
     if (detailedType === 'convenience_store') return false;
-    return detailedType === 'farmers_market';
+    const isMatch = detailedType === 'farmers_market';
+    if (!isMatch) {
+      console.log(`❌ Farmers market date requires actual farmers market venue, rejecting ${detailedType}: ${venueName}`);
+    }
+    return isMatch;
   }
 
   if (title.includes('wine') || desc.includes('wine') || 
@@ -240,9 +280,14 @@ export function matchDatesToVenues(
     matchScore: number;
   }> = [];
 
+  // FILTER OUT at-home activities that don't need venues
+  const venueRequiringDates = templates.filter(t => !isAtHomeActivity(t));
+
+  console.log(`🏠 Filtered out ${templates.length - venueRequiringDates.length} at-home activities`);
+
   // Separate basic and specialized dates
-  const basicDates = templates.filter(t => isBasicDate(t));
-  const specializedDates = templates.filter(t => !isBasicDate(t));
+  const basicDates = venueRequiringDates.filter(t => isBasicDate(t));
+  const specializedDates = venueRequiringDates.filter(t => !isBasicDate(t));
 
   console.log(`📊 Matching dates: ${basicDates.length} basic, ${specializedDates.length} specialized`);
 
@@ -288,6 +333,7 @@ export function matchDatesToVenues(
 }
 
 export const venueDrivenDateMatching = {
+  isAtHomeActivity,
   isBasicDate,
   venueActuallyMatchesDate,
   matchDatesToVenues,
