@@ -984,8 +984,12 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       // Log what date suggestions we're showing
       finalDates.forEach((option, index) => {
-        const venueNames = option.venues.map(v => v.name).join(', ');
-        console.log(`📅 Option ${index + 1}: "${option.date.title}" - ${option.venues.length} venue(s) (${venueNames}), closest: ${option.venues[0]?.distance.toFixed(1)} miles, score: ${option.matchScore.toFixed(1)}`);
+        const venueNames = option.venues.map(v => v?.name || 'Unknown').join(', ');
+        const closestDistance = option.venues[0]?.distance;
+        const distanceStr = closestDistance !== undefined && closestDistance !== null
+          ? `${closestDistance.toFixed(1)} miles`
+          : 'unknown distance';
+        console.log(`📅 Option ${index + 1}: "${option.date.title}" - ${option.venues.length} venue(s) (${venueNames}), closest: ${distanceStr}, score: ${option.matchScore.toFixed(1)}`);
       });
 
       setDateOptions(finalDates);
