@@ -101,7 +101,7 @@ export function matchDatesWithPreferences(
     const totalScore = Object.values(scoreBreakdown).reduce((sum, val) => sum + val, 0);
 
     // Mark venues as used to prevent repetition
-    matchedVenues.forEach(venue => usedVenueIds.add(venue.placeId));
+    matchedVenues.forEach(venue => usedVenueIds.add(venue.id));
 
     // Step 3: Add to results
     scoredDates.push({
@@ -238,7 +238,7 @@ function scoreVenueAvailability(
   let availableCount = 0;
   for (const category of requiredCategories) {
     const categoryVenues = venues.filter(
-      v => v.category === category && !usedVenueIds.has(v.placeId)
+      v => v.category === category && !usedVenueIds.has(v.id)
     );
     availableCount += categoryVenues.length;
   }
@@ -355,7 +355,7 @@ function findMatchingVenues(
   for (const category of requiredCategories) {
     // Find unused venues for this category
     const availableVenues = venues.filter(
-      v => v.category === category && !usedVenueIds.has(v.placeId)
+      v => v.category === category && !usedVenueIds.has(v.id)
     );
 
     if (availableVenues.length === 0) {
@@ -456,18 +456,18 @@ export function getTopDates(
     console.log(`    ✅ Template found: "${template.title}"`);
 
     // Find first unused venue in this category
-    const venue = categoryVenues.find(v => !usedVenueIds.has(v.placeId));
+    const venue = categoryVenues.find(v => !usedVenueIds.has(v.id));
     if (!venue) {
-      // Debug: show sample placeIds from this category
-      const sampleIds = categoryVenues.slice(0, 3).map(v => v.placeId).join(', ');
+      // Debug: show sample IDs from this category
+      const sampleIds = categoryVenues.slice(0, 3).map(v => v.id).join(', ');
       console.log(`    ⏭️  Skipping: all venues already used (${categoryVenues.length} venues)`);
-      console.log(`       Sample placeIds in this category: ${sampleIds}`);
+      console.log(`       Sample IDs in this category: ${sampleIds}`);
       console.log(`       UsedSet has ${usedVenueIds.size} IDs: ${Array.from(usedVenueIds).join(', ')}`);
       continue;
     }
-    console.log(`    🏪 Selected venue: "${venue.name}" (placeId: ${venue.placeId})`);
+    console.log(`    🏪 Selected venue: "${venue.name}" (id: ${venue.id})`);
 
-    usedVenueIds.add(venue.placeId);
+    usedVenueIds.add(venue.id);
     console.log(`    📝 Added to usedSet. UsedSet now has ${usedVenueIds.size} venues`);
 
     // Score based on user preferences
