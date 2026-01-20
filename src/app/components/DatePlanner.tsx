@@ -292,7 +292,35 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       const venueDates = dateSuggestionTemplates.filter(date => {
         const title = (date.title || '').toLowerCase();
         const desc = (date.description || '').toLowerCase();
-        
+
+        // AGGRESSIVE FILTER: Reject specialized templates that require specific services
+        // These should ONLY show if venues explicitly advertise these services
+        const specializedTemplates = [
+          'live music', 'dinner theater', 'mystery', 'progressive dinner',
+          'wine tasting class', 'cooking class', 'paint and sip', 'pottery class',
+          'dance class', 'yoga class', 'fitness class', 'spa day', 'couples massage',
+          'hot air balloon', 'helicopter tour', 'boat tour', 'kayaking', 'rafting',
+          'escape room', 'laser tag', 'go-kart', 'rock climbing', 'zip line',
+          'trivia night', 'karaoke', 'open mic', 'comedy show', 'improv show',
+          'wine and cheese pairing', 'sake tasting', 'brewery tour', 'distillery tour'
+        ];
+
+        for (const specialized of specializedTemplates) {
+          if (title.includes(specialized) || desc.includes(specialized)) {
+            // Check if ANY venue explicitly offers this service
+            const hasMatchingVenue = uniquePlaces.some(p => {
+              const venueName = (p.name || '').toLowerCase();
+              const venueDesc = (p.description || '').toLowerCase();
+              return venueName.includes(specialized) || venueDesc.includes(specialized);
+            });
+
+            if (!hasMatchingVenue) {
+              console.log(`❌ Rejected specialized template: "${date.title}" - no venues offer this service`);
+              return false;
+            }
+          }
+        }
+
         // Exclude dates that require specific venue types we're not fetching
         // Spa dates need spas (not in our categories)
         if (title.includes('spa') || desc.includes('spa')) {
