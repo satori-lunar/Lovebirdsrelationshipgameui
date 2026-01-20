@@ -227,8 +227,8 @@ export const dateMatchingService = {
     let score = 0;
     const reasons: string[] = [];
 
-    // PRIORITY BOOST: Simple, generic date templates (50 points bonus!)
-    // These are always appropriate and match what venues actually are
+    // Simple templates get a SMALL bonus (10 points), but preferences matter MORE
+    // They should be a safe fallback, not always dominant
     const simpleTemplateIds = [
       'simple_coffee_date',
       'simple_dinner_date',
@@ -241,8 +241,8 @@ export const dateMatchingService = {
     ];
 
     if (simpleTemplateIds.includes(template.id)) {
-      score += 50; // Massive boost to prioritize simple dates
-      reasons.push('✨ Simple, realistic date - always appropriate');
+      score += 10; // Small bonus, not overwhelming
+      reasons.push('Simple, realistic date');
     }
 
     // Venue availability: 30 points (CRITICAL)
@@ -330,13 +330,27 @@ export const dateMatchingService = {
       }
     }
 
-    // Duration match: 10 points
+    // Duration match: 15 points (INCREASED - user's time is important!)
     if (criteria.duration && template.timeRequired) {
       const timeReq = template.timeRequired.toLowerCase();
       const matches = this.matchesDuration(timeReq, criteria.duration);
       if (matches) {
-        score += 10;
-        reasons.push(`Duration match: ${template.timeRequired}`);
+        score += 15;
+        reasons.push(`Perfect duration match: ${template.timeRequired}`);
+      }
+    }
+
+    // Venue preference match: 15 points (IMPORTANT - respect single vs multiple choice!)
+    if (criteria.venuePreference) {
+      const venueCount = this.getVenueCategoryCount(template);
+      if (criteria.venuePreference === 'single' && venueCount === 1) {
+        score += 15;
+        reasons.push('Single venue date (as requested)');
+      } else if (criteria.venuePreference === 'multiple' && venueCount >= 2) {
+        score += 15;
+        reasons.push('Multiple venue date (as requested)');
+      } else if (criteria.venuePreference === 'single' && venueCount > 1) {
+        score -= 10; // Penalize multi-venue when single requested
       }
     }
 

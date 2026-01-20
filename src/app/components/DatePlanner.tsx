@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star, Clock, Layers } from 'lucide-react';
+import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star, Clock, Layers, Map } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,6 +12,7 @@ import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useRelationship } from '../hooks/useRelationship';
 import { dateMatchingService } from '../services/dateMatchingService';
 import { EnhancedVenueCard } from './EnhancedVenueCard';
+import { VenuesMap } from './VenuesMap';
 
 interface DatePlannerProps {
   onBack: () => void;
@@ -54,6 +55,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
   const [allNearbyVenues, setAllNearbyVenues] = useState<Place[]>([]);
   const [targetLocation, setTargetLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [fetchingVenues, setFetchingVenues] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   // Get user's love language from onboarding data
   const userLoveLanguage = user?.onboarding?.love_language_primary;
@@ -331,6 +333,24 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               const placeName = (place.name || '').toLowerCase();
               const placeDesc = (place.description || '').toLowerCase();
               const placeCategory = place.category;
+
+              // ===== CRITICAL: Check requiredVenues field FIRST =====
+              // If template specifies required venue types, ONLY match those exact categories
+              if (date.requiredVenues && date.requiredVenues.length > 0) {
+                const isRequiredCategory = date.requiredVenues.includes(placeCategory as PlaceCategory);
+
+                if (!isRequiredCategory) {
+                  // Log rejections for debugging
+                  if (date.title === 'Dinner Date' && placeCategory === 'cafe') {
+                    console.log(`❌ REJECTED: "${placeName}" (cafe) for "Dinner Date" - requires restaurant only`);
+                  }
+                  return false; // Strict: MUST be in requiredVenues list
+                }
+
+                // If it matches requiredVenues, allow it through
+                console.log(`✓ "${placeName}" (${placeCategory}) matches requiredVenues for "${date.title}"`);
+                return true;
+              }
 
               // ===== SPECIALIZED ACTIVITY DATES - Require explicit evidence =====
 
@@ -1488,8 +1508,17 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             >
               <Sparkles className="w-12 h-12 text-white" />
             </motion.div>
-            <h2 className="text-2xl font-bold mb-2">Finding Perfect Dates...</h2>
-            <p className="text-gray-600">Looking for venues near you</p>
+            <h2 className="text-2xl font-bold mb-2">Creating Your Perfect Dates...</h2>
+            <div className="space-y-2 text-gray-600">
+              <p>📊 Analyzing {allNearbyVenues.length} venues in your area</p>
+              <p>🎯 Matching to your preferences:</p>
+              <ul className="text-sm space-y-1">
+                <li>• Budget: {selectedBudget}</li>
+                <li>• Duration: {selectedDuration === 'quick' ? '1-3 hours' : selectedDuration === 'half-day' ? '3-5 hours' : '5+ hours'}</li>
+                <li>• Venues: {venuePreference === 'single' ? 'Single location' : 'Multiple locations'}</li>
+              </ul>
+              <p className="text-xs text-gray-500 mt-4">This may take up to 10 seconds for best results...</p>
+            </div>
           </Card>
         )}
 
@@ -1510,10 +1539,22 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 <Sparkles className="w-8 h-8 text-white" />
               </motion.div>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">Your Perfect Dates</h2>
-              <p className="text-sm text-gray-600 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 max-w-md mx-auto mb-4">
                 {userLoveLanguage && `✨ Curated for your ${userLoveLanguage} love language. `}
                 Tap any date to explore the full experience!
               </p>
+
+              {/* Map Button */}
+              {allNearbyVenues.length > 0 && targetLocation && (
+                <Button
+                  onClick={() => setShowMap(true)}
+                  variant="outline"
+                  className="mx-auto"
+                >
+                  <Map className="w-4 h-4 mr-2" />
+                  View All {allNearbyVenues.length} Venues on Map
+                </Button>
+              )}
             </div>
 
             {dateOptions.map((option, index) => {
@@ -1911,6 +1952,15 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Venues Map Modal */}
+      {showMap && allNearbyVenues.length > 0 && targetLocation && (
+        <VenuesMap
+          venues={allNearbyVenues}
+          centerLocation={targetLocation}
+          onClose={() => setShowMap(false)}
+        />
+      )}
     </div>
   );
 }
