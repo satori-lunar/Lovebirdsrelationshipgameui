@@ -332,6 +332,24 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               const placeDesc = (place.description || '').toLowerCase();
               const placeCategory = place.category;
 
+              // ===== CRITICAL: Check requiredVenues field FIRST =====
+              // If template specifies required venue types, ONLY match those exact categories
+              if (date.requiredVenues && date.requiredVenues.length > 0) {
+                const isRequiredCategory = date.requiredVenues.includes(placeCategory as PlaceCategory);
+
+                if (!isRequiredCategory) {
+                  // Log rejections for debugging
+                  if (date.title === 'Dinner Date' && placeCategory === 'cafe') {
+                    console.log(`❌ REJECTED: "${placeName}" (cafe) for "Dinner Date" - requires restaurant only`);
+                  }
+                  return false; // Strict: MUST be in requiredVenues list
+                }
+
+                // If it matches requiredVenues, allow it through
+                console.log(`✓ "${placeName}" (${placeCategory}) matches requiredVenues for "${date.title}"`);
+                return true;
+              }
+
               // ===== SPECIALIZED ACTIVITY DATES - Require explicit evidence =====
 
               // Cocktail/Beer/Wine CLASSES or WORKSHOPS - must mention classes/workshops/tastings
