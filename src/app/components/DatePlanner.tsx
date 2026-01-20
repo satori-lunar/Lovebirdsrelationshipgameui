@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star, Clock, Layers } from 'lucide-react';
+import { ChevronLeft, Calendar, Heart, Sparkles, Check, X, MapPin, Navigation, Users2, MapPinned, DollarSign, Star, Clock, Layers, Map } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,6 +12,7 @@ import { usePartnerOnboarding } from '../hooks/usePartnerOnboarding';
 import { useRelationship } from '../hooks/useRelationship';
 import { dateMatchingService } from '../services/dateMatchingService';
 import { EnhancedVenueCard } from './EnhancedVenueCard';
+import { VenuesMap } from './VenuesMap';
 
 interface DatePlannerProps {
   onBack: () => void;
@@ -49,6 +50,12 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
     venue: Place;
   } | null>(null);
   const [loadingVenues, setLoadingVenues] = useState(false);
+
+  // NEW: Store all fetched venues (fetched when location is selected)
+  const [allNearbyVenues, setAllNearbyVenues] = useState<Place[]>([]);
+  const [targetLocation, setTargetLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [fetchingVenues, setFetchingVenues] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   // Get user's love language from onboarding data
   const userLoveLanguage = user?.onboarding?.love_language_primary;
@@ -95,102 +102,187 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
   const handleLocationSelect = async (preference: LocationPreference) => {
     setLocationPreference(preference);
-    setStep('loading');
-    await generateDateOptions(preference);
-  };
+    setFetchingVenues(true);
 
-  const generateDateOptions = async (preference: LocationPreference) => {
-    setLoadingVenues(true);
+    console.log('🌍 Location selected, fetching ALL nearby venues within 10 miles...');
 
     try {
-      // Step 1: Get target location
-      let targetLocation;
+      // Step 1: Get target location based on preference
+      let location;
 
       if (preference === 'user') {
         if (!shareWithApp) {
           const coords = await getCurrentLocation();
-          targetLocation = coords;
+          location = coords;
         } else if (userLocation) {
-          targetLocation = {
+          location = {
             latitude: Number(userLocation.latitude),
             longitude: Number(userLocation.longitude),
           };
+        } else {
+          throw new Error('User location not available');
         }
       } else if (preference === 'partner') {
         if (partnerLocation) {
-          targetLocation = {
+          location = {
             latitude: Number(partnerLocation.latitude),
             longitude: Number(partnerLocation.longitude),
           };
+        } else {
+          throw new Error('Partner location not available');
         }
       } else if (preference === 'middle') {
         if (userLocation && partnerLocation) {
-          targetLocation = placesService.findMidpoint(
-            { latitude: Number(userLocation.latitude), longitude: Number(userLocation.longitude) },
-            { latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }
-          );
-        } else if (!shareWithApp) {
-          const coords = await getCurrentLocation();
-          if (partnerLocation) {
-            targetLocation = placesService.findMidpoint(
-              coords,
-              { latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }
-            );
+          location = {
+            latitude: (Number(userLocation.latitude) + Number(partnerLocation.latitude)) / 2,
+            longitude: (Number(userLocation.longitude) + Number(partnerLocation.longitude)) / 2,
+          };
+        } else {
+          throw new Error('Both user and partner locations required for middle point');
+        }
+      }
+
+      if (!location) {
+        throw new Error('Could not determine target location');
+      }
+
+      setTargetLocation(location);
+      console.log(`📍 Target location: ${location.latitude}, ${location.longitude}`);
+
+      // Step 2: Fetch ALL venues from all categories within 10 miles
+      console.log('🔍 Fetching venues from all categories...');
+      const allCategories: PlaceCategory[] = ['restaurant', 'cafe', 'bar', 'park', 'museum', 'theater', 'activity'];
+      const allPlaces: Place[] = [];
+
+      const searchRadius = 10; // 10 mile radius
+      const maxDistanceMiles = 10;
+
+      for (const category of allCategories) {
+        console.log(`  🔎 Fetching ${category} venues...`);
+        try {
+          const places = await placesService.findNearbyPlaces(location, searchRadius, category, 20);
+          if (Array.isArray(places)) {
+            allPlaces.push(...places);
+            console.log(`  ✓ Found ${places.length} ${category} venues`);
+          } else {
+            console.warn(`  ⚠️ Invalid response for ${category} venues`);
+          }
+        } catch (err) {
+          console.error(`  ❌ Error fetching ${category} venues:`, err);
+        }
+      }
+
+      console.log(`📦 Total places fetched (with duplicates): ${allPlaces.length}`);
+
+      // Step 3: Filter and deduplicate using a safer method
+      // Avoid using new Map() which might cause constructor issues in minified code
+      const seenIds = new Set<string>();
+      const uniquePlaces: Place[] = [];
+
+      for (const place of allPlaces) {
+        if (place && place.id && !seenIds.has(place.id)) {
+          if (place.distance && place.distance <= maxDistanceMiles) {
+            seenIds.add(place.id);
+            uniquePlaces.push(place);
           }
         }
       }
 
-      if (!targetLocation) {
-        console.error('Could not determine target location');
+      // Sort by distance
+      uniquePlaces.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+
+      console.log(`✅ TOTAL: ${uniquePlaces.length} unique venues fetched within ${maxDistanceMiles} miles`);
+
+      if (uniquePlaces.length === 0) {
+        console.warn('⚠️ No venues found in the area');
+        setFetchingVenues(false);
         setStep('results');
-        setLoadingVenues(false);
+        setDateOptions([]);
         return;
       }
 
-      // Step 2: Fetch venues from all categories with a smaller radius for more local results
-      console.log('🔍 Starting venue search for date planning...');
-      const allCategories: PlaceCategory[] = ['restaurant', 'cafe', 'bar', 'park', 'museum', 'theater', 'activity'];
-      const allPlaces: Place[] = [];
+      console.log(`📊 Breakdown by distance:`);
+      console.log(`   - Within 0.5 mi: ${uniquePlaces.filter(p => p.distance <= 0.5).length}`);
+      console.log(`   - Within 1 mi: ${uniquePlaces.filter(p => p.distance <= 1).length}`);
+      console.log(`   - Within 3 mi: ${uniquePlaces.filter(p => p.distance <= 3).length}`);
+      console.log(`   - Within 5 mi: ${uniquePlaces.filter(p => p.distance <= 5).length}`);
 
-      // Use a smaller radius (5 miles) to get more local, relevant results
-      const searchRadius = 5; // Reduced from 15 to focus on nearby venues
-      const maxDistanceMiles = 10; // Maximum distance to consider for date suggestions
+      // Store venues for later use
+      setAllNearbyVenues([...uniquePlaces]); // Create new array to avoid reference issues
+      setFetchingVenues(false);
 
-      // Fetch venues per category with detailed logging
-      const venuesByCategoryBeforeFilter: Record<string, Place[]> = {};
-      for (const category of allCategories) {
-        const places = await placesService.findNearbyPlaces(targetLocation, searchRadius, category, 15); // Increased from 10 to 15 for more diversity
-        allPlaces.push(...places);
-        venuesByCategoryBeforeFilter[category] = places;
-        console.log(`  📍 Fetched ${places.length} ${category} venues`);
+      // Now generate date options using the pre-fetched venues
+      setStep('loading');
+
+      // Pass a clean copy of the array
+      await generateDateOptions([...uniquePlaces]);
+
+    } catch (error) {
+      console.error('❌ Error in handleLocationSelect:', error);
+      if (error instanceof Error) {
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        });
+      }
+      setFetchingVenues(false);
+      setStep('location'); // Go back to location selection
+    }
+  };
+
+  const generateDateOptions = async (preFetchedVenues: Place[]) => {
+    setLoadingVenues(true);
+
+    try {
+      console.log('🎯 Generating date options from pre-fetched venues...');
+
+      // Validate input
+      if (!Array.isArray(preFetchedVenues)) {
+        console.error('❌ preFetchedVenues is not an array:', typeof preFetchedVenues);
+        setStep('results');
+        setLoadingVenues(false);
+        setDateOptions([]);
+        return;
       }
 
-      // Filter to only include venues within reasonable distance
-      const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values())
-        .filter(place => place.distance <= maxDistanceMiles) // Only venues within 10 miles
-        .sort((a, b) => a.distance - b.distance); // Sort by distance (closest first)
+      // Use the venues that were already fetched
+      const uniquePlaces = preFetchedVenues.filter(v => v && v.id && v.category);
 
-      console.log(`📍 Found ${uniquePlaces.length} unique venues within ${maxDistanceMiles} miles (from ${allPlaces.length} total fetched)`);
-      
+      console.log(`📊 Using ${uniquePlaces.length} pre-fetched venues`);
+
+      if (uniquePlaces.length === 0) {
+        console.warn('⚠️ No valid venues to generate dates from');
+        setStep('results');
+        setLoadingVenues(false);
+        setDateOptions([]);
+        return;
+      }
+
       // Group venues by category to see what's actually available
-      const venuesByCategory = uniquePlaces.reduce((acc, place) => {
-        if (!acc[place.category]) {
-          acc[place.category] = [];
+      const venuesByCategory: Record<string, Place[]> = {};
+      uniquePlaces.forEach(place => {
+        if (place && place.category) {
+          if (!venuesByCategory[place.category]) {
+            venuesByCategory[place.category] = [];
+          }
+          venuesByCategory[place.category].push(place);
         }
-        acc[place.category].push(place);
-        return acc;
-      }, {} as Record<string, Place[]>);
-      
+      });
+
       // Log detailed venue breakdown
-      console.log('🏪 Available venue categories:', Object.keys(venuesByCategory).map(cat => 
+      const categoryNames = Object.keys(venuesByCategory);
+      console.log('🏪 Available venue categories:', categoryNames.map(cat =>
         `${cat} (${venuesByCategory[cat]?.length || 0})`
       ).join(', '));
-      
+
       // Log sample venues from each category for debugging
-      Object.keys(venuesByCategory).forEach(cat => {
+      categoryNames.forEach(cat => {
         const venues = venuesByCategory[cat];
-        const sampleNames = venues.slice(0, 3).map(v => v.name).join(', ');
-        console.log(`  ${cat}: ${sampleNames}${venues.length > 3 ? '...' : ''}`);
+        if (venues && Array.isArray(venues) && venues.length > 0) {
+          const sampleNames = venues.slice(0, 3).map(v => v?.name || 'Unknown').join(', ');
+          console.log(`  ${cat}: ${sampleNames}${venues.length > 3 ? '...' : ''}`);
+        }
       });
 
       // Step 3: Filter dates based on what venues are actually available nearby
@@ -336,7 +428,92 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                    primaryVenue === 'restaurant') && isACafe) {
                 return false; // Never match cafes for dinner dates
               }
-              
+
+              // ===== CRITICAL: Check requiredVenues field FIRST =====
+              // If template specifies required venue types, ONLY match those exact categories
+              if (date.requiredVenues && date.requiredVenues.length > 0) {
+                const isRequiredCategory = date.requiredVenues.includes(placeCategory as PlaceCategory);
+
+                if (!isRequiredCategory) {
+                  // Log rejections for debugging
+                  if (date.title === 'Dinner Date' && placeCategory === 'cafe') {
+                    console.log(`❌ REJECTED: "${placeName}" (cafe) for "Dinner Date" - requires restaurant only`);
+                  }
+                  return false; // Strict: MUST be in requiredVenues list
+                }
+
+                // If it matches requiredVenues, allow it through
+                console.log(`✓ "${placeName}" (${placeCategory}) matches requiredVenues for "${date.title}"`);
+                return true;
+              }
+
+              // ===== SPECIALIZED ACTIVITY DATES - Require explicit evidence =====
+
+              // Cocktail/Beer/Wine CLASSES or WORKSHOPS - must mention classes/workshops/tastings
+              if (dateTitle.includes('making class') || dateTitle.includes('workshop') ||
+                  dateTitle.includes('tasting class') || dateDesc.includes('making class') ||
+                  dateDesc.includes('workshop') || dateDesc.includes('tasting class')) {
+                // Only match if venue explicitly offers classes/workshops
+                const offersClasses = placeName.includes('class') || placeName.includes('workshop') ||
+                                     placeName.includes('school') || placeName.includes('academy') ||
+                                     placeDesc.includes('class') || placeDesc.includes('workshop') ||
+                                     placeDesc.includes('learn') || placeDesc.includes('lesson');
+
+                if (!offersClasses) {
+                  return false; // Reject bars that don't offer classes
+                }
+                // Continue to check if it's the right venue type
+                return placeCategory === 'bar' || placeCategory === 'restaurant' || placeCategory === 'activity';
+              }
+
+              // Float therapy / Sensory deprivation - ONLY spas with float tanks
+              if (dateTitle.includes('float') || dateTitle.includes('sensory deprivation') ||
+                  dateDesc.includes('float therapy') || dateDesc.includes('float tank')) {
+                const offersFloat = placeName.includes('float') || placeName.includes('sensory') ||
+                                   placeDesc.includes('float') || placeDesc.includes('sensory deprivation');
+
+                if (!offersFloat) {
+                  return false; // Reject venues without float tanks
+                }
+                // Must also be a spa/wellness venue
+                const isSpaVenue = placeName.includes('spa') || placeName.includes('wellness') ||
+                                  placeDesc.includes('spa') || placeDesc.includes('wellness');
+                return isSpaVenue;
+              }
+
+              // Seafood dinner/cuisine - ONLY restaurants with seafood in name/description, NOT cafes
+              if (dateTitle.includes('seafood') || dateDesc.includes('seafood')) {
+                // REJECT cafes entirely for seafood
+                if (placeCategory === 'cafe') {
+                  return false;
+                }
+                // Only match restaurants that mention seafood
+                const hasSeafood = placeName.includes('seafood') || placeName.includes('fish') ||
+                                  placeName.includes('oyster') || placeName.includes('sushi') ||
+                                  placeName.includes('ocean') || placeName.includes('marine') ||
+                                  placeDesc.includes('seafood') || placeDesc.includes('fish') ||
+                                  placeDesc.includes('oyster') || placeDesc.includes('sushi');
+
+                if (!hasSeafood) {
+                  return false; // Reject restaurants without seafood
+                }
+                return placeCategory === 'restaurant';
+              }
+
+              // Cooking classes - must mention cooking/culinary/chef
+              if (dateTitle.includes('cooking class') || dateTitle.includes('culinary class') ||
+                  dateDesc.includes('cooking class') || dateDesc.includes('culinary')) {
+                const offersCooking = placeName.includes('cooking') || placeName.includes('culinary') ||
+                                     placeName.includes('chef') || placeName.includes('kitchen') ||
+                                     placeDesc.includes('cooking class') || placeDesc.includes('culinary');
+
+                if (!offersCooking) {
+                  return false;
+                }
+                return placeCategory === 'restaurant' || placeCategory === 'activity';
+              }
+
+              // ===== END SPECIALIZED CHECKS =====
               // For wine tasting dates - ONLY match wine bars/wineries, NOT cafes
               if (dateTitle.includes('wine') || dateTitle.includes('wine tasting') ||
                   dateDesc.includes('wine') || dateDesc.includes('wine tasting') ||
@@ -761,21 +938,28 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       // Step 6: Stage 4 - Ranking & Selection with Variety
       // Ensure variety: no duplicate venue types, balance different date styles, distance diversity
+      // ENHANCED: Also track individual venue IDs to prevent same venue across multiple dates
       const selectedDates: typeof datesWithVenues = [];
       const usedVenueCategories = new Set<PlaceCategory>();
       const usedDateStyles = new Set<string>();
+      const usedVenueIds = new Set<string>(); // Track individual venue IDs to prevent duplicates
 
       // Helper function to check if an option adds variety
       const addsVariety = (option: typeof datesWithVenues[0]): boolean => {
         const primaryCategory = option.primaryVenueCategory;
         const hasVenueMatch = primaryCategory && usedVenueCategories.has(primaryCategory);
         const hasStyleMatch = option.dateStyle.some(style => usedDateStyles.has(style));
-        
-        // Prefer options with new venue categories or new date styles
-        return !hasVenueMatch || !hasStyleMatch;
+
+        // CRITICAL: Check if any venues in this option are already used
+        const hasVenueIdOverlap = option.venues.some(venue => usedVenueIds.has(venue.id));
+
+        // Prefer options with:
+        // 1. No venue ID overlap (most important)
+        // 2. New venue categories OR new date styles
+        return !hasVenueIdOverlap && (!hasVenueMatch || !hasStyleMatch);
       };
 
-      // Select top 3 with variety
+      // Select top 3 with variety and unique venues
       for (const option of datesWithVenues) {
         if (selectedDates.length >= 3) break;
 
@@ -786,6 +970,8 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             usedVenueCategories.add(option.primaryVenueCategory);
           }
           option.dateStyle.forEach(style => usedDateStyles.add(style));
+          // Mark venues as used
+          option.venues.forEach(venue => usedVenueIds.add(venue.id));
         } else {
           // For subsequent selections, prioritize variety
           if (addsVariety(option)) {
@@ -794,36 +980,56 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               usedVenueCategories.add(option.primaryVenueCategory);
             }
             option.dateStyle.forEach(style => usedDateStyles.add(style));
+            // Mark venues as used
+            option.venues.forEach(venue => usedVenueIds.add(venue.id));
           } else if (selectedDates.length < 3) {
-            // If we can't find variety and still need options, include best remaining
-            // This ensures we always have up to 3 suggestions
-            selectedDates.push(option);
-            if (option.primaryVenueCategory) {
-              usedVenueCategories.add(option.primaryVenueCategory);
+            // Check if we can still add this without venue overlap
+            const hasVenueOverlap = option.venues.some(venue => usedVenueIds.has(venue.id));
+            if (!hasVenueOverlap) {
+              // If no venue overlap, include it even without style/category variety
+              selectedDates.push(option);
+              if (option.primaryVenueCategory) {
+                usedVenueCategories.add(option.primaryVenueCategory);
+              }
+              option.dateStyle.forEach(style => usedDateStyles.add(style));
+              option.venues.forEach(venue => usedVenueIds.add(venue.id));
             }
-            option.dateStyle.forEach(style => usedDateStyles.add(style));
+            // If there's venue overlap and we need options, we're stuck - skip this one
           }
         }
       }
 
-      // Final sort: prioritize close venues, then by match score
+      // Final sort: STRONGLY prioritize close venues (under 1 mile), then by match score
       const finalDates = selectedDates
         .sort((a, b) => {
-          // Prioritize dates with closer venues
-          if (Math.abs(a.closestVenueDistance - b.closestVenueDistance) > 0.5) {
+          const aIsVeryClose = a.closestVenueDistance <= 1.0; // Within 1 mile
+          const bIsVeryClose = b.closestVenueDistance <= 1.0;
+
+          // Strongly prefer venues under 1 mile
+          if (aIsVeryClose && !bIsVeryClose) return -1;
+          if (!aIsVeryClose && bIsVeryClose) return 1;
+
+          // If both are close or both are far, sort by distance
+          if (Math.abs(a.closestVenueDistance - b.closestVenueDistance) > 0.3) {
             return a.closestVenueDistance - b.closestVenueDistance;
           }
           // Then by match score
           return b.matchScore - a.matchScore;
         });
 
-      console.log(`✅ Generated ${finalDates.length} personalized date options with variety`);
+      console.log(`✅ Generated ${finalDates.length} personalized date options with venue diversity`);
       console.log(`🎯 Venue types: ${Array.from(usedVenueCategories).join(', ')}`);
       console.log(`🎨 Date styles: ${Array.from(usedDateStyles).join(', ')}`);
-      
+      console.log(`🏪 Total unique venues used: ${usedVenueIds.size}`);
+
       // Log what date suggestions we're showing
       finalDates.forEach((option, index) => {
-        console.log(`📅 Option ${index + 1}: "${option.date.title}" - ${option.venues.length} venue(s), closest: ${option.venues[0]?.distance.toFixed(1)} miles, score: ${option.matchScore.toFixed(1)}`);
+        const venueNames = option.venues.map(v => v?.name || 'Unknown').join(', ');
+        const closestDistance = option.venues[0]?.distance;
+        const distanceStr = closestDistance !== undefined && closestDistance !== null
+          ? `${closestDistance.toFixed(1)} miles`
+          : 'unknown distance';
+        console.log(`📅 Option ${index + 1}: "${option.date.title}" - ${option.venues.length} venue(s) (${venueNames}), closest: ${distanceStr}, score: ${option.matchScore.toFixed(1)}`);
       });
 
       setDateOptions(finalDates);
@@ -1408,8 +1614,17 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             >
               <Sparkles className="w-12 h-12 text-white" />
             </motion.div>
-            <h2 className="text-2xl font-bold mb-2">Finding Perfect Dates...</h2>
-            <p className="text-gray-600">Looking for venues near you</p>
+            <h2 className="text-2xl font-bold mb-2">Creating Your Perfect Dates...</h2>
+            <div className="space-y-2 text-gray-600">
+              <p>📊 Analyzing {allNearbyVenues.length} venues in your area</p>
+              <p>🎯 Matching to your preferences:</p>
+              <ul className="text-sm space-y-1">
+                <li>• Budget: {selectedBudget}</li>
+                <li>• Duration: {selectedDuration === 'quick' ? '1-3 hours' : selectedDuration === 'half-day' ? '3-5 hours' : '5+ hours'}</li>
+                <li>• Venues: {venuePreference === 'single' ? 'Single location' : 'Multiple locations'}</li>
+              </ul>
+              <p className="text-xs text-gray-500 mt-4">This may take up to 10 seconds for best results...</p>
+            </div>
           </Card>
         )}
 
@@ -1430,10 +1645,22 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 <Sparkles className="w-8 h-8 text-white" />
               </motion.div>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">Your Perfect Dates</h2>
-              <p className="text-sm text-gray-600 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 max-w-md mx-auto mb-4">
                 {userLoveLanguage && `✨ Curated for your ${userLoveLanguage} love language. `}
                 Tap any date to explore the full experience!
               </p>
+
+              {/* Map Button */}
+              {allNearbyVenues.length > 0 && targetLocation && (
+                <Button
+                  onClick={() => setShowMap(true)}
+                  variant="outline"
+                  className="mx-auto"
+                >
+                  <Map className="w-4 h-4 mr-2" />
+                  View All {allNearbyVenues.length} Venues on Map
+                </Button>
+              )}
             </div>
 
             {dateOptions.map((option, index) => {
@@ -1831,6 +2058,15 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Venues Map Modal */}
+      {showMap && allNearbyVenues.length > 0 && targetLocation && (
+        <VenuesMap
+          venues={allNearbyVenues}
+          centerLocation={targetLocation}
+          onClose={() => setShowMap(false)}
+        />
+      )}
     </div>
   );
 }
