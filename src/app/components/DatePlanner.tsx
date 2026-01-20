@@ -882,9 +882,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             })
           */
           
-          // Use the venues already matched by venueDrivenDateMatching
-          const finalVenues = selectedVenues.length > 0 ? selectedVenues : sortedVenues.slice(0, 3);
-
+          // finalVenues is already declared above, just use it here
           // Log venue matching for debugging
           if (finalVenues.length > 0) {
             console.log(`✅ Matched "${date.title}" with ${finalVenues.length} venues: ${finalVenues.map(v => v.name).join(', ')}`);
