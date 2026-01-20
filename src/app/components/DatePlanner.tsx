@@ -13,6 +13,7 @@ import { useRelationship } from '../hooks/useRelationship';
 import { dateMatchingService } from '../services/dateMatchingService';
 import { EnhancedVenueCard } from './EnhancedVenueCard';
 import { VenuesMap } from './VenuesMap';
+import { categorizeVenues, groupVenuesByType, CategorizedVenue } from '../services/venueCategorizationService';
 
 interface DatePlannerProps {
   onBack: () => void;
@@ -258,6 +259,14 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         setDateOptions([]);
         return;
       }
+
+      // Categorize venues with icons, titles, and detailed types
+      const categorizedVenues = categorizeVenues(uniquePlaces);
+      const venuesByType = groupVenuesByType(categorizedVenues);
+      
+      console.log('📋 Venues grouped by type:', Object.keys(venuesByType).map(type => 
+        `${type} (${venuesByType[type]?.length || 0})`
+      ).join(', '));
 
       // Group venues by category to see what's actually available
       const venuesByCategory: Record<string, Place[]> = {};
@@ -514,6 +523,48 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               }
 
               // ===== END SPECIALIZED CHECKS =====
+
+              // Farmers Market dates - ONLY match actual farmers markets, NOT convenience stores
+              if (dateTitle.includes('farmers market') || dateTitle.includes('farmer\'s market') ||
+                  dateDesc.includes('farmers market') || dateDesc.includes('farmer\'s market')) {
+                // REJECT convenience stores, gas stations, mini markets
+                if (placeName.includes('convenience') || placeName.includes('store') && 
+                    (placeName.includes('gas') || placeName.includes('mini') || placeName.includes('corner') ||
+                     placeName.includes('oasis') || placeName.includes('7-eleven') || placeName.includes('7/11'))) {
+                  return false; // Never match convenience stores for farmers market dates
+                }
+                // Only match if it's actually a farmers market
+                const isFarmersMarket = placeName.includes('farmers market') || placeName.includes('farmer\'s market') ||
+                                       placeName.includes('farmers\' market') || placeDesc.includes('farmers market') ||
+                                       (placeName.includes('market') && (placeName.includes('farm') || 
+                                        placeDesc.includes('produce') || placeDesc.includes('fresh')));
+                if (!isFarmersMarket) {
+                  return false; // Reject if not an actual farmers market
+                }
+                return true;
+              }
+
+              // Poetry Reading dates - ONLY match venues that actually host poetry/open mic
+              if (dateTitle.includes('poetry') || dateTitle.includes('poetry reading') ||
+                  dateDesc.includes('poetry') || dateDesc.includes('open mic') || dateDesc.includes('open-mic')) {
+                // REJECT regular bars that don't host poetry
+                if (placeCategory === 'bar' || placeCategory === 'cafe') {
+                  const hasPoetry = placeName.includes('poetry') || placeName.includes('open mic') ||
+                                   placeName.includes('open-mic') || placeDesc.includes('poetry') ||
+                                   placeDesc.includes('open mic') || placeDesc.includes('spoken word') ||
+                                   placeDesc.includes('poetry reading') || placeDesc.includes('slam poetry');
+                  if (!hasPoetry) {
+                    return false; // Reject bars/cafes that don't host poetry
+                  }
+                }
+                // Only match if venue mentions poetry/open mic
+                const isPoetryVenue = placeName.includes('poetry') || placeName.includes('open mic') ||
+                                     placeName.includes('open-mic') || placeDesc.includes('poetry') ||
+                                     placeDesc.includes('open mic') || placeDesc.includes('spoken word') ||
+                                     placeDesc.includes('poetry reading') || placeDesc.includes('slam poetry');
+                return isPoetryVenue;
+              }
+
               // For wine tasting dates - ONLY match wine bars/wineries, NOT cafes
               if (dateTitle.includes('wine') || dateTitle.includes('wine tasting') ||
                   dateDesc.includes('wine') || dateDesc.includes('wine tasting') ||
