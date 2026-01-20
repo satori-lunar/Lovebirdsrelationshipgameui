@@ -317,40 +317,54 @@ export const dateMatchingService = {
     }
     score += Math.min(interestScore, 15); // Cap at 15 points
 
-    // Budget match: 15 points
+    // Budget match: 25 points (CRITICAL - user explicitly chose this!)
     if (criteria.budget) {
       if (template.budget === criteria.budget) {
-        score += 15;
-        reasons.push(`Budget match: ${template.budget}`);
+        score += 25;
+        reasons.push(`✓ Budget match: ${template.budget}`);
       } else if (
         (criteria.budget === '$$$' && template.budget !== '$') ||
         (criteria.budget === '$$' && template.budget === '$')
       ) {
-        score += 7; // Partial match
+        score += 10; // Partial match
+      } else {
+        // PENALTY for budget mismatch - user wants specific price range
+        score -= 15;
+        reasons.push(`✗ Budget mismatch (wants ${criteria.budget}, this is ${template.budget})`);
       }
     }
 
-    // Duration match: 15 points (INCREASED - user's time is important!)
+    // Duration match: 25 points (CRITICAL - user's time is important!)
     if (criteria.duration && template.timeRequired) {
       const timeReq = template.timeRequired.toLowerCase();
       const matches = this.matchesDuration(timeReq, criteria.duration);
       if (matches) {
-        score += 15;
-        reasons.push(`Perfect duration match: ${template.timeRequired}`);
+        score += 25;
+        reasons.push(`✓ Perfect duration match: ${template.timeRequired}`);
+      } else {
+        // PENALTY for duration mismatch
+        score -= 15;
+        reasons.push(`✗ Duration mismatch (wants ${criteria.duration}, this is ${template.timeRequired})`);
       }
     }
 
-    // Venue preference match: 15 points (IMPORTANT - respect single vs multiple choice!)
+    // Venue preference match: 25 points (CRITICAL - respect single vs multiple choice!)
     if (criteria.venuePreference) {
       const venueCount = this.getVenueCategoryCount(template);
       if (criteria.venuePreference === 'single' && venueCount === 1) {
-        score += 15;
-        reasons.push('Single venue date (as requested)');
+        score += 25;
+        reasons.push('✓ Single venue date (as requested)');
       } else if (criteria.venuePreference === 'multiple' && venueCount >= 2) {
-        score += 15;
-        reasons.push('Multiple venue date (as requested)');
+        score += 25;
+        reasons.push('✓ Multiple venue date (as requested)');
       } else if (criteria.venuePreference === 'single' && venueCount > 1) {
-        score -= 10; // Penalize multi-venue when single requested
+        // STRONG PENALTY for wrong venue count
+        score -= 20;
+        reasons.push('✗ Multi-venue when single requested');
+      } else if (criteria.venuePreference === 'multiple' && venueCount === 1) {
+        // PENALTY for single venue when multiple requested
+        score -= 15;
+        reasons.push('✗ Single venue when multiple requested');
       }
     }
 
