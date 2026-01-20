@@ -720,21 +720,28 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
       // Step 6: Stage 4 - Ranking & Selection with Variety
       // Ensure variety: no duplicate venue types, balance different date styles, distance diversity
+      // ENHANCED: Also track individual venue IDs to prevent same venue across multiple dates
       const selectedDates: typeof datesWithVenues = [];
       const usedVenueCategories = new Set<PlaceCategory>();
       const usedDateStyles = new Set<string>();
+      const usedVenueIds = new Set<string>(); // Track individual venue IDs to prevent duplicates
 
       // Helper function to check if an option adds variety
       const addsVariety = (option: typeof datesWithVenues[0]): boolean => {
         const primaryCategory = option.primaryVenueCategory;
         const hasVenueMatch = primaryCategory && usedVenueCategories.has(primaryCategory);
         const hasStyleMatch = option.dateStyle.some(style => usedDateStyles.has(style));
-        
-        // Prefer options with new venue categories or new date styles
-        return !hasVenueMatch || !hasStyleMatch;
+
+        // CRITICAL: Check if any venues in this option are already used
+        const hasVenueIdOverlap = option.venues.some(venue => usedVenueIds.has(venue.id));
+
+        // Prefer options with:
+        // 1. No venue ID overlap (most important)
+        // 2. New venue categories OR new date styles
+        return !hasVenueIdOverlap && (!hasVenueMatch || !hasStyleMatch);
       };
 
-      // Select top 3 with variety
+      // Select top 3 with variety and unique venues
       for (const option of datesWithVenues) {
         if (selectedDates.length >= 3) break;
 
@@ -745,6 +752,8 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             usedVenueCategories.add(option.primaryVenueCategory);
           }
           option.dateStyle.forEach(style => usedDateStyles.add(style));
+          // Mark venues as used
+          option.venues.forEach(venue => usedVenueIds.add(venue.id));
         } else {
           // For subsequent selections, prioritize variety
           if (addsVariety(option)) {
@@ -753,14 +762,21 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               usedVenueCategories.add(option.primaryVenueCategory);
             }
             option.dateStyle.forEach(style => usedDateStyles.add(style));
+            // Mark venues as used
+            option.venues.forEach(venue => usedVenueIds.add(venue.id));
           } else if (selectedDates.length < 3) {
-            // If we can't find variety and still need options, include best remaining
-            // This ensures we always have up to 3 suggestions
-            selectedDates.push(option);
-            if (option.primaryVenueCategory) {
-              usedVenueCategories.add(option.primaryVenueCategory);
+            // Check if we can still add this without venue overlap
+            const hasVenueOverlap = option.venues.some(venue => usedVenueIds.has(venue.id));
+            if (!hasVenueOverlap) {
+              // If no venue overlap, include it even without style/category variety
+              selectedDates.push(option);
+              if (option.primaryVenueCategory) {
+                usedVenueCategories.add(option.primaryVenueCategory);
+              }
+              option.dateStyle.forEach(style => usedDateStyles.add(style));
+              option.venues.forEach(venue => usedVenueIds.add(venue.id));
             }
-            option.dateStyle.forEach(style => usedDateStyles.add(style));
+            // If there's venue overlap and we need options, we're stuck - skip this one
           }
         }
       }
@@ -776,13 +792,15 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           return b.matchScore - a.matchScore;
         });
 
-      console.log(`✅ Generated ${finalDates.length} personalized date options with variety`);
+      console.log(`✅ Generated ${finalDates.length} personalized date options with venue diversity`);
       console.log(`🎯 Venue types: ${Array.from(usedVenueCategories).join(', ')}`);
       console.log(`🎨 Date styles: ${Array.from(usedDateStyles).join(', ')}`);
-      
+      console.log(`🏪 Total unique venues used: ${usedVenueIds.size}`);
+
       // Log what date suggestions we're showing
       finalDates.forEach((option, index) => {
-        console.log(`📅 Option ${index + 1}: "${option.date.title}" - ${option.venues.length} venue(s), closest: ${option.venues[0]?.distance.toFixed(1)} miles, score: ${option.matchScore.toFixed(1)}`);
+        const venueNames = option.venues.map(v => v.name).join(', ');
+        console.log(`📅 Option ${index + 1}: "${option.date.title}" - ${option.venues.length} venue(s) (${venueNames}), closest: ${option.venues[0]?.distance.toFixed(1)} miles, score: ${option.matchScore.toFixed(1)}`);
       });
 
       setDateOptions(finalDates);
