@@ -227,6 +227,24 @@ export const dateMatchingService = {
     let score = 0;
     const reasons: string[] = [];
 
+    // PRIORITY BOOST: Simple, generic date templates (50 points bonus!)
+    // These are always appropriate and match what venues actually are
+    const simpleTemplateIds = [
+      'simple_coffee_date',
+      'simple_dinner_date',
+      'simple_drinks_at_bar',
+      'simple_walk_in_park',
+      'simple_museum_visit',
+      'simple_movie_date',
+      'simple_brunch_date',
+      'simple_lunch_date'
+    ];
+
+    if (simpleTemplateIds.includes(template.id)) {
+      score += 50; // Massive boost to prioritize simple dates
+      reasons.push('✨ Simple, realistic date - always appropriate');
+    }
+
     // Venue availability: 30 points (CRITICAL)
     if (venueMatch.hasVenues) {
       score += 30;

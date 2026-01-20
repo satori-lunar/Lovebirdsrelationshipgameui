@@ -50,6 +50,11 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
   } | null>(null);
   const [loadingVenues, setLoadingVenues] = useState(false);
 
+  // NEW: Store all fetched venues (fetched when location is selected)
+  const [allNearbyVenues, setAllNearbyVenues] = useState<Place[]>([]);
+  const [targetLocation, setTargetLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [fetchingVenues, setFetchingVenues] = useState(false);
+
   // Get user's love language from onboarding data
   const userLoveLanguage = user?.onboarding?.love_language_primary;
 
@@ -95,83 +100,106 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
 
   const handleLocationSelect = async (preference: LocationPreference) => {
     setLocationPreference(preference);
-    setStep('loading');
-    await generateDateOptions(preference);
-  };
+    setFetchingVenues(true);
 
-  const generateDateOptions = async (preference: LocationPreference) => {
-    setLoadingVenues(true);
+    console.log('🌍 Location selected, fetching ALL nearby venues within 10 miles...');
 
     try {
-      // Step 1: Get target location
-      let targetLocation;
+      // Step 1: Get target location based on preference
+      let location;
 
       if (preference === 'user') {
         if (!shareWithApp) {
           const coords = await getCurrentLocation();
-          targetLocation = coords;
+          location = coords;
         } else if (userLocation) {
-          targetLocation = {
+          location = {
             latitude: Number(userLocation.latitude),
             longitude: Number(userLocation.longitude),
           };
+        } else {
+          throw new Error('User location not available');
         }
       } else if (preference === 'partner') {
         if (partnerLocation) {
-          targetLocation = {
+          location = {
             latitude: Number(partnerLocation.latitude),
             longitude: Number(partnerLocation.longitude),
           };
+        } else {
+          throw new Error('Partner location not available');
         }
       } else if (preference === 'middle') {
         if (userLocation && partnerLocation) {
-          targetLocation = placesService.findMidpoint(
-            { latitude: Number(userLocation.latitude), longitude: Number(userLocation.longitude) },
-            { latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }
-          );
-        } else if (!shareWithApp) {
-          const coords = await getCurrentLocation();
-          if (partnerLocation) {
-            targetLocation = placesService.findMidpoint(
-              coords,
-              { latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }
-            );
-          }
+          location = {
+            latitude: (Number(userLocation.latitude) + Number(partnerLocation.latitude)) / 2,
+            longitude: (Number(userLocation.longitude) + Number(partnerLocation.longitude)) / 2,
+          };
+        } else {
+          throw new Error('Both user and partner locations required for middle point');
         }
       }
 
-      if (!targetLocation) {
-        console.error('Could not determine target location');
-        setStep('results');
-        setLoadingVenues(false);
-        return;
+      if (!location) {
+        throw new Error('Could not determine target location');
       }
 
-      // Step 2: Fetch venues from all categories with a smaller radius for more local results
-      console.log('🔍 Starting venue search for date planning...');
+      setTargetLocation(location);
+      console.log(`📍 Target location: ${location.latitude}, ${location.longitude}`);
+
+      // Step 2: Fetch ALL venues from all categories within 10 miles
+      console.log('🔍 Fetching venues from all categories...');
       const allCategories: PlaceCategory[] = ['restaurant', 'cafe', 'bar', 'park', 'museum', 'theater', 'activity'];
       const allPlaces: Place[] = [];
 
-      // Use a smaller radius (5 miles) to get more local, relevant results
-      const searchRadius = 5; // Reduced from 15 to focus on nearby venues
-      const maxDistanceMiles = 10; // Maximum distance to consider for date suggestions
+      const searchRadius = 10; // 10 mile radius
+      const maxDistanceMiles = 10;
 
-      // Fetch venues per category with detailed logging
-      const venuesByCategoryBeforeFilter: Record<string, Place[]> = {};
       for (const category of allCategories) {
-        const places = await placesService.findNearbyPlaces(targetLocation, searchRadius, category, 15); // Increased from 10 to 15 for more diversity
+        console.log(`  🔎 Fetching ${category} venues...`);
+        const places = await placesService.findNearbyPlaces(location, searchRadius, category, 20);
         allPlaces.push(...places);
-        venuesByCategoryBeforeFilter[category] = places;
-        console.log(`  📍 Fetched ${places.length} ${category} venues`);
+        console.log(`  ✓ Found ${places.length} ${category} venues`);
       }
 
-      // Filter to only include venues within reasonable distance
+      // Step 3: Filter and deduplicate
       const uniquePlaces = Array.from(new Map(allPlaces.map(place => [place.id, place])).values())
-        .filter(place => place.distance <= maxDistanceMiles) // Only venues within 10 miles
-        .sort((a, b) => a.distance - b.distance); // Sort by distance (closest first)
+        .filter(place => place.distance <= maxDistanceMiles)
+        .sort((a, b) => a.distance - b.distance);
 
-      console.log(`📍 Found ${uniquePlaces.length} unique venues within ${maxDistanceMiles} miles (from ${allPlaces.length} total fetched)`);
-      
+      console.log(`✅ TOTAL: ${uniquePlaces.length} unique venues fetched within ${maxDistanceMiles} miles`);
+      console.log(`📊 Breakdown by distance:`);
+      console.log(`   - Within 0.5 mi: ${uniquePlaces.filter(p => p.distance <= 0.5).length}`);
+      console.log(`   - Within 1 mi: ${uniquePlaces.filter(p => p.distance <= 1).length}`);
+      console.log(`   - Within 3 mi: ${uniquePlaces.filter(p => p.distance <= 3).length}`);
+      console.log(`   - Within 5 mi: ${uniquePlaces.filter(p => p.distance <= 5).length}`);
+
+      // Store venues for later use
+      setAllNearbyVenues(uniquePlaces);
+      setFetchingVenues(false);
+
+      // Now generate date options using the pre-fetched venues
+      setStep('loading');
+      await generateDateOptions(uniquePlaces);
+
+    } catch (error) {
+      console.error('❌ Error fetching venues:', error);
+      setFetchingVenues(false);
+      setStep('location'); // Go back to location selection
+    }
+  };
+
+  const generateDateOptions = async (preFetchedVenues: Place[]) => {
+    setLoadingVenues(true);
+
+    try {
+      console.log('🎯 Generating date options from pre-fetched venues...');
+
+      // Use the venues that were already fetched
+      const uniquePlaces = preFetchedVenues;
+
+      console.log(`📊 Using ${uniquePlaces.length} pre-fetched venues`);
+
       // Group venues by category to see what's actually available
       const venuesByCategory = uniquePlaces.reduce((acc, place) => {
         if (!acc[place.category]) {
@@ -180,7 +208,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         acc[place.category].push(place);
         return acc;
       }, {} as Record<string, Place[]>);
-      
+
       // Log detailed venue breakdown
       console.log('🏪 Available venue categories:', Object.keys(venuesByCategory).map(cat => 
         `${cat} (${venuesByCategory[cat]?.length || 0})`
