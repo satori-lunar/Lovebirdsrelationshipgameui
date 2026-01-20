@@ -303,7 +303,75 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               const placeName = (place.name || '').toLowerCase();
               const placeDesc = (place.description || '').toLowerCase();
               const placeCategory = place.category;
-              
+
+              // ===== SPECIALIZED ACTIVITY DATES - Require explicit evidence =====
+
+              // Cocktail/Beer/Wine CLASSES or WORKSHOPS - must mention classes/workshops/tastings
+              if (dateTitle.includes('making class') || dateTitle.includes('workshop') ||
+                  dateTitle.includes('tasting class') || dateDesc.includes('making class') ||
+                  dateDesc.includes('workshop') || dateDesc.includes('tasting class')) {
+                // Only match if venue explicitly offers classes/workshops
+                const offersClasses = placeName.includes('class') || placeName.includes('workshop') ||
+                                     placeName.includes('school') || placeName.includes('academy') ||
+                                     placeDesc.includes('class') || placeDesc.includes('workshop') ||
+                                     placeDesc.includes('learn') || placeDesc.includes('lesson');
+
+                if (!offersClasses) {
+                  return false; // Reject bars that don't offer classes
+                }
+                // Continue to check if it's the right venue type
+                return placeCategory === 'bar' || placeCategory === 'restaurant' || placeCategory === 'activity';
+              }
+
+              // Float therapy / Sensory deprivation - ONLY spas with float tanks
+              if (dateTitle.includes('float') || dateTitle.includes('sensory deprivation') ||
+                  dateDesc.includes('float therapy') || dateDesc.includes('float tank')) {
+                const offersFloat = placeName.includes('float') || placeName.includes('sensory') ||
+                                   placeDesc.includes('float') || placeDesc.includes('sensory deprivation');
+
+                if (!offersFloat) {
+                  return false; // Reject venues without float tanks
+                }
+                // Must also be a spa/wellness venue
+                const isSpaVenue = placeName.includes('spa') || placeName.includes('wellness') ||
+                                  placeDesc.includes('spa') || placeDesc.includes('wellness');
+                return isSpaVenue;
+              }
+
+              // Seafood dinner/cuisine - ONLY restaurants with seafood in name/description, NOT cafes
+              if (dateTitle.includes('seafood') || dateDesc.includes('seafood')) {
+                // REJECT cafes entirely for seafood
+                if (placeCategory === 'cafe') {
+                  return false;
+                }
+                // Only match restaurants that mention seafood
+                const hasSeafood = placeName.includes('seafood') || placeName.includes('fish') ||
+                                  placeName.includes('oyster') || placeName.includes('sushi') ||
+                                  placeName.includes('ocean') || placeName.includes('marine') ||
+                                  placeDesc.includes('seafood') || placeDesc.includes('fish') ||
+                                  placeDesc.includes('oyster') || placeDesc.includes('sushi');
+
+                if (!hasSeafood) {
+                  return false; // Reject restaurants without seafood
+                }
+                return placeCategory === 'restaurant';
+              }
+
+              // Cooking classes - must mention cooking/culinary/chef
+              if (dateTitle.includes('cooking class') || dateTitle.includes('culinary class') ||
+                  dateDesc.includes('cooking class') || dateDesc.includes('culinary')) {
+                const offersCooking = placeName.includes('cooking') || placeName.includes('culinary') ||
+                                     placeName.includes('chef') || placeName.includes('kitchen') ||
+                                     placeDesc.includes('cooking class') || placeDesc.includes('culinary');
+
+                if (!offersCooking) {
+                  return false;
+                }
+                return placeCategory === 'restaurant' || placeCategory === 'activity';
+              }
+
+              // ===== END SPECIALIZED CHECKS =====
+
               // For wine tasting dates - ONLY match wine bars/wineries, NOT cafes
               if (dateTitle.includes('wine') || dateTitle.includes('wine tasting') ||
                   dateDesc.includes('wine') || dateDesc.includes('wine tasting') ||
@@ -781,11 +849,18 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
         }
       }
 
-      // Final sort: prioritize close venues, then by match score
+      // Final sort: STRONGLY prioritize close venues (under 1 mile), then by match score
       const finalDates = selectedDates
         .sort((a, b) => {
-          // Prioritize dates with closer venues
-          if (Math.abs(a.closestVenueDistance - b.closestVenueDistance) > 0.5) {
+          const aIsVeryClose = a.closestVenueDistance <= 1.0; // Within 1 mile
+          const bIsVeryClose = b.closestVenueDistance <= 1.0;
+
+          // Strongly prefer venues under 1 mile
+          if (aIsVeryClose && !bIsVeryClose) return -1;
+          if (!aIsVeryClose && bIsVeryClose) return 1;
+
+          // If both are close or both are far, sort by distance
+          if (Math.abs(a.closestVenueDistance - b.closestVenueDistance) > 0.3) {
             return a.closestVenueDistance - b.closestVenueDistance;
           }
           // Then by match score
