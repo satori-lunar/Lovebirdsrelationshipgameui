@@ -86,12 +86,17 @@ export function matchDatesWithPreferences(
   );
 
   for (const template of templatesNeedingVenues) {
-    // Step 1: Score based on user preferences
+    // Step 1: Find matching venues FIRST (before scoring)
+    const matchedVenues = findMatchingVenues(template, venues, usedVenueIds);
+
+    // CRITICAL: Skip dates with no matching venues
+    if (matchedVenues.length === 0) {
+      continue; // Don't include dates without venues
+    }
+
+    // Step 2: Score based on user preferences (only for dates with venues)
     const scoreBreakdown = calculateScore(template, venues, preferences, usedVenueIds);
     const totalScore = Object.values(scoreBreakdown).reduce((sum, val) => sum + val, 0);
-
-    // Step 2: Find matching venues (and mark them as used)
-    const matchedVenues = findMatchingVenues(template, venues, usedVenueIds);
 
     // Mark venues as used to prevent repetition
     matchedVenues.forEach(venue => usedVenueIds.add(venue.placeId));
@@ -211,7 +216,7 @@ function scoreVenueAvailability(
   const requiredCategories = template.requiredVenues || [];
 
   if (requiredCategories.length === 0) {
-    return SCORING_WEIGHTS.VENUE_AVAILABLE; // No venue needed
+    return SCORING_WEIGHTS.VENUE_AVAILABLE; // No venue needed (at-home activities)
   }
 
   // Count available (unused) venues for each category
@@ -223,7 +228,12 @@ function scoreVenueAvailability(
     availableCount += categoryVenues.length;
   }
 
-  // Scale: 0 venues = 0 points, 5+ venues = full points
+  // CRITICAL: If no venues available, return 0 (not full points!)
+  if (availableCount === 0) {
+    return 0;
+  }
+
+  // Scale: 1 venue = minimum points, 5+ venues = full points
   const ratio = Math.min(availableCount / 5, 1);
   return SCORING_WEIGHTS.VENUE_AVAILABLE * ratio;
 }
