@@ -458,13 +458,17 @@ export function getTopDates(
     // Find first unused venue in this category
     const venue = categoryVenues.find(v => !usedVenueIds.has(v.placeId));
     if (!venue) {
-      console.log(`    ⏭️  Skipping: all venues already used (${categoryVenues.length} venues, all in usedSet)`);
+      // Debug: show sample placeIds from this category
+      const sampleIds = categoryVenues.slice(0, 3).map(v => v.placeId).join(', ');
+      console.log(`    ⏭️  Skipping: all venues already used (${categoryVenues.length} venues)`);
+      console.log(`       Sample placeIds in this category: ${sampleIds}`);
+      console.log(`       UsedSet has ${usedVenueIds.size} IDs: ${Array.from(usedVenueIds).join(', ')}`);
       continue;
     }
-    console.log(`    🏪 Selected venue: "${venue.name}"`);
-
+    console.log(`    🏪 Selected venue: "${venue.name}" (placeId: ${venue.placeId})`);
 
     usedVenueIds.add(venue.placeId);
+    console.log(`    📝 Added to usedSet. UsedSet now has ${usedVenueIds.size} venues`);
 
     // Score based on user preferences
     const scoreBreakdown = calculateScore(template, [venue], preferences, usedVenueIds);
