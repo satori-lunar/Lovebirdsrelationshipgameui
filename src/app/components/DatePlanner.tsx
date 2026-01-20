@@ -494,33 +494,55 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           // Venues are already matched by venueDrivenDateMatching, just use them
           const relevantVenues = scored.matchingVenues || [];
           
-          // Sort venues by distance (closest first)
-          const sortedVenues = [...relevantVenues].sort((a, b) => (a.distance || 0) - (b.distance || 0));
-          
-          // Select top 3 venues (closest, diverse categories if possible)
+          // ADD VARIETY: Shuffle venues within distance tiers to prevent always picking the same ones
+          // Group venues by distance tiers (close vs far)
+          const veryCloseVenues = relevantVenues.filter(v => (v.distance || 0) <= 1.5); // Within 1.5 miles
+          const closeVenues = relevantVenues.filter(v => (v.distance || 0) > 1.5 && (v.distance || 0) <= 3); // 1.5-3 miles
+          const moderateVenues = relevantVenues.filter(v => (v.distance || 0) > 3 && (v.distance || 0) <= 5); // 3-5 miles
+          const farVenues = relevantVenues.filter(v => (v.distance || 0) > 5); // 5+ miles
+
+          // Shuffle within each distance tier for variety
+          const shuffleArray = <T,>(array: T[]): T[] => {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+          };
+
+          // Recombine shuffled tiers - prioritize close ones, but randomize within each tier
+          const shuffledVenues = [
+            ...shuffleArray(veryCloseVenues),
+            ...shuffleArray(closeVenues),
+            ...shuffleArray(moderateVenues),
+            ...shuffleArray(farVenues)
+          ];
+
+          // Select top 3 venues from shuffled pool (closest, diverse categories if possible)
           const selectedVenues: Place[] = [];
           const usedCategories = new Set<string>();
-          
+
           // First pass: get one venue from each category
-          for (const venue of sortedVenues) {
+          for (const venue of shuffledVenues) {
             if (selectedVenues.length >= 3) break;
             if (!usedCategories.has(venue.category)) {
               selectedVenues.push(venue);
               usedCategories.add(venue.category);
             }
           }
-          
-          // Second pass: fill remaining slots with closest venues
-          for (const venue of sortedVenues) {
+
+          // Second pass: fill remaining slots with closest remaining venues
+          for (const venue of shuffledVenues) {
             if (selectedVenues.length >= 3) break;
             if (!selectedVenues.includes(venue)) {
               selectedVenues.push(venue);
             }
           }
-          
+
           // OLD VENUE MATCHING LOGIC REMOVED - now using venueDrivenDateMatching results
           // All the complex filtering below was replaced by venueDrivenDateMatching service
-          const finalVenues = selectedVenues.length > 0 ? selectedVenues : sortedVenues.slice(0, 3);
+          const finalVenues = selectedVenues.length > 0 ? selectedVenues : shuffledVenues.slice(0, 3);
           
           // Remove the old filter logic - it's all handled by venueDrivenDateMatching now
           /* REMOVED: Old venue matching filter logic - replaced by venueDrivenDateMatching
@@ -926,8 +948,10 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
                 }
               }
               
-              // Check if venue category matches date categories
-              if (dateCategories.includes(placeCategory as PlaceCategory)) {
+              // Check if venue category matches date's PRIMARY category ONLY
+              // DO NOT match based on secondary mentions (like "grab lunch afterward")
+              // This was causing museums to match to cafes just because description mentioned lunch
+              if (primaryVenue && placeCategory === primaryVenue) {
                 // Additional validation: check venue name/description for special date types
                 if ((dateTitle.includes('spa') || dateDesc.includes('spa')) &&
                     !placeName.includes('spa') && !placeDesc.includes('spa') &&
@@ -958,8 +982,9 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
               return false; // No match found
             })
           */
-          
-          // finalVenues is already declared above, just use it here
+
+          // finalVenues is already declared above with shuffling for variety
+
           // Log venue matching for debugging
           if (finalVenues.length > 0) {
             console.log(`✅ Matched "${date.title}" with ${finalVenues.length} venues: ${finalVenues.map(v => v.name).join(', ')}`);
@@ -1090,12 +1115,20 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       };
 
       // Select top 3 with variety and unique venues from the diverse pool
+      console.log(`🎲 Selecting 3 dates from ${diverseDatesPool.length} candidates with venue variety enforcement...`);
+
       for (const option of diverseDatesPool) {
         if (selectedDates.length >= 3) break;
+
+        // Check for venue reuse
+        const venueNames = option.venues.map(v => v.name).join(', ');
+        const overlappingVenues = option.venues.filter(v => usedVenueIds.has(v.id));
+        const hasVenueOverlap = overlappingVenues.length > 0;
 
         // Always include the first (highest-scored) option
         if (selectedDates.length === 0) {
           selectedDates.push(option);
+          console.log(`  ✅ Date #1: "${option.date.title}" at ${venueNames}`);
           if (option.primaryVenueCategory) {
             usedVenueCategories.add(option.primaryVenueCategory);
           }
@@ -1106,6 +1139,7 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           // For subsequent selections, prioritize variety
           if (addsVariety(option)) {
             selectedDates.push(option);
+            console.log(`  ✅ Date #${selectedDates.length}: "${option.date.title}" at ${venueNames} (adds variety)`);
             if (option.primaryVenueCategory) {
               usedVenueCategories.add(option.primaryVenueCategory);
             }
@@ -1113,18 +1147,20 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
             // Mark venues as used
             option.venues.forEach(venue => usedVenueIds.add(venue.id));
           } else if (selectedDates.length < 3) {
-            // Check if we can still add this without venue overlap
-            const hasVenueOverlap = option.venues.some(venue => usedVenueIds.has(venue.id));
             if (!hasVenueOverlap) {
               // If no venue overlap, include it even without style/category variety
               selectedDates.push(option);
+              console.log(`  ✅ Date #${selectedDates.length}: "${option.date.title}" at ${venueNames} (no venue overlap)`);
               if (option.primaryVenueCategory) {
                 usedVenueCategories.add(option.primaryVenueCategory);
               }
               option.dateStyle.forEach(style => usedDateStyles.add(style));
               option.venues.forEach(venue => usedVenueIds.add(venue.id));
+            } else {
+              // Skip due to venue reuse
+              const reusedVenues = overlappingVenues.map(v => v.name).join(', ');
+              console.log(`  ⏭️  SKIPPED: "${option.date.title}" - reuses venues: ${reusedVenues}`);
             }
-            // If there's venue overlap and we need options, we're stuck - skip this one
           }
         }
       }
