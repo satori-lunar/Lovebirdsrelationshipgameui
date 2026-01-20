@@ -189,6 +189,45 @@ export const googlePlacesService = {
         }
       }
 
+      // VALIDATE: Check if venue name suggests it's NOT the category Google says it is
+      // This catches miscategorizations like "OASIS" being marked as "restaurant"
+      const venueName = result.name.toLowerCase();
+
+      // Red flags for restaurants (venues that aren't actually food places)
+      if (category === 'restaurant') {
+        const nonRestaurantKeywords = [
+          'hotel', 'resort', 'lodge', 'inn', 'motel',
+          'spa', 'wellness', 'massage', 'salon',
+          'gym', 'fitness', 'yoga',
+          'church', 'temple', 'chapel',
+          'school', 'university', 'college',
+          'hospital', 'clinic', 'medical',
+          'bank', 'atm',
+          'parking', 'garage',
+          'plaza', 'mall', 'center', // Often too generic
+        ];
+
+        const seemsWrong = nonRestaurantKeywords.some(keyword => venueName.includes(keyword));
+        if (seemsWrong) {
+          console.log(`❌ Filtering out miscategorized restaurant: "${result.name}" (likely not a restaurant)`);
+          return null;
+        }
+      }
+
+      // Red flags for cafes
+      if (category === 'cafe') {
+        const nonCafeKeywords = [
+          'hotel', 'resort', 'lodge',
+          'restaurant', 'grill', 'kitchen', // Restaurants, not cafes
+        ];
+
+        const seemsWrong = nonCafeKeywords.some(keyword => venueName.includes(keyword));
+        if (seemsWrong) {
+          console.log(`❌ Filtering out miscategorized cafe: "${result.name}"`);
+          return null;
+        }
+      }
+
       // Extract cuisine type if restaurant (for better food matching)
       let cuisineType: string | undefined;
       if (category === 'restaurant' && result.types) {
