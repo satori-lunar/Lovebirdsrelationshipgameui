@@ -437,20 +437,32 @@ export function getTopDates(
 
   // For each category with venues, create ONE date
   for (const [category, categoryVenues] of venuesByCategory.entries()) {
-    if (categoryVenues.length === 0) continue;
+    console.log(`  🔍 Processing category: ${category} (${categoryVenues.length} venues available)`);
+
+    if (categoryVenues.length === 0) {
+      console.log(`    ⏭️  Skipping: no venues in this category`);
+      continue;
+    }
 
     // Get the simple template for this category
     const templateId = categoryToTemplate[category];
+    console.log(`    📋 Looking for template: ${templateId}`);
     const template = templates.find(t => t.id === templateId);
 
     if (!template) {
-      console.log(`⚠️ No template found for category '${category}' (looking for '${templateId}')`);
+      console.log(`    ⚠️  No template found for category '${category}' (looking for '${templateId}')`);
       continue; // Skip if template doesn't exist
     }
+    console.log(`    ✅ Template found: "${template.title}"`);
 
     // Find first unused venue in this category
     const venue = categoryVenues.find(v => !usedVenueIds.has(v.placeId));
-    if (!venue) continue;
+    if (!venue) {
+      console.log(`    ⏭️  Skipping: all venues already used (${categoryVenues.length} venues, all in usedSet)`);
+      continue;
+    }
+    console.log(`    🏪 Selected venue: "${venue.name}"`);
+
 
     usedVenueIds.add(venue.placeId);
 
