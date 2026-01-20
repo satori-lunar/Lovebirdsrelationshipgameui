@@ -144,17 +144,37 @@ export const googlePlacesService = {
         priceLevel = levels[result.price_level] || undefined;
       }
 
-      // Determine category from types - enhanced mapping
+      // Determine category from types - enhanced mapping with strict validation
       let category = 'other';
       if (result.types) {
         const types = result.types.map((t: string) => t.toLowerCase());
-        
+
+        // FILTER OUT invalid venue types (cities, political areas, generic places)
+        const invalidTypes = [
+          'locality', 'political', 'administrative_area_level_1', 'administrative_area_level_2',
+          'administrative_area_level_3', 'country', 'postal_code', 'sublocality',
+          'neighborhood', 'route', 'street_address', 'premise', 'subpremise',
+          'natural_feature', 'colloquial_area', 'geocode', 'intersection',
+          'convenience_store', 'gas_station', 'supermarket', 'grocery_or_supermarket',
+          'store', 'establishment' // Too generic
+        ];
+
+        // If venue has invalid types, mark it as invalid
+        const hasInvalidType = types.some(t => invalidTypes.includes(t));
+        if (hasInvalidType && !types.some(t => ['restaurant', 'cafe', 'bar', 'park', 'museum', 'movie_theater'].includes(t))) {
+          console.log(`❌ Filtering out invalid venue: "${result.name}" (types: ${types.join(', ')})`);
+          return null; // Will be filtered out later
+        }
+
         // Priority order matters - more specific first
-        if (types.some(t => ['restaurant', 'meal_takeaway', 'meal_delivery', 'food'].includes(t))) {
-          category = 'restaurant';
-        } else if (types.some(t => ['cafe', 'bakery'].includes(t))) {
+        // IMPORTANT: Check cafe BEFORE restaurant to avoid mis-categorization
+        if (types.some(t => ['cafe', 'bakery'].includes(t))) {
           category = 'cafe';
-        } else if (types.some(t => ['bar', 'night_club', 'liquor_store'].includes(t))) {
+        } else if (types.some(t => ['restaurant', 'meal_takeaway', 'meal_delivery'].includes(t))) {
+          // NOTE: Removed 'food' - it's too broad and matches convenience stores
+          category = 'restaurant';
+        } else if (types.some(t => ['bar', 'night_club'].includes(t))) {
+          // Removed 'liquor_store' - not a venue to hang out at
           category = 'bar';
         } else if (types.some(t => ['park', 'campground', 'rv_park'].includes(t))) {
           category = 'park';
@@ -207,7 +227,21 @@ export const googlePlacesService = {
           ? `/api/places-photo?photo_reference=${result.photos[0].photo_reference}&maxwidth=400`
           : undefined,
       };
-    }).filter((place: Place) => place.name && place.name !== '');
+    }).filter((place: Place | null) => {
+      // Filter out null values (invalid venues)
+      if (!place) return false;
+
+      // Filter out venues without names
+      if (!place.name || place.name === '') return false;
+
+      // Filter out venues categorized as 'other' (couldn't determine proper category)
+      if (place.category === 'other') {
+        console.log(`❌ Filtering out uncategorized venue: "${place.name}"`);
+        return false;
+      }
+
+      return true;
+    }) as Place[];
   },
 
   /**

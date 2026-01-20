@@ -182,6 +182,29 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
       for (const place of allPlaces) {
         if (place && place.id && !seenIds.has(place.id)) {
           if (place.distance && place.distance <= maxDistanceMiles) {
+            // VALIDATE: Filter out venues with suspicious names
+            const venueName = (place.name || '').toLowerCase().trim();
+
+            // Check if venue name is a known city/locality (too generic)
+            const invalidVenueNames = [
+              'guadalajara', 'chapala', 'ajijic', 'san antonio', 'tlaquepaque',
+              'mexico', 'jalisco', 'ciudad', 'centro', // Common Mexican location terms
+              'downtown', 'city center', 'main street', 'plaza', // Generic terms
+            ];
+
+            const isInvalidName = invalidVenueNames.some(invalid => venueName === invalid);
+
+            if (isInvalidName) {
+              console.log(`❌ Filtering out venue with invalid name: "${place.name}" (likely a city/locality, not a specific venue)`);
+              continue;
+            }
+
+            // Additional validation: venue name should be substantive (not just 1-2 characters)
+            if (venueName.length < 3) {
+              console.log(`❌ Filtering out venue with too-short name: "${place.name}"`);
+              continue;
+            }
+
             seenIds.add(place.id);
             uniquePlaces.push(place);
           }
@@ -304,21 +327,45 @@ export function DatePlanner({ onBack, partnerName }: DatePlannerProps) {
           'trivia night', 'karaoke', 'open mic', 'comedy show', 'improv show',
           'wine and cheese pairing', 'sake tasting', 'brewery tour', 'distillery tour',
           'mini golf', 'miniature golf', 'putt putt', 'bowling', 'arcade',
-          'ice cream', 'gelato', 'frozen yogurt'
+          'ice cream', 'gelato', 'frozen yogurt',
+          'bakery', 'bakery tour', 'artisan', // Requires actual bakeries
+          'seafood', 'sushi', 'steakhouse', 'bbq', 'ramen', // Requires specific restaurant types
+          'dessert crawl', 'dessert shop', 'chocolate', // Requires dessert-specific venues
+          'cocktail making', 'wine tasting', // Requires places that teach classes
         ];
 
         for (const specialized of specializedTemplates) {
           if (title.includes(specialized) || desc.includes(specialized)) {
-            // Check if ANY venue explicitly offers this service
-            const hasMatchingVenue = uniquePlaces.some(p => {
-              const venueName = (p.name || '').toLowerCase();
-              const venueDesc = (p.description || '').toLowerCase();
-              return venueName.includes(specialized) || venueDesc.includes(specialized);
-            });
+            // For classes/tours/workshops, venue must explicitly advertise teaching/instruction
+            const isClassOrTour = title.includes('class') || title.includes('tour') ||
+                                  title.includes('workshop') || title.includes('lesson');
 
-            if (!hasMatchingVenue) {
-              console.log(`❌ Rejected specialized template: "${date.title}" - no venues offer this service`);
-              return false;
+            if (isClassOrTour) {
+              // STRICT: Venue name must include "class", "school", "academy", "workshop", "tour", or "lesson"
+              const hasMatchingVenue = uniquePlaces.some(p => {
+                const venueName = (p.name || '').toLowerCase();
+                return venueName.includes('class') || venueName.includes('school') ||
+                       venueName.includes('academy') || venueName.includes('workshop') ||
+                       venueName.includes('tour') || venueName.includes('lesson') ||
+                       venueName.includes('studio') || venueName.includes('institute');
+              });
+
+              if (!hasMatchingVenue) {
+                console.log(`❌ Rejected class/tour template: "${date.title}" - no venues offer classes/instruction`);
+                return false;
+              }
+            } else {
+              // For non-class specialized activities, venue name must explicitly mention the activity
+              const hasMatchingVenue = uniquePlaces.some(p => {
+                const venueName = (p.name || '').toLowerCase();
+                // Must be in the venue NAME (not just description which can be generic)
+                return venueName.includes(specialized);
+              });
+
+              if (!hasMatchingVenue) {
+                console.log(`❌ Rejected specialized template: "${date.title}" - no venues offer this service`);
+                return false;
+              }
             }
           }
         }
