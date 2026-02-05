@@ -23,6 +23,27 @@ export type CheckinTime =
   | 'afternoon'  // 12pm-5pm
   | 'evening';   // 5pm-10pm
 
+export type RelationshipStatus =
+  | 'dating'      // Currently dating
+  | 'married';    // Married
+
+export type CohabitationStatus =
+  | 'living_together'    // Live in the same place
+  | 'living_apart';      // Live in different places
+
+export type ProximityStatus =
+  | 'same_city'      // In the same city/area
+  | 'different_cities'  // Different cities but same state/country
+  | 'long_distance'; // Long distance relationship
+
+export type SeeingFrequency =
+  | 'daily'        // See each other every day
+  | 'few_times_week'  // Few times per week
+  | 'once_week'    // Once per week
+  | 'few_times_month' // Few times per month
+  | 'once_month'   // Once per month
+  | 'rarely';      // Rarely see each other
+
 /**
  * Partner Profile - The core personalization engine
  */
@@ -30,6 +51,12 @@ export interface PartnerProfile {
   id: string;
   userId: string;
   coupleId: string;
+
+  // Relationship Details (collected during onboarding)
+  relationshipStatus?: RelationshipStatus;
+  cohabitationStatus?: CohabitationStatus;
+  proximityStatus?: ProximityStatus;
+  seeingFrequency?: SeeingFrequency;
 
   // Explicit Preferences (collected during onboarding)
   loveLanguagePrimary: LoveLanguage;

@@ -8,7 +8,6 @@ import { EnhancedCalendar } from './EnhancedCalendar';
 import { CalendarSyncSetup } from './CalendarSyncSetup';
 import { DateSuggestions } from './DateSuggestions';
 import { NotificationSettings } from './NotificationSettings';
-import { AnniversaryTracker } from './AnniversaryTracker';
 import { PartnerProfile } from './PartnerProfile';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
@@ -66,7 +65,6 @@ export function CalendarPage({ onNavigate }: CalendarPageProps) {
   const partner = {
     name: "Alex",
     initials: "AX",
-    relationshipStart: new Date('2023-06-15'),
     syncStatus: 'connected' as const
   };
 
@@ -265,8 +263,8 @@ export function CalendarPage({ onNavigate }: CalendarPageProps) {
           </div>
         </div>
 
-        {/* Quick Stats and Anniversary */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        {/* Quick Stats */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
           <Card className="shadow-sm border-0 bg-white">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -298,11 +296,6 @@ export function CalendarPage({ onNavigate }: CalendarPageProps) {
               </div>
             </CardContent>
           </Card>
-
-          <AnniversaryTracker
-            partnerName={partner.name}
-            relationshipStart={partner.relationshipStart}
-          />
         </div>
 
         {/* Main Calendar Content */}

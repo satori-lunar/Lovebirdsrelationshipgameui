@@ -20,28 +20,28 @@ const SLIDES = [
     title: 'Welcome to Lovebirds',
     subtitle: 'Your relationship companion',
     description: 'Strengthen your bond with daily questions, thoughtful suggestions, and meaningful moments together.',
-    gradient: 'from-rose-500 to-pink-500',
+    gradient: 'from-warm-pink to-warm-pink-light',
   },
   {
     icon: MessageCircleHeart,
     title: 'Daily Questions',
     subtitle: 'Know each other deeper',
     description: 'Answer fun questions daily and discover how well you really know your partner.',
-    gradient: 'from-pink-500 to-purple-500',
+    gradient: 'from-warm-pink to-warm-orange',
   },
   {
     icon: Gift,
     title: 'Thoughtful Surprises',
     subtitle: 'Never run out of ideas',
     description: 'Get personalized date ideas, gift suggestions, and sweet gestures tailored to your relationship.',
-    gradient: 'from-purple-500 to-violet-500',
+    gradient: 'from-warm-orange to-warm-yellow',
   },
   {
     icon: Users,
     title: 'Grow Together',
     subtitle: 'Build lasting memories',
     description: 'Set goals, track milestones, and celebrate your journey as a couple.',
-    gradient: 'from-violet-500 to-rose-500',
+    gradient: 'from-soft-purple to-warm-pink',
   },
 ];
 
@@ -64,7 +64,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const Icon = slide.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-warm-cream via-warm-beige to-soft-purple-light relative overflow-hidden">
       {/* Custom Styles */}
       <style>{`
         @keyframes heartbeat {

@@ -133,37 +133,58 @@ export const onboardingService = {
     // Note: Session validation is handled at the component level
 
     try {
+      console.log('🔍 [getOnboarding] Fetching for user_id:', userId);
+      console.log('🔍 [getOnboarding] Current auth user:', (await api.supabase.auth.getUser()).data.user?.id);
+
       const { data, error } = await api.supabase
         .from('onboarding_responses')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle(); // Use maybeSingle instead of single to avoid 406 on empty results
 
+      console.log('🔍 [getOnboarding] Query result:', {
+        userId,
+        hasData: !!data,
+        data: data ? { name: data.name, partner_name: data.partner_name } : null,
+        error: error ? { code: error.code, message: error.message, details: error.details, hint: error.hint } : null
+      });
+
       if (error) {
+        console.error('❌ [getOnboarding] Error fetching onboarding:', error);
         // If no rows found, return null (user hasn't completed onboarding)
         if (error.code === 'PGRST116' || error.message?.includes('No rows')) {
+          console.log('⚠️ [getOnboarding] No rows found for user:', userId);
           return null;
         }
         // Handle 406 errors specifically
         if (error.status === 406 || error.code === '406') {
-          console.warn('406 error fetching onboarding - table might not exist or RLS issue:', error);
+          console.warn('⚠️ [getOnboarding] 406 error - table might not exist or RLS issue:', error);
           return null;
         }
+        console.error('❌ [getOnboarding] Throwing error:', error.message);
         throw new Error(error.message);
       }
 
+      console.log('✅ [getOnboarding] Successfully fetched data for:', userId);
       return data;
     } catch (error: any) {
       // If table doesn't exist or other error, return null
-      console.warn('Error fetching onboarding:', error.message);
+      console.error('❌ [getOnboarding] Caught exception:', error);
+      console.warn('⚠️ [getOnboarding] Error message:', error.message);
       // Don't throw - return null so app can continue
       return null;
     }
   },
 
   async updateOnboarding(userId: string, data: Partial<OnboardingData>): Promise<OnboardingResponse> {
+    // Check if any data is actually being updated
+    const hasDataToUpdate = Object.keys(data).length > 0;
+    if (!hasDataToUpdate) {
+      throw new Error('No data provided to update');
+    }
+
     const updateData: any = {};
-    
+
     // New onboarding fields
     if (data.name !== undefined) updateData.name = data.name;
     if (data.birthday !== undefined) updateData.birthday = data.birthday;
@@ -196,18 +217,51 @@ export const onboardingService = {
     if (data.healthAccessibility !== undefined) updateData.health_accessibility = data.healthAccessibility;
     if (data.relationshipGoals !== undefined) updateData.relationship_goals = data.relationshipGoals;
 
+    // Always update the timestamp
     updateData.updated_at = new Date().toISOString();
 
-    const response = await handleSupabaseError(
-      api.supabase
+    try {
+      // First, check if the user has an existing onboarding record
+      const { data: existingRecord, error: fetchError } = await api.supabase
+        .from('onboarding_responses')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('❌ [updateOnboarding] Error checking existing record:', fetchError);
+        throw new Error(fetchError.message || 'Failed to check existing onboarding record');
+      }
+
+      if (!existingRecord) {
+        console.warn('⚠️ [updateOnboarding] No existing onboarding record found for user:', userId);
+        throw new Error('Cannot update onboarding - no existing record found. Please complete full onboarding first.');
+      }
+
+      // User has an existing record, so we can safely update it
+      const { data: result, error } = await api.supabase
         .from('onboarding_responses')
         .update(updateData)
         .eq('user_id', userId)
         .select()
-        .single()
-    );
+        .single();
 
-    return response;
+      if (error) {
+        console.error('❌ [updateOnboarding] Update failed:', error);
+        throw new Error(error.message || 'Failed to update onboarding data');
+      }
+
+      if (!result) {
+        console.warn('⚠️ [updateOnboarding] No result returned for user:', userId);
+        throw new Error('Failed to update onboarding data - no result returned');
+      }
+
+      console.log('✅ [updateOnboarding] Successfully updated data for:', userId);
+      return result;
+    } catch (error: any) {
+      console.error('❌ [updateOnboarding] Exception during update:', error);
+      throw error;
+    }
   },
 };
 

@@ -1,10 +1,10 @@
-import { ChevronLeft, Sparkles, Users, Zap, Calendar } from 'lucide-react';
+import { ChevronLeft, Sparkles, Zap, Calendar } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 
 interface DateHubProps {
   onBack: () => void;
-  onSelectMode: (mode: 'personalized' | 'swipe-together' | 'challenge') => void;
+  onSelectMode: (mode: 'personalized' | 'challenge') => void;
   partnerName: string;
 }
 
@@ -46,9 +46,9 @@ export function DateHub({ onBack, onSelectMode, partnerName }: DateHubProps) {
               <Sparkles className="w-6 h-6 text-purple-600" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1 text-lg">Personalized Suggestions</h3>
+              <h3 className="font-semibold mb-1 text-lg">Plan a Date</h3>
               <p className="text-sm text-gray-600 mb-3">
-                Browse date ideas tailored to {partnerName}'s preferences and interests
+                Get personalized date suggestions based on your preferences
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
@@ -56,32 +56,6 @@ export function DateHub({ onBack, onSelectMode, partnerName }: DateHubProps) {
                 </span>
                 <span className="text-xs px-2 py-1 bg-pink-100 text-pink-700 rounded-full">
                   Personalized
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Choose Together */}
-        <Card
-          onClick={() => onSelectMode('swipe-together')}
-          className="p-6 border-0 shadow-lg hover:shadow-xl transition-all cursor-pointer group"
-        >
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-pink-100 to-pink-50 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-              <Users className="w-6 h-6 text-pink-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold mb-1 text-lg">Choose Together</h3>
-              <p className="text-sm text-gray-600 mb-3">
-                Swipe on date ideas together and find your perfect match
-              </p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs px-2 py-1 bg-pink-100 text-pink-700 rounded-full">
-                  Recommended
-                </span>
-                <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
-                  No arguments!
                 </span>
               </div>
             </div>
@@ -99,11 +73,11 @@ export function DateHub({ onBack, onSelectMode, partnerName }: DateHubProps) {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold mb-1 text-lg flex items-center gap-2">
-                Challenge Us
+                Random Challenge
                 <span className="text-xs px-2 py-1 bg-orange-200 text-orange-700 rounded-full">NEW</span>
               </h3>
               <p className="text-sm text-gray-600 mb-3">
-                Feeling adventurous? We'll pick a random date you HAVE to do!
+                Take on a spontaneous date challenge that you can't back out of!
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full">

@@ -226,5 +226,33 @@ export const relationshipService = {
 
     console.log('✅ Successfully disconnected from partner');
   },
+
+  async updateRelationshipStartDate(userId: string, startDate: string): Promise<Relationship> {
+    console.log('📅 Updating relationship start date for user:', userId);
+
+    // Get the user's relationship
+    const relationship = await this.getRelationship(userId);
+
+    if (!relationship) {
+      console.error('❌ No relationship found');
+      throw new Error('No relationship found');
+    }
+
+    console.log('📅 Updating relationship:', relationship.id, 'with start date:', startDate);
+
+    const updated = await handleSupabaseError(
+      api.supabase
+        .from('relationships')
+        .update({
+          relationship_start_date: startDate,
+        })
+        .eq('id', relationship.id)
+        .select()
+        .single()
+    );
+
+    console.log('✅ Successfully updated relationship start date');
+    return updated;
+  },
 };
 
